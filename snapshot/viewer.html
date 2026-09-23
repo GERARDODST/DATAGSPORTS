@@ -526,6 +526,19 @@
   .steps li > span:first-child { display: inline-block; min-width: 110px; font-size: 11px; }
   .steps li .pill { margin-left: 8px; }
 
+  .crumbs-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .crumb-nav { display: flex; gap: 12px; }
+  .crumb-nav a { font-family: var(--mono); }
+  .delta { font-size: 11px; font-family: var(--mono); white-space: nowrap; }
+  .delta.up { color: var(--accent-ink); }
+  .delta.down { color: var(--neg); }
+  .delta.flat { color: var(--muted); }
+  .evo-list { display: flex; flex-direction: column; gap: 10px; }
+  .evo-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .evo-label { text-decoration: none; font-size: 13px; }
+  .evo-label:hover { text-decoration: underline; }
+  @media (max-width: 560px) { .evo-row { grid-template-columns: 1fr auto; } .evo-row .prob-compare { grid-column: 1 / -1; grid-row: 2; } }
+
   @media (prefers-reduced-motion: no-preference) {
     .game, .callout, .weeks button, .tabs a { transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease; }
   }
@@ -766,9 +779,9 @@ function renderHome() {
     <section class="stack" style="gap:10px">
       <div class="section-head" style="margin-bottom:0">
         <h2>${esc(CORE.teams[FOCUS.team]?.name ?? FOCUS.team)}: modelo antes de cada partido</h2>
-        <p class="lede">Empezamos por su primer partido de ${CORE.season}, con solo los datos de ${CORE.season - 1}. <a href="#chiefs">Ver la sección del equipo →</a></p>
+        <p class="lede">${FOCUS.analyzed.length > 1 ? `${FOCUS.analyzed.length} partidos de ${CORE.season} analizados: cada uno con los datos que existían ese día.` : `Empezamos por su primer partido de ${CORE.season}, con solo los datos de ${CORE.season - 1}.`} <a href="#chiefs">Ver la sección del equipo y la evolución del modelo →</a></p>
       </div>
-      ${focusCard(FOCUS.analyzed[0])}
+      ${focusCard(FOCUS.analyzed[FOCUS.analyzed.length - 1])}
     </section>` : ""}
 
     <div class="callouts">
@@ -1543,6 +1556,7 @@ function focusCard(gameId) {
         <span class="eyebrow">${esc(team?.name ?? FOCUS.team)} · ${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span>
         <div class="matchup">${esc(CORE.teams[g.away]?.name ?? g.away)} @ ${esc(CORE.teams[g.home]?.name ?? g.home)}</div>
         <div class="sub">Modelo construido solo con datos anteriores al partido (${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}, ${a.data.currentSeasonGames} de ${a.season}) y comparado con el resultado final.</div>
+        <div class="chips" style="margin-top:6px"><span class="chip">P(gana ${esc(FOCUS.team)}) <b>${pct(g.home === FOCUS.team ? a.pHome : 1 - a.pHome)}</b></span><span class="chip">Proyección <b>${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}</b></span>${a.postgame ? `<span class="chip">Real <b>${a.postgame.awayScore} – ${a.postgame.homeScore}</b></span>` : ""}</div>
       </div>
       <span class="go">Ver análisis →</span>
     </a>`;
@@ -1580,7 +1594,12 @@ function renderFocusTeam() {
       <p class="lede">Antes de cada partido de los ${esc(team?.name ?? FOCUS.team)} construimos el modelo <strong>solo con los datos que existían hasta ese día</strong>, y al final lo comparamos con lo que pasó. En la semana 1 todo sale de la temporada ${CORE.season - 1}; cada partido nuevo entra al siguiente modelo con el doble de peso que un partido del año anterior, así que el modelo debería mejorar conforme avanza la temporada.</p>
     </section>
 
-    ${first ? focusCard(first) : ""}
+    <section class="stack" style="gap:10px">
+      <div class="section-head" style="margin-bottom:0"><h2>Partidos analizados</h2></div>
+      ${FOCUS.analyzed.slice().reverse().map((id) => focusCard(id)).join("")}
+    </section>
+
+    ${evolutionPanel()}
 
     <section class="panel">
       <div class="section-head">
@@ -2005,6 +2024,115 @@ function inventoryPanel(a) {
     </section>`;
 }
 
+/* ---------- Evolución del modelo entre partidos del equipo en seguimiento ---------- */
+const RATING_ROWS = [
+  { key: "weightCurrent", label: "Peso de la temporada actual", fmt: (v) => pct(v, 0), higher: null },
+  { key: "off", label: "Ofensiva: puntos por partido (regresada)", fmt: (v) => v.toFixed(1), higher: true },
+  { key: "def", label: "Defensa: puntos permitidos (regresada)", fmt: (v) => v.toFixed(1), higher: false },
+  { key: "elo", label: "Elo", fmt: (v) => String(v), higher: true },
+  { key: "offEpa", label: "EPA/jugada ofensiva", fmt: (v) => signed(v, 3), higher: true, rank: "offEpaRank" },
+  { key: "defEpa", label: "EPA/jugada permitido", fmt: (v) => signed(v, 3), higher: false, rank: "defEpaRank" },
+];
+function ratingDelta(row, before, now) {
+  const d = now - before;
+  if (Math.abs(d) < 1e-9) return `<span class="delta flat">= sin cambio</span>`;
+  const good = row.higher === null ? null : (d > 0) === row.higher;
+  const cls = good === null ? "flat" : good ? "up" : "down";
+  const txt = row.key === "weightCurrent" ? `${d > 0 ? "+" : "−"}${Math.abs(d * 100).toFixed(0)} pp` : row.key === "elo" ? signed(d, 0) : row.key.endsWith("Epa") ? signed(d, 3) : signed(d, 1);
+  return `<span class="delta ${cls}">${d > 0 ? "▲" : "▼"} ${txt}${good === null ? "" : good ? " mejor" : " peor"}</span>`;
+}
+function changesTable(prev, a) {
+  const t = FOCUS.team;
+  const p0 = prev.ratings?.[t], p1 = a.ratings?.[t];
+  if (!p0 || !p1) return "";
+  const rows = RATING_ROWS.map((r) => `<tr><td>${annotate(r.label)}</td><td class="r num">${r.fmt(p0[r.key])}${r.rank ? ` <span class="muted">(${p0[r.rank]}º)</span>` : ""}</td><td class="r num">${r.fmt(p1[r.key])}${r.rank ? ` <span class="muted">(${p1[r.rank]}º)</span>` : ""}</td><td>${ratingDelta(r, p0[r.key], p1[r.key])}</td></tr>`);
+  if (p0.qb && p1.qb && p0.qb.name === p1.qb.name) rows.push(`<tr><td>${annotate(`ANY/A de ${p1.qb.name}`)}</td><td class="r num">${p0.qb.anya.toFixed(2)}</td><td class="r num">${p1.qb.anya.toFixed(2)}</td><td>${ratingDelta({ key: "anya", higher: true }, p0.qb.anya, p1.qb.anya)}</td></tr>`);
+  const pr = prev.postgame;
+  return `
+    <p class="note">Ratings de ${esc(t)} en el análisis de la ${esc(weekLabel(prev.week, true))} (${esc(prev.baseLabel ?? String(prev.season - 1))}) y en este (${esc(a.baseLabel ?? "")}).${pr ? ` Entre los dos entró el partido ${esc(prev.away)} ${pr.awayScore} – ${pr.homeScore} ${esc(prev.home)}.` : ""}</p>
+    <div class="table-scroll"><table class="compact"><thead><tr><th>Dato de ${esc(t)}</th><th class="r">${esc(weekLabel(prev.week, true))}</th><th class="r">${esc(weekLabel(a.week, true))}</th><th>Cambio</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+}
+function changesSummary(prev, a) {
+  const t = FOCUS.team;
+  const p0 = prev.ratings?.[t], p1 = a.ratings?.[t];
+  if (!p0 || !p1) return "";
+  const opp = a.home === t ? a.away : a.home;
+  const o1 = a.ratings?.[opp];
+  const parts = [`Los partidos de ${a.season} ya pesan ${pct(p1.weightCurrent, 0)} en los ratings de ${t}${o1 ? ` y ${pct(o1.weightCurrent, 0)} en los de ${opp}` : ""}.`];
+  parts.push(`La ofensiva de ${t} pasó de ${p0.off.toFixed(1)} a ${p1.off.toFixed(1)} puntos esperados y la defensa de ${p0.def.toFixed(1)} a ${p1.def.toFixed(1)} permitidos; su Elo de ${p0.elo} a ${p1.elo}.`);
+  if (p0.defEpaRank !== p1.defEpaRank || p0.offEpaRank !== p1.offEpaRank) parts.push(`En EPA por jugada: ofensiva ${p0.offEpaRank}º → ${p1.offEpaRank}º, defensa ${p0.defEpaRank}º → ${p1.defEpaRank}º.`);
+  return parts.join(" ");
+}
+function evolutionPanel() {
+  const t = FOCUS.team;
+  const list = FOCUS.analyzed.map((id) => PRE[id]).filter(Boolean);
+  if (!list.length) return "";
+  const pFocus = (a) => (a.home === t ? a.pHome : 1 - a.pHome);
+  const mFocus = (a) => { const m = marketImpliedHome(a); return m === null ? null : a.home === t ? m : 1 - m; };
+  const rows = list.map((a) => {
+    const opp = a.home === t ? a.away : a.home;
+    const pg = a.postgame;
+    const own = pg ? (a.home === t ? pg.homeScore : pg.awayScore) : null;
+    const their = pg ? (a.home === t ? pg.awayScore : pg.homeScore) : null;
+    const projOwn = a.home === t ? a.projection.home : a.projection.away;
+    const projOpp = a.home === t ? a.projection.away : a.projection.home;
+    const bets = a.markets.filter((m) => m.light !== "Gris");
+    const won = bets.filter((m) => m.won && !m.push).length, lost = bets.filter((m) => m.won === false && !m.push).length;
+    return { a, opp, pg, own, their, projOwn, projOpp, won, lost, bets: bets.length, p: pFocus(a), m: mFocus(a) };
+  });
+  const played = rows.filter((r) => r.pg);
+  const avgB = (k) => played.length ? played.reduce((s, r) => s + (r.pg[k] ?? 0), 0) / played.length : null;
+  const bModel = avgB("brierModel"), bMarket = played.every((r) => r.pg.brierMarket !== null) ? avgB("brierMarket") : null;
+  const wins = rows.reduce((s, r) => s + r.won, 0), losses = rows.reduce((s, r) => s + r.lost, 0);
+  const underMiss = played.filter((r) => r.a.context.total !== null && r.a.projection.total < r.a.context.total && r.pg.homeScore + r.pg.awayScore > r.a.context.total).length;
+  const winnerOk = played.filter((r) => r.pg.winnerCorrect).length;
+  const learn = [
+    `Ganador: el modelo acertó ${winnerOk} de ${played.length}. Brier promedio ${bModel?.toFixed(3) ?? "—"} contra ${bMarket?.toFixed(3) ?? "—"} del mercado: ${bModel !== null && bMarket !== null ? (bModel < bMarket ? "el modelo va por delante" : "el mercado va por delante") : "sin comparación"}.`,
+    `Picks con semáforo Amarillo o Verde: ${wins} ganados y ${losses} perdidos.`,
+    underMiss ? `En ${underMiss} de ${played.length} partidos el modelo proyectó menos puntos que la línea y el partido terminó por encima: la base subestima el total. Es la señal a vigilar conforme entren más partidos de ${list[0].season}.` : "Sin un sesgo claro en el total todavía.",
+    `Con cada partido el peso de ${list[0].season} en los ratings de ${t} sube: ${rows.map((r) => `${weekLabel(r.a.week, true)} ${pct(r.a.ratings?.[t]?.weightCurrent ?? 0, 0)}`).join(" → ")}.`,
+  ];
+  const probRow = (r) => `
+    <div class="evo-row">
+      <a class="evo-label" href="#p-${esc(r.a.gameId)}"><b>${esc(weekLabel(r.a.week, true))}</b> ${r.a.home === t ? "vs" : "@"} ${esc(r.opp)}</a>
+      <div class="prob-compare">
+        <div><span>Modelo</span><div class="pbar"><i style="width:${(r.p * 100).toFixed(1)}%;background:var(--s1)"></i></div><b class="num">${pct(r.p)}</b></div>
+        ${r.m !== null ? `<div><span>Mercado</span><div class="pbar"><i style="width:${(r.m * 100).toFixed(1)}%;background:var(--s2)"></i></div><b class="num">${pct(r.m)}</b></div>` : ""}
+      </div>
+      <div class="evo-res">${r.pg ? `<span class="pill ${r.own > r.their ? "ok" : r.own < r.their ? "no" : "muted"}">${r.own > r.their ? "G" : r.own < r.their ? "P" : "E"} ${r.own}–${r.their}</span>` : '<span class="pill muted">Por jugar</span>'}</div>
+    </div>`;
+  const rt = (a) => a.ratings?.[t];
+  return `
+    <section class="panel stack" id="evolucion">
+      <div class="section-head">
+        <span class="eyebrow">Evolución del modelo</span>
+        <h2>Cómo cambia el modelo de ${esc(CORE.teams[t]?.name ?? t)} partido a partido</h2>
+        <p class="lede">Cada análisis se hizo solo con lo que existía antes de ese partido. Aquí se comparan entre sí y contra el resultado.</p>
+      </div>
+      ${group(`Probabilidad de que gane ${t}: modelo, mercado y resultado`, `<div class="evo-list">${rows.map(probRow).join("")}</div>`, { icon: "%" })}
+      ${group("Proyección contra resultado", `<div class="table-scroll"><table class="compact">
+        <thead><tr><th>Partido</th><th class="r">Peso ${list[0].season}</th><th class="r">Proyección ${esc(t)}–rival</th><th class="r">Real</th><th class="r">Error margen</th><th class="r">Total proy. · línea · real</th><th class="r">Brier ${info("brier")} modelo · mercado</th><th class="r">Picks</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          <td><a href="#p-${esc(r.a.gameId)}">${esc(weekLabel(r.a.week, true))} ${r.a.home === t ? "vs" : "@"} ${esc(r.opp)}</a></td>
+          <td class="r num">${pct(rt(r.a)?.weightCurrent ?? 0, 0)}</td>
+          <td class="r num">${r.projOwn.toFixed(1)}–${r.projOpp.toFixed(1)}</td>
+          <td class="r num">${r.pg ? `${r.own}–${r.their}` : "—"}</td>
+          <td class="r num">${r.pg ? signed((r.projOwn - r.projOpp) - (r.own - r.their), 1) : "—"}</td>
+          <td class="r num">${r.a.projection.total.toFixed(1)} · ${r.a.context.total ?? "—"} · ${r.pg ? r.pg.homeScore + r.pg.awayScore : "—"}</td>
+          <td class="r num"><span class="${r.pg && r.pg.brierMarket !== null ? (r.pg.brierModel < r.pg.brierMarket ? "pos" : "negv") : ""}">${r.pg ? r.pg.brierModel.toFixed(3) : "—"}</span> · ${r.pg?.brierMarket?.toFixed(3) ?? "—"}</td>
+          <td class="r num">${r.bets ? `${r.won}G · ${r.lost}P` : "sin picks"}</td>
+        </tr>`).join("")}</tbody></table></div>`, { icon: "≈" })}
+      ${group(`Ratings de ${t} en cada análisis`, `<div class="table-scroll"><table class="compact">
+        <thead><tr><th>Dato</th>${rows.map((r) => `<th class="r">${esc(weekLabel(r.a.week, true))}</th>`).join("")}</tr></thead>
+        <tbody>${RATING_ROWS.map((row) => `<tr><td>${annotate(row.label)}</td>${rows.map((r, i) => {
+          const v = rt(r.a)?.[row.key];
+          const prevV = i ? rt(rows[i - 1].a)?.[row.key] : null;
+          return `<td class="r num">${v === undefined ? "—" : row.fmt(v)}${row.rank && rt(r.a) ? ` <span class="muted">(${rt(r.a)[row.rank]}º)</span>` : ""}${prevV !== null && prevV !== undefined && v !== undefined ? `<div>${ratingDelta(row, prevV, v)}</div>` : ""}</td>`;
+        }).join("")}</tr>`).join("")}</tbody></table></div>`, { icon: "↻", open: false })}
+      ${cloud("take", "Lo que vamos aprendiendo", `<ul>${learn.map((x) => `<li>${annotate(x)}</li>`).join("")}</ul>`, "✓")}
+    </section>`;
+}
+
 function renderPregame(gameId) {
   renderToken++;
   const a = PRE[gameId];
@@ -2013,6 +2141,9 @@ function renderPregame(gameId) {
   const marketHome = marketImpliedHome(a);
   const pg = a.postgame;
   const favTeam = c.spread >= 0 ? a.home : a.away;
+  const order = FOCUS.analyzed.indexOf(gameId);
+  const prevId = order > 0 ? FOCUS.analyzed[order - 1] : null;
+  const nextId = order >= 0 && order < FOCUS.analyzed.length - 1 ? FOCUS.analyzed[order + 1] : null;
   const sec = (id) => FW_SECTIONS.find((d) => d.id === id);
   const itemsOf = (id) => a.items.filter((it) => it.section === id);
   const grouped = (id) => {
@@ -2043,11 +2174,12 @@ function renderPregame(gameId) {
 
   view.innerHTML = `
     <section class="scoreboard">
-      <div class="crumbs"><a href="#chiefs">← ${esc(CORE.teams[FOCUS.team]?.name ?? "Equipo")}</a></div>
+      <div class="crumbs crumbs-row"><a href="#chiefs">← ${esc(CORE.teams[FOCUS.team]?.name ?? "Equipo")}</a>${prevId || nextId ? `<span class="crumb-nav">${prevId ? `<a href="#p-${esc(prevId)}">‹ ${esc(weekLabel(PRE[prevId].week, true))}</a>` : ""}${nextId ? `<a href="#p-${esc(nextId)}">${esc(weekLabel(PRE[nextId].week, true))} ›</a>` : ""}</span>` : ""}</div>
       <div class="sb-meta">${esc(weekLabel(a.week))} · ${esc(fmtDate(a.date))} · ${esc(c.stadium ?? "")}</div>
       <h1>${esc(CORE.teams[a.away]?.name ?? a.away)} @ ${esc(CORE.teams[a.home]?.name ?? a.home)}</h1>
-      ${cloud("explain", "Cómo leer esta página", `<p>Es el análisis <strong>antes del partido</strong>, con solo lo publicado hasta el ${esc(fmtDate(a.data.cutoff))}: ${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}, ${numFmt.format(a.data.plays)} jugadas, ${a.data.injuryRows} registros del reporte de lesiones y ${a.data.depthRows} del depth chart. Cada sección se abre con su flecha; los círculos ${info("epa").replace('data-term="epa"', 'data-term="epa" tabindex="-1"')} explican siglas. El resultado real está al final.</p>`, "i")}
+      ${cloud("explain", "Cómo leer esta página", `<p>Es el análisis <strong>antes del partido</strong>, con solo lo publicado hasta el ${esc(fmtDate(a.data.cutoff))}: ${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}${a.data.currentSeasonGames ? ` y ${a.data.currentSeasonGames} de ${a.season} (pesan el doble)` : ""}, ${numFmt.format(a.data.plays)} jugadas, ${a.data.injuryRows} registros del reporte de lesiones y ${a.data.depthRows} del depth chart. Cada sección se abre con su flecha; los círculos ${info("epa").replace('data-term="epa"', 'data-term="epa" tabindex="-1"')} explican siglas. El resultado real está al final.</p>`, "i")}
       ${flow}
+      ${prevId ? cloud("take", `Qué aprendió el modelo desde la ${weekLabel(PRE[prevId].week, true)}`, `<p>${annotate(changesSummary(PRE[prevId], a))} <a href="#fw-5" class="jump-5">Ver el detalle en la sección 5 →</a></p>`, "↻") : ""}
     </section>
 
     <div class="summary-cards">
@@ -2092,12 +2224,13 @@ function renderPregame(gameId) {
       ${grouped("4")}
       ${group("Bajas del reporte de lesiones (Out / Doubtful)", `
         <div class="table-scroll"><table class="compact">
-          <thead><tr><th>Jugador</th><th>Equipo</th><th>Pos ${info("positions")}</th><th>Estado</th><th>Lesión</th><th>Publicado</th><th>¿Titular esta semana?</th><th>¿Titular en ${a.season - 1}?</th></tr></thead>
+          <thead><tr><th>Jugador</th><th>Equipo</th><th>Pos ${info("positions")}</th><th>Estado</th><th>Lesión</th><th>Publicado</th><th>¿Titular esta semana?</th><th>¿Titular en la base?</th></tr></thead>
           <tbody>${a.injuries.map((i) => `<tr><td>${esc(i.name)}</td><td>${esc(i.team)}</td><td>${esc(i.position ?? "—")}</td><td>${esc(i.status)}</td><td class="muted">${esc(i.injury ?? "—")}</td><td class="muted">${esc(fmtDate(i.date))}</td><td>${i.starterNow ? "Sí" : "No"}</td><td>${i.inBase ? "Sí" : `No (${i.baseWeeks} sem.)`}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">Sin bajas reportadas.</td></tr>`}</tbody>
         </table></div>
         ${pg && pg.injuredLate.length ? cloud("warn", "Excluido por fuga de datos", `<p>${esc(pg.injuredLate.join("; "))}: publicado después del inicio del partido.${info("leak")}</p>`, "!") : ""}`, { icon: "✚", count: a.injuries.length, open: false })}`)}
 
     ${sectionBlock(a, sec("5"), `
+      ${prevId ? group(`Qué cambió desde el análisis de la ${weekLabel(PRE[prevId].week, true)}`, changesTable(PRE[prevId], a), { icon: "↻" }) : ""}
       ${grouped("5")}
       ${group("Proyección de puntos", `
         <div class="proj-flow">
@@ -2191,15 +2324,17 @@ function renderPregame(gameId) {
       </div>
       <div class="table-scroll"><table class="compact"><thead><tr><th>Mercado</th><th>Pick</th><th>Semáforo</th><th>Resultado</th></tr></thead>
         <tbody>${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td>${esc(marketPickLabel(m))}</td><td>${lightPill(m.light)}</td><td>${outcomePill(m)}</td></tr>`).join("")}</tbody></table></div>
-      ${cloud("take", "Diagnóstico con los datos", `<ul>
-        <li>Total: proyectado ${a.projection.total.toFixed(1)}, real ${pg.homeScore + pg.awayScore}, línea ${c.total}. El mercado estuvo más cerca.</li>
-        <li>${annotate(`EPA ofensivo en el partido: ${a.home} ${signed(pg.epaInGame[a.home], 3)} y ${a.away} ${signed(pg.epaInGame[a.away], 3)}.`)} Las dos ofensivas jugaron muy por encima de su nivel de ${a.season - 1}; la base no tenía cómo anticiparlo.</li>
-        <li>Lo que el inventario marca como faltante coincide con el error: fichajes y novatos fuera de la base, sin movimiento de línea ni más de una casa de apuestas.</li>
-        <li>Las reglas se aplicaron igual que antes del partido: nada se ajustó después de conocer el resultado.</li>
-      </ul>`, "✓")}
+      ${cloud("take", "Diagnóstico con los datos", `<ul>${(pg.diagnosis ?? []).map((d) => `<li>${annotate(d)}</li>`).join("")}</ul>`, "✓")}
     </section>` : ""}`;
 
   attachMarginHover(a);
+  view.querySelector(".jump-5")?.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    const d = document.getElementById("fw-5");
+    if (!d) return;
+    d.open = true;
+    d.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   view.dataset.filter = pregameFilter;
   const applyFilterOpen = () => {
     if (pregameFilter === "todos") return;

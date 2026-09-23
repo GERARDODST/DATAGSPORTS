@@ -137,6 +137,8 @@ export async function buildPregameAnalysis(gameId: string) {
   const currentSeasonGames = prior.filter((g) => g.season === target.season).length;
   const priorSeasonGames = prior.length - currentSeasonGames;
   const gameById = new Map(prior.map((g) => [g.gameId, g]));
+  // Cómo se describe "la base" en los textos: solo la temporada anterior o ambas.
+  const baseLabel = currentSeasonGames ? `${priorSeason} (×${PRIOR_SEASON_WEIGHT}) + ${target.season} hasta la semana ${target.week - 1}` : `${priorSeason}`;
 
   const [plays, drives] = await Promise.all([
     prisma.play.findMany({
@@ -169,7 +171,7 @@ export async function buildPregameAnalysis(gameId: string) {
 
   // ------------------------------------------------ Métricas por equipo (32)
   type TeamAgg = {
-    games: Set<string>; offPlays: number; offEpa: number; passPlays: number; passEpa: number; runPlays: number; runEpa: number;
+    games: Set<string>; gamesW: number; gamesCur: number; offPlays: number; offEpa: number; passPlays: number; passEpa: number; runPlays: number; runEpa: number;
     success: number; explosive: number; dropbacks: number; sacksTaken: number; giveaways: number; conv3: number; att3: number;
     defPlays: number; defEpa: number; defPassPlays: number; defPassEpa: number; defRunPlays: number; defRunEpa: number;
     defConv3: number; defAtt3: number; sacksMade: number; takeaways: number; oppDropbacks: number;
@@ -177,7 +179,7 @@ export async function buildPregameAnalysis(gameId: string) {
     q1Points: number; h1Points: number; pressures: number; missedTackles: number; pressureGames: number;
   };
   const blank = (): TeamAgg => ({
-    games: new Set(), offPlays: 0, offEpa: 0, passPlays: 0, passEpa: 0, runPlays: 0, runEpa: 0, success: 0, explosive: 0, dropbacks: 0,
+    games: new Set(), gamesW: 0, gamesCur: 0, offPlays: 0, offEpa: 0, passPlays: 0, passEpa: 0, runPlays: 0, runEpa: 0, success: 0, explosive: 0, dropbacks: 0,
     sacksTaken: 0, giveaways: 0, conv3: 0, att3: 0, defPlays: 0, defEpa: 0, defPassPlays: 0, defPassEpa: 0, defRunPlays: 0, defRunEpa: 0,
     defConv3: 0, defAtt3: 0, sacksMade: 0, takeaways: 0, oppDropbacks: 0, drives: 0, drivePoints: 0, rzTrips: 0, rzTds: 0,
     oppDrives: 0, oppDrivePoints: 0, oppRzTrips: 0, oppRzTds: 0, q1Points: 0, h1Points: 0, pressures: 0, missedTackles: 0, pressureGames: 0,
@@ -187,23 +189,32 @@ export async function buildPregameAnalysis(gameId: string) {
     if (!agg.has(t)) agg.set(t, blank());
     return agg.get(t) as TeamAgg;
   };
+  // Cada jugada, posesión y fila de presión pesa según su temporada (0.5 la anterior, 1 la actual):
+  // así las métricas por equipo usan la misma ponderación que los puntos del λ.
+  const markGame = (a: TeamAgg, gameId: string, season: number) => {
+    if (a.games.has(gameId)) return;
+    a.games.add(gameId);
+    a.gamesW += weightOf(season);
+    if (season === target.season) a.gamesCur++;
+  };
   for (const p of plays) {
     if (!p.possessionTeamAbbr || !p.defenseTeamAbbr) continue;
+    const w = weightOf(p.season);
     const o = T(p.possessionTeamAbbr);
     const d = T(p.defenseTeamAbbr);
-    o.games.add(p.gameId);
-    d.games.add(p.gameId);
-    if (p.thirdDownConverted) { o.conv3++; o.att3++; d.defConv3++; d.defAtt3++; }
-    if (p.thirdDownFailed) { o.att3++; d.defAtt3++; }
-    if (p.isDropback) { o.dropbacks++; d.oppDropbacks++; }
-    if (p.isSack) { o.sacksTaken++; d.sacksMade++; }
-    if (p.isInterception || p.isFumbleLost) { o.giveaways++; d.takeaways++; }
+    markGame(o, p.gameId, p.season);
+    markGame(d, p.gameId, p.season);
+    if (p.thirdDownConverted) { o.conv3 += w; o.att3 += w; d.defConv3 += w; d.defAtt3 += w; }
+    if (p.thirdDownFailed) { o.att3 += w; d.defAtt3 += w; }
+    if (p.isDropback) { o.dropbacks += w; d.oppDropbacks += w; }
+    if (p.isSack) { o.sacksTaken += w; d.sacksMade += w; }
+    if (p.isInterception || p.isFumbleLost) { o.giveaways += w; d.takeaways += w; }
     if ((p.playType !== "pass" && p.playType !== "run") || p.epa === null) continue;
-    o.offPlays++; o.offEpa += p.epa; d.defPlays++; d.defEpa += p.epa;
-    if (p.isSuccess) o.success++;
-    if ((p.yardsGained ?? 0) >= 20) o.explosive++;
-    if (p.playType === "pass") { o.passPlays++; o.passEpa += p.epa; d.defPassPlays++; d.defPassEpa += p.epa; }
-    else { o.runPlays++; o.runEpa += p.epa; d.defRunPlays++; d.defRunEpa += p.epa; }
+    o.offPlays += w; o.offEpa += w * p.epa; d.defPlays += w; d.defEpa += w * p.epa;
+    if (p.isSuccess) o.success += w;
+    if ((p.yardsGained ?? 0) >= 20) o.explosive += w;
+    if (p.playType === "pass") { o.passPlays += w; o.passEpa += w * p.epa; d.defPassPlays += w; d.defPassEpa += w * p.epa; }
+    else { o.runPlays += w; o.runEpa += w * p.epa; d.defRunPlays += w; d.defRunEpa += w * p.epa; }
   }
   const pointsOf = (res: string | null) => (res === "Touchdown" ? TD_POINTS : res === "Field goal" ? 3 : 0);
   for (const dr of drives) {
@@ -212,22 +223,32 @@ export async function buildPregameAnalysis(gameId: string) {
     const opp = g.homeTeamAbbr === dr.possessionTeamAbbr ? g.awayTeamAbbr : g.homeTeamAbbr;
     const o = T(dr.possessionTeamAbbr);
     const d = T(opp);
-    const pts = pointsOf(dr.result);
-    o.drives++; o.drivePoints += pts; d.oppDrives++; d.oppDrivePoints += pts;
+    const w = weightOf(g.season);
+    const pts = w * pointsOf(dr.result);
+    o.drives += w; o.drivePoints += pts; d.oppDrives += w; d.oppDrivePoints += pts;
     if (dr.quarterStart === 1) o.q1Points += pts;
     if ((dr.quarterStart ?? 5) <= 2) o.h1Points += pts;
     if (dr.reachedRedZone) {
-      o.rzTrips++; d.oppRzTrips++;
-      if (dr.result === "Touchdown") { o.rzTds++; d.oppRzTds++; }
+      o.rzTrips += w; d.oppRzTrips += w;
+      if (dr.result === "Touchdown") { o.rzTds += w; d.oppRzTds += w; }
     }
+  }
+  // La presión solo cuenta contra los dropbacks de los partidos que tienen fila de PFR.
+  const pressureGameIds = new Set(pressureRows.map((pr) => `${pr.gameId}_${pr.teamAbbr}`));
+  const pressDropbacks = new Map<string, number>();
+  for (const p of plays) {
+    if (!p.isDropback || !p.defenseTeamAbbr || !pressureGameIds.has(`${p.gameId}_${p.defenseTeamAbbr}`)) continue;
+    pressDropbacks.set(p.defenseTeamAbbr, (pressDropbacks.get(p.defenseTeamAbbr) ?? 0) + weightOf(p.season));
   }
   for (const pr of pressureRows) {
     const t = T(pr.teamAbbr);
-    t.pressures += pr.pressures;
-    t.missedTackles += pr.missedTackles;
-    t.pressureGames++;
+    const w = weightOf(gameById.get(pr.gameId)?.season ?? priorSeason);
+    t.pressures += w * pr.pressures;
+    t.missedTackles += w * pr.missedTackles;
+    t.pressureGames += w;
   }
 
+  const teamOf = (a: TeamAgg) => [...agg.entries()].find(([, v]) => v === a)?.[0] ?? "";
   const metric = (fn: (a: TeamAgg) => number) => new Map([...agg.entries()].map(([t, a]) => [t, fn(a)]));
   const M = {
     offEpa: metric((a) => safeDiv(a.offEpa, a.offPlays)),
@@ -236,9 +257,9 @@ export async function buildPregameAnalysis(gameId: string) {
     success: metric((a) => safeDiv(a.success, a.offPlays)),
     explosive: metric((a) => safeDiv(a.explosive, a.offPlays)),
     sackRateTaken: metric((a) => safeDiv(a.sacksTaken, a.dropbacks)),
-    giveawaysPg: metric((a) => safeDiv(a.giveaways, a.games.size)),
+    giveawaysPg: metric((a) => safeDiv(a.giveaways, a.gamesW)),
     conv3: metric((a) => safeDiv(a.conv3, a.att3)),
-    pace: metric((a) => safeDiv(a.offPlays, a.games.size)),
+    pace: metric((a) => safeDiv(a.offPlays, a.gamesW)),
     ptsPerDrive: metric((a) => safeDiv(a.drivePoints, a.drives)),
     rzTd: metric((a) => safeDiv(a.rzTds, a.rzTrips)),
     defEpa: metric((a) => safeDiv(a.defEpa, a.defPlays)),
@@ -246,10 +267,10 @@ export async function buildPregameAnalysis(gameId: string) {
     defRunEpa: metric((a) => safeDiv(a.defRunEpa, a.defRunPlays)),
     defConv3: metric((a) => safeDiv(a.defConv3, a.defAtt3)),
     sackRateMade: metric((a) => safeDiv(a.sacksMade, a.oppDropbacks)),
-    takeawaysPg: metric((a) => safeDiv(a.takeaways, a.games.size)),
+    takeawaysPg: metric((a) => safeDiv(a.takeaways, a.gamesW)),
     ptsPerDriveAllowed: metric((a) => safeDiv(a.oppDrivePoints, a.oppDrives)),
     rzTdAllowed: metric((a) => safeDiv(a.oppRzTds, a.oppRzTrips)),
-    pressureRate: metric((a) => (a.pressureGames ? safeDiv(a.pressures, a.oppDropbacks) : NaN)),
+    pressureRate: metric((a) => (a.pressureGames ? safeDiv(a.pressures, pressDropbacks.get(teamOf(a)) ?? NaN) : NaN)),
     missedTacklesPg: metric((a) => safeDiv(a.missedTackles, a.pressureGames)),
     q1Share: metric((a) => safeDiv(a.q1Points, a.drivePoints)),
     h1Share: metric((a) => safeDiv(a.h1Points, a.drivePoints)),
@@ -326,6 +347,11 @@ export async function buildPregameAnalysis(gameId: string) {
   const H = profile(home);
   const A = profile(away);
   add({ id: "record", section: "2", category: "Récords e historial", label: `Récord ${priorSeason} (temporada regular)`, home: `${H.reg.wins}–${H.reg.losses}`, away: `${A.reg.wins}–${A.reg.losses}`, source: `${SRC.games} · resultados ${priorSeason}`, status: "derivado" });
+  const curRec = (t: string) => {
+    const list = teamGames(t).filter((g) => g.season === target.season).map((g) => fmtGame(g, t));
+    return list.length ? `${rec(list)} · ${avg(list, "pf")} / ${avg(list, "pa")}` : "—";
+  };
+  if (currentSeasonGames) add({ id: "record-cur", section: "2", category: "Récords e historial", label: `Récord ${target.season} antes de este partido (PF/PA)`, home: curRec(home), away: curRec(away), source: `${SRC.games} · resultados ${target.season}`, status: "derivado", note: `Cada partido de ${target.season} pesa ${1 / PRIOR_SEASON_WEIGHT} veces lo que uno de ${priorSeason} en los ratings.` });
   add({ id: "last", section: "2", category: "Récords e historial", label: "Último partido", home: H.last ? `${H.last.win ? "G" : "P"} ${H.last.pf}–${H.last.pa} vs ${H.last.opp}` : "—", away: A.last ? `${A.last.win ? "G" : "P"} ${A.last.pf}–${A.last.pa} vs ${A.last.opp}` : "—", source: `${SRC.games}`, status: "disponible" });
 
   // ============================================================ SECCIÓN 3
@@ -338,18 +364,22 @@ export async function buildPregameAnalysis(gameId: string) {
       orderBy: [{ season: "asc" }, { week: "asc" }],
     });
     const priorWeeks = weeks.filter((w) => w.season < target.season || (w.gameId && gameById.has(w.gameId)));
-    const sum = (k: "completions" | "attempts" | "passingYards" | "passingTds" | "interceptions") => priorWeeks.reduce((s, w) => s + (w[k] ?? 0), 0);
+    // Sumas ponderadas por temporada (igual que los ratings de equipo), redondeadas para mostrarse.
+    const sum = (k: "completions" | "attempts" | "passingYards" | "passingTds" | "interceptions") => Math.round(priorWeeks.reduce((s, w) => s + weightOf(w.season) * (w[k] ?? 0), 0));
     const cmp = sum("completions"), att = sum("attempts"), yds = sum("passingYards"), td = sum("passingTds"), int = sum("interceptions");
     const qbPlays = plays.filter((p) => p.passerPlayerId === player.gsisId);
-    const sacks = qbPlays.filter((p) => p.isSack).length;
-    const sackYds = -qbPlays.filter((p) => p.isSack).reduce((s, p) => s + (p.yardsGained ?? 0), 0);
-    const cpoeVals = qbPlays.map((p) => p.cpoe).filter((v): v is number => v !== null);
-    const epaVals = qbPlays.map((p) => p.epa).filter((v): v is number => v !== null);
+    const sackPlays = qbPlays.filter((p) => p.isSack);
+    const sacks = Math.round(sackPlays.reduce((s, p) => s + weightOf(p.season), 0));
+    const sackYds = Math.round(-sackPlays.reduce((s, p) => s + weightOf(p.season) * (p.yardsGained ?? 0), 0));
+    const wMean = (xs: { v: number; w: number }[]) => xs.reduce((s, x) => s + x.v * x.w, 0) / Math.max(1e-9, xs.reduce((s, x) => s + x.w, 0));
+    const cpoeVals = qbPlays.filter((p) => p.cpoe !== null).map((p) => ({ v: p.cpoe as number, w: weightOf(p.season) }));
+    const epaVals = qbPlays.filter((p) => p.epa !== null).map((p) => ({ v: p.epa as number, w: weightOf(p.season) }));
+    const currentGames = priorWeeks.filter((w) => w.season === target.season).length;
     const pr = passerRating(cmp, att, yds, td, int);
     const anya = (yds + 20 * td - 45 * int - sackYds) / (att + sacks);
     return {
       team, name, id: player.gsisId, cmp, att, yds, td, int, sacks, sackYds, pr, anya,
-      cpoe: cpoeVals.length ? mean(cpoeVals) : null, epa: epaVals.length ? mean(epaVals) : null,
+      cpoe: cpoeVals.length ? wMean(cpoeVals) : null, epa: epaVals.length ? wMean(epaVals) : null, currentGames,
       last5: priorWeeks.slice(-5).map((w) => ({ season: w.season, week: w.week, opp: w.opponentAbbr, cmp: w.completions, att: w.attempts, yds: w.passingYards, td: w.passingTds, int: w.interceptions })),
     };
   };
@@ -363,30 +393,39 @@ export async function buildPregameAnalysis(gameId: string) {
   const lgInt = (leagueQb._sum.interceptions ?? 0) / Math.max(1, leagueQb._sum.attempts ?? 1);
   const qbAnyaAll = await (async () => {
     const rows = await prisma.playerWeekStat.groupBy({
-      by: ["playerId"],
-      where: { season: priorSeason },
+      by: ["playerId", "season"],
+      where: { OR: [{ season: priorSeason }, { season: target.season, gameId: { in: priorIds } }] },
       _sum: { attempts: true, passingYards: true, passingTds: true, interceptions: true },
     });
+    const tot = new Map<string, { att: number; w: number; num: number }>();
+    for (const r of rows) {
+      const w = weightOf(r.season);
+      const t = tot.get(r.playerId) ?? { att: 0, w: 0, num: 0 };
+      t.att += r._sum.attempts ?? 0;
+      t.w += w * (r._sum.attempts ?? 0);
+      t.num += w * ((r._sum.passingYards ?? 0) + 20 * (r._sum.passingTds ?? 0) - 45 * (r._sum.interceptions ?? 0));
+      tot.set(r.playerId, t);
+    }
     const sackByQb = new Map<string, { n: number; yds: number }>();
     for (const p of plays) {
-      if (!p.isSack || !p.passerPlayerId || p.season !== priorSeason) continue;
+      if (!p.isSack || !p.passerPlayerId) continue;
+      const w = weightOf(p.season);
       const s = sackByQb.get(p.passerPlayerId) ?? { n: 0, yds: 0 };
-      s.n++; s.yds += -(p.yardsGained ?? 0);
+      s.n += w; s.yds += -w * (p.yardsGained ?? 0);
       sackByQb.set(p.passerPlayerId, s);
     }
     const m = new Map<string, number>();
-    for (const r of rows) {
-      const att = r._sum.attempts ?? 0;
-      if (att < 200) continue;
-      const s = sackByQb.get(r.playerId) ?? { n: 0, yds: 0 };
-      m.set(r.playerId, ((r._sum.passingYards ?? 0) + 20 * (r._sum.passingTds ?? 0) - 45 * (r._sum.interceptions ?? 0) - s.yds) / (att + s.n));
+    for (const [id, t] of tot) {
+      if (t.att < 200) continue;
+      const s = sackByQb.get(id) ?? { n: 0, yds: 0 };
+      m.set(id, (t.num - s.yds) / (t.w + s.n));
     }
     return m;
   })();
   const qbRows = (label: string, fn: (q: NonNullable<typeof qbH>) => string, source: string, status: DataStatus) =>
     add({ id: `qb-${label}`, section: "3", category: "QB y ofensiva", label, home: qbH ? fn(qbH) : "—", away: qbA ? fn(qbA) : "—", source, status: qbH && qbA ? status : "faltante" });
   add({ id: "qb-name", section: "3", category: "QB y ofensiva", label: "QB titular", home: target.homeQbName ?? "—", away: target.awayQbName ?? "—", source: `${SRC.games} · home_qb_name / away_qb_name`, status: target.homeQbName && target.awayQbName ? "disponible" : "faltante" });
-  qbRows(`Cmp% · Yds/Att (${priorSeason})`, (q) => `${pctS(q.cmp / q.att)} · ${f1(q.yds / q.att)}`, `${SRC.weekly} · completions, attempts, passing_yards`, "derivado");
+  qbRows(`Cmp% · Yds/Att (${baseLabel})`, (q) => `${pctS(q.cmp / q.att)} · ${f1(q.yds / q.att)}`, `${SRC.weekly} · completions, attempts, passing_yards`, "derivado");
   qbRows("TD · INT", (q) => `${q.td} · ${q.int}`, `${SRC.weekly} · passing_tds, interceptions`, "disponible");
   qbRows("Passer rating (fórmula NFL)", (q) => f1(q.pr.rating), `${SRC.weekly} → fórmula oficial`, "derivado");
   qbRows("Sacks recibidos · yardas", (q) => `${q.sacks} · ${q.sackYds}`, `${SRC.pbp} · sack, yards_gained, passer_player_id`, "derivado");
@@ -433,30 +472,35 @@ export async function buildPregameAnalysis(gameId: string) {
   const [injAll, depthNow, depthPrior] = await Promise.all([
     prisma.injuryReport.findMany({ where: { season: target.season, week: target.week, teamAbbr: { in: [home, away] } } }),
     prisma.depthChartEntry.findMany({ where: { season: target.season, week: target.week, teamAbbr: { in: [home, away] }, depthTeam: 1 } }),
-    prisma.depthChartEntry.findMany({ where: { season: priorSeason, teamAbbr: { in: [home, away] }, depthTeam: 1 } }),
+    prisma.depthChartEntry.findMany({ where: { OR: [{ season: priorSeason }, { season: target.season, week: { lt: target.week } }], teamAbbr: { in: [home, away] }, depthTeam: 1 } }),
   ]);
   const injPre = injAll.filter((i) => i.dateModified && i.dateModified < cutoff);
   const injLate = injAll.filter((i) => !i.dateModified || i.dateModified >= cutoff);
-  const priorStarterWeeks = new Map<string, Set<number>>();
+  // ¿El jugador está "en la base"? Semanas como titular, ponderadas por temporada, sobre el total ponderado de semanas.
+  const priorStarterWeeks = new Map<string, Set<string>>();
   for (const d of depthPrior) {
     if (!d.gsisId) continue;
     const key = `${d.teamAbbr}_${d.gsisId}`;
-    const s = priorStarterWeeks.get(key) ?? new Set<number>();
-    s.add(d.week);
+    const s = priorStarterWeeks.get(key) ?? new Set<string>();
+    s.add(`${d.season}_${d.week}`);
     priorStarterWeeks.set(key, s);
   }
-  const priorWeeksCount = new Set(depthPrior.map((d) => d.week)).size || 1;
+  const weekW = (sw: string) => weightOf(Number(sw.split("_")[0]));
+  const allBaseWeeks = new Set(depthPrior.map((d) => `${d.season}_${d.week}`));
+  const priorWeeksCount = [...allBaseWeeks].reduce((s, sw) => s + weekW(sw), 0) || 1;
   const currentStarters = new Set(depthNow.map((d) => `${d.teamAbbr}_${d.gsisId}`));
   const injuryDetail = injPre
     .filter((i) => i.reportStatus === "Out" || i.reportStatus === "Doubtful")
     .map((i) => {
       const key = `${i.teamAbbr}_${i.gsisId}`;
-      const baseWeeks = priorStarterWeeks.get(key)?.size ?? 0;
+      const starterWeeks = [...(priorStarterWeeks.get(key) ?? [])];
+      const baseWeeks = starterWeeks.length;
+      const baseShare = starterWeeks.reduce((s, sw) => s + weekW(sw), 0) / priorWeeksCount;
       return {
         team: i.teamAbbr, name: i.fullName, position: i.position, status: i.reportStatus, injury: i.primaryInjury,
         date: i.dateModified?.toISOString().slice(0, 10) ?? null,
         starterNow: currentStarters.has(key),
-        inBase: baseWeeks >= priorWeeksCount / 2,
+        inBase: baseShare >= 0.5,
         baseWeeks,
       };
     });
@@ -488,6 +532,18 @@ export async function buildPregameAnalysis(gameId: string) {
   formula({ id: "shrink-def-a", section: "5", name: `Defensa de ${away} regresada a la media`, expression: "def = (n·PĀ + k·μ) / (n + k)", substituted: `(${f1(A.w, 1)}·${f1(A.rawDef, 2)} + 6·${f1(leagueMean, 2)}) / (${f1(A.w, 1)} + 6)`, result: f1(A.def, 2) });
   formula({ id: "hfa", section: "5", name: "Ventaja de local observada", expression: "HFA = promedio(pts local − pts visita) en sedes no neutrales", substituted: `${prior.filter((g) => g.location === "Home").length} partidos`, result: `${sgn(hfaObserved, 2)} pts${neutral ? " (no se aplica: sede neutral)" : ""}` });
 
+  const curShare = (t: string) => {
+    const a = agg.get(t);
+    return a && a.gamesW ? a.gamesCur / a.gamesW : 0;
+  };
+  add({
+    id: "weight", section: "5", category: "Modelo", label: `Peso de los partidos de ${target.season} en los ratings`,
+    home: `${agg.get(home)?.gamesCur ?? 0} partido(s) · ${pctS(curShare(home), 0)}`, away: `${agg.get(away)?.gamesCur ?? 0} partido(s) · ${pctS(curShare(away), 0)}`,
+    source: SRC.model, status: "derivado",
+    note: currentSeasonGames ? `El resto del peso sigue viniendo de ${priorSeason}. Cada partido nuevo sube esta proporción.` : `Semana 1: todo el modelo sale de ${priorSeason}.`,
+  });
+  formula({ id: "weights", section: "5", name: `Peso de ${target.season} frente a ${priorSeason}`, expression: `peso = n_${target.season}·1 / (n_${target.season}·1 + n_${priorSeason}·${PRIOR_SEASON_WEIGHT})`, substituted: `${home}: ${agg.get(home)?.gamesCur ?? 0} / ${f1(agg.get(home)?.gamesW ?? 0, 1)} · ${away}: ${agg.get(away)?.gamesCur ?? 0} / ${f1(agg.get(away)?.gamesW ?? 0, 1)}`, result: `${home} ${pctS(curShare(home))} · ${away} ${pctS(curShare(away))}` });
+
   const baseHome = leagueMean + (H.off - leagueMean) + (A.def - leagueMean) + hfa / 2;
   const baseAway = leagueMean + (A.off - leagueMean) + (H.def - leagueMean) - hfa / 2;
   formula({ id: "lambda-h", section: "5", name: `λ base de ${home}`, expression: "λ_local = μ + (off_local − μ) + (def_visita − μ) + HFA/2", substituted: `${f1(leagueMean, 2)} + (${f1(H.off, 2)} − ${f1(leagueMean, 2)}) + (${f1(A.def, 2)} − ${f1(leagueMean, 2)}) + ${f1(hfa / 2, 2)}`, result: f1(baseHome, 2) });
@@ -505,14 +561,14 @@ export async function buildPregameAnalysis(gameId: string) {
   type Adj = { condition: string; data: string; met: boolean | null; inBase: boolean; factor: number; appliesTo: "total" | "home" | "away"; applied: boolean; reason: string };
   const adjustments: Adj[] = [];
   const pushAdj = (a: Omit<Adj, "applied">) => adjustments.push({ ...a, applied: Boolean(a.met) && !a.inBase });
-  pushAdj({ condition: "Ambos QBs con buen ANY/A y bajo INT%", data: `${qbH?.name ?? home}: ANY/A ${anyaRank(qbH)}º, INT% ${pctS(qbH ? qbH.int / qbH.att : NaN)} · ${qbA?.name ?? away}: ANY/A ${anyaRank(qbA)}º, INT% ${pctS(qbA ? qbA.int / qbA.att : NaN)} (liga ${pctS(lgInt)})`, met: qbH && qbA ? qbGood(qbH) && qbGood(qbA) : null, inBase: true, factor: 0.9, appliesTo: "total", reason: "La producción de ambos QBs en la temporada pasada ya está en los puntos a favor que forman la base." });
+  pushAdj({ condition: "Ambos QBs con buen ANY/A y bajo INT%", data: `${qbH?.name ?? home}: ANY/A ${anyaRank(qbH)}º, INT% ${pctS(qbH ? qbH.int / qbH.att : NaN)} · ${qbA?.name ?? away}: ANY/A ${anyaRank(qbA)}º, INT% ${pctS(qbA ? qbA.int / qbA.att : NaN)} (liga ${pctS(lgInt)})`, met: qbH && qbA ? qbGood(qbH) && qbGood(qbA) : null, inBase: true, factor: 0.9, appliesTo: "total", reason: "La producción de ambos QBs ya está en los puntos a favor que forman la base." });
   pushAdj({ condition: `Rival con alto pressure rate (contra ${home})`, data: `${away}: ${pctS(M.pressureRate.get(away))} (${rk(M.pressureRate, away, true)})`, met: top10(M.pressureRate, away, true), inBase: true, factor: 0.9, appliesTo: "home", reason: "La presión de la defensa rival ya se refleja en sus puntos permitidos." });
   pushAdj({ condition: `Rival con alto pressure rate (contra ${away})`, data: `${home}: ${pctS(M.pressureRate.get(home))} (${rk(M.pressureRate, home, true)})`, met: top10(M.pressureRate, home, true), inBase: true, factor: 0.9, appliesTo: "away", reason: "Igual: ya está en los puntos permitidos." });
   pushAdj({ condition: "Ambas defensas top-10 en EPA/jugada permitido", data: `${home} ${rk(M.defEpa, home, false)}, ${away} ${rk(M.defEpa, away, false)}`, met: top10(M.defEpa, home, false) && top10(M.defEpa, away, false), inBase: true, factor: 0.88, appliesTo: "total", reason: "La calidad defensiva ya entra como def_local y def_visita en λ: aplicarlo otra vez contaría doble." });
   pushAdj({ condition: "Viento fuerte (> 25 km/h ≈ 15.5 mph) o lluvia intensa", data: target.roof === "outdoors" ? `Viento ${windMph ?? "—"} mph; lluvia: sin dato` : `Estadio ${target.roof}`, met: target.roof === "outdoors" ? (windMph ?? 0) > 15.5 : false, inBase: false, factor: 0.9, appliesTo: "total", reason: "Condición del día del partido: información nueva." });
   pushAdj({ condition: "Estadio con domo o techo cerrado", data: target.roof ?? "—", met: target.roof === "dome" || target.roof === "closed", inBase: false, factor: 1.05, appliesTo: "total", reason: "Condición del día del partido." });
   pushAdj({ condition: "Frío extremo (< 0 °C ≈ 32 °F)", data: tempF !== null ? `${tempF} °F` : "Sin dato", met: tempF !== null ? tempF < 32 : null, inBase: false, factor: 0.93, appliesTo: "total", reason: "Condición del día del partido." });
-  pushAdj({ condition: `Ritmo combinado alto (jugadas por partido sobre la media)`, data: `${home} ${f1(M.pace.get(home))}, ${away} ${f1(M.pace.get(away))}, liga ${f1(leagueAvg(M.pace))}`, met: (M.pace.get(home) ?? 0) + (M.pace.get(away) ?? 0) > 2 * leagueAvg(M.pace), inBase: true, factor: 1.05, appliesTo: "total", reason: "El ritmo de la temporada pasada ya está en los puntos por partido." });
+  pushAdj({ condition: `Ritmo combinado alto (jugadas por partido sobre la media)`, data: `${home} ${f1(M.pace.get(home))}, ${away} ${f1(M.pace.get(away))}, liga ${f1(leagueAvg(M.pace))}`, met: (M.pace.get(home) ?? 0) + (M.pace.get(away) ?? 0) > 2 * leagueAvg(M.pace), inBase: true, factor: 1.05, appliesTo: "total", reason: "El ritmo de la base ya está en los puntos por partido." });
   for (const t of [home, away]) {
     const offOut = offStarterOut(t);
     const defOut = defStarterOut(t);
@@ -530,7 +586,7 @@ export async function buildPregameAnalysis(gameId: string) {
   const muTotal = muHome + muAway;
   formula({ id: "lambda-final", section: "5", name: "λ final con ajustes aplicables", expression: "λ_final = λ_base × Π(factores con información nueva)", substituted: `${home}: ${f1(baseHome, 2)} × ${f1(mulHome, 3)} · ${away}: ${f1(baseAway, 2)} × ${f1(mulAway, 3)}`, result: `${home} ${f1(muHome, 1)} – ${away} ${f1(muAway, 1)} · total ${f1(muTotal, 1)}` });
   if (newToBase.length) {
-    add({ id: "inj-new", section: "5", category: "Disponibilidad de jugadores", label: "Bajas de jugadores que no están en la base", value: newToBase.map((i) => `${i.name} (${i.team}, ${i.position})`).join("; "), source: `${SRC.injuries} + ${SRC.depth} ${priorSeason}`, status: "derivado", note: `No fueron titulares de su equipo en ${priorSeason}: los ratings construidos con ${priorSeason} no los contienen, así que su baja no cambia la proyección. Es información que el modelo todavía no sabe usar (fichajes, novatos).` });
+    add({ id: "inj-new", section: "5", category: "Disponibilidad de jugadores", label: "Bajas de jugadores que no están en la base", value: newToBase.map((i) => `${i.name} (${i.team}, ${i.position})`).join("; "), source: `${SRC.injuries} + ${SRC.depth} (${baseLabel})`, status: "derivado", note: `No fueron titulares de su equipo en la base (${baseLabel}): los ratings no los contienen, así que su baja no cambia la proyección. Es información que el modelo todavía no sabe usar (fichajes, novatos).` });
   }
 
   // Simulación (5.4 / 5.7.9)
@@ -696,7 +752,7 @@ export async function buildPregameAnalysis(gameId: string) {
   const marketFav = (target.homeMoneyline ?? 0) < (target.awayMoneyline ?? 0) ? home : away;
   const checks: Check[] = [
     { id: "8.3.1", rule: "No confundir predicción con valor", status: ml ? "pasa" : "no_evaluable", detail: ml ? `El mercado favorece a ${marketFav}; el modelo ve ${pctS(pHome)} para ${home}. El pick sale del edge (${ml.pick}), no de quién es más probable.` : "Sin moneyline." },
-    { id: "8.3.2", rule: "No sobreponderar los últimos 5 partidos", status: "pasa", detail: `El modelo no usa rachas: pondera temporada completa y regresión. Los últimos 5 del QB son de ${priorSeason} y solo se muestran como contexto.` },
+    { id: "8.3.2", rule: "No sobreponderar los últimos 5 partidos", status: "pasa", detail: `El modelo no usa rachas: pondera temporadas completas (${baseLabel}) con regresión a la media. Los últimos 5 partidos del QB solo se muestran como contexto.` },
     { id: "8.3.3", rule: "Si el pick depende de que una defensa colapse, verificar presión, lesiones y clima", status: "pasa", detail: `Ningún pick asume un colapso: las defensas son ${rk(M.defEpa, home, false)} (${home}) y ${rk(M.defEpa, away, false)} (${away}) en EPA permitido.` },
     { id: "8.3.4", rule: "Presión alta contra el QB → revisar 1H Under / Under primero", status: top10(M.pressureRate, home, true) || top10(M.pressureRate, away, true) ? "alerta" : "pasa", detail: `Pressure rate: ${home} ${pctS(M.pressureRate.get(home))} (${rk(M.pressureRate, home, true)}), ${away} ${pctS(M.pressureRate.get(away))} (${rk(M.pressureRate, away, true)}).` },
     { id: "8.3.5", rule: "El estadio o el clima no deciden solos", status: "pasa", detail: `Ajustes de clima/estadio aplicados: ${adjustments.filter((a) => a.applied && /Viento|domo|Frío/.test(a.condition)).length}.` },
@@ -715,7 +771,7 @@ export async function buildPregameAnalysis(gameId: string) {
   ];
   const dependencies = picks.map((m) => ({
     pick: `${m.market}: ${m.pick} ${m.line}`,
-    assumption: m.market === "Total" ? (m.pick === "Under" ? "Las dos defensas de la temporada pasada siguen siendo élite" : "Las ofensivas superan a las defensas") : `${m.pick} rinde al menos como en ${priorSeason} y el rival no mejora`,
+    assumption: m.market === "Total" ? (m.pick === "Under" ? "Las dos defensas mantienen el nivel de la base" : "Las ofensivas superan a las defensas") : `${m.pick} rinde al menos como en la base (${baseLabel}) y el rival no mejora`,
     ifFails: "Pierde valor",
     risk: m.market === "Total" ? "Medio" : "Alto",
   }));
@@ -761,6 +817,7 @@ export async function buildPregameAnalysis(gameId: string) {
     ],
     "2": [
       `En ${priorSeason}: ${home} ${H.reg.wins}–${H.reg.losses} y ${away} ${A.reg.wins}–${A.reg.losses}. Según el Pitagórico, ${home} ${H.actual - H.pyth >= 0 ? "ganó un poco más" : "ganó un poco menos"} de lo que merecía y ${away} ${A.actual - A.pyth >= 0 ? "un poco más" : "un poco menos"}.`,
+      ...(currentSeasonGames ? [`En ${target.season} antes de este partido: ${home} ${curRec(home)} y ${away} ${curRec(away)} (récord · PF/PA).`] : []),
       `Solo hay ${h2h.length} de 5 enfrentamientos directos en los datos cargados: el historial pesa poco.`,
     ],
     "3": [
@@ -770,10 +827,11 @@ export async function buildPregameAnalysis(gameId: string) {
     ],
     "4": [
       `${betterDef} tuvo la mejor defensa por jugada (${rkN(M.defEpa, home, false)} ${home} vs ${rkN(M.defEpa, away, false)} ${away}); ${better(M.pressureRate, true)} presiona más al QB (${rkN(M.pressureRate, home, true)} vs ${rkN(M.pressureRate, away, true)}).`,
-      injuryDetail.length ? `Bajas previas: ${injuryDetail.map((i) => `${i.name} (${i.team})`).join(", ")}. ${injuryDetail.some((i) => i.inBase) ? "Alguna afecta a la base." : `Ninguna fue titular en ${priorSeason}, así que no mueven la proyección.`}` : "Sin bajas importantes reportadas antes del partido.",
+      injuryDetail.length ? `Bajas previas: ${injuryDetail.map((i) => `${i.name} (${i.team})`).join(", ")}. ${injuryDetail.some((i) => i.inBase) ? "Alguna afecta a la base." : `Ninguna era titular en la base, así que no mueven la proyección.`}` : "Sin bajas importantes reportadas antes del partido.",
     ],
     "5": [
       `Proyección ${away} ${f1(muAway)} – ${home} ${f1(muHome)} (total ${f1(muTotal)}). Los tres métodos dan entre ${pctS(Math.min(...methods.map((m) => m.p)))} y ${pctS(Math.max(...methods.map((m) => m.p)))} a ${home}: confianza ${confidence}.`,
+      currentSeasonGames ? `Los partidos de ${target.season} ya pesan ${pctS(curShare(home), 0)} en los ratings de ${home} y ${pctS(curShare(away), 0)} en los de ${away}; el resto sigue saliendo de ${priorSeason}.` : `Semana 1: los ratings salen por completo de ${priorSeason}.`,
       `${metAdj} de ${adjustments.length} condiciones de la tabla 5.3 se cumplen; ${appliedAdj} se aplicaron (el resto ya está en la base o no se cumple).`,
     ],
     "6": [
@@ -792,6 +850,31 @@ export async function buildPregameAnalysis(gameId: string) {
   const gameEpa = async (abbr: string) =>
     (await prisma.play.aggregate({ where: { gameId, possessionTeamAbbr: abbr, playType: { in: ["pass", "run"] } }, _avg: { epa: true } }))._avg.epa;
   const [hg, ag] = played ? await Promise.all([gameEpa(home), gameEpa(away)]) : [null, null];
+  const diagnosis: string[] = [];
+  if (played) {
+    const realTotal = finalTotal as number, realMargin = finalMargin as number;
+    if (total !== null) {
+      const closer = Math.abs(muTotal - realTotal) < Math.abs(total - realTotal) ? "El modelo estuvo más cerca que el mercado." : "El mercado estuvo más cerca.";
+      diagnosis.push(`Total: proyectado ${f1(muTotal)}, real ${realTotal}, línea ${total}. ${closer}`);
+    }
+    if (spread !== null) {
+      const closer = Math.abs(muMargin - realMargin) < Math.abs(spread - realMargin) ? "el modelo estuvo más cerca" : "el mercado estuvo más cerca";
+      diagnosis.push(`Margen para ${home}: proyectado ${sgn(muMargin, 1)}, mercado ${sgn(spread, 1)}, real ${sgn(realMargin, 0)}: ${closer}.`);
+    }
+    for (const [t, v] of [[home, hg], [away, ag]] as const) {
+      const baseEpa = M.offEpa.get(t);
+      if (v === null || baseEpa === undefined) continue;
+      const diff = v - baseEpa;
+      diagnosis.push(`EPA ofensivo de ${t} en el partido: ${sgn(v, 3)} contra ${sgn(baseEpa, 3)} en la base (${Math.abs(diff) < 0.05 ? "en su nivel" : diff > 0 ? "muy por encima de su nivel" : "muy por debajo de su nivel"}).`);
+    }
+    if (ml) {
+      const bm = (pHome - (realMargin > 0 ? 1 : 0)) ** 2;
+      const bk = ((ml.sides.find((x) => x.pick === home)?.pImplied ?? 0.5) - (realMargin > 0 ? 1 : 0)) ** 2;
+      diagnosis.push(`Brier del modelo ${f1(bm, 3)} contra ${f1(bk, 3)} del mercado: ${bm < bk ? "el modelo fue más preciso" : "el mercado fue más preciso"} en la probabilidad de victoria.`);
+    }
+    if (newToBase.length) diagnosis.push(`Jugadores fuera de la base (fichajes, novatos o suplentes que subieron): ${newToBase.length} en el reporte de lesiones. El modelo todavía no sabe medirlos.`);
+    diagnosis.push("Las reglas se aplicaron igual que antes del partido: nada se ajustó después de conocer el resultado.");
+  }
   const postgame = played
     ? {
         homeScore: target.homeScore as number,
@@ -802,6 +885,7 @@ export async function buildPregameAnalysis(gameId: string) {
         brierModel: r3((pHome - ((finalMargin as number) > 0 ? 1 : 0)) ** 2),
         brierMarket: ml ? r3(((mk("Moneyline")?.sides.find((s) => s.pick === home)?.pImplied ?? 0.5) - ((finalMargin as number) > 0 ? 1 : 0)) ** 2) : null,
         epaInGame: { [home]: hg === null ? null : r3(hg), [away]: ag === null ? null : r3(ag) },
+        diagnosis,
         injuredLate: injLate.map((i) => `${i.fullName} (${i.teamAbbr}, ${i.reportStatus ?? "—"}, ${i.dateModified?.toISOString().slice(0, 10)})`),
       }
     : null;
@@ -815,7 +899,16 @@ export async function buildPregameAnalysis(gameId: string) {
     },
     data: { priorSeasonGames, currentSeasonGames, cutoff: cutoff.toISOString().slice(0, 10), plays: plays.length, drives: drives.length, pressureRows: pressureRows.length, injuryRows: injPre.length, depthRows: depthNow.length },
     league: { mean: r3(leagueMean, 2), hfa: r3(hfa, 2), hfaObserved: r3(hfaObserved, 2), sigmaMargin: r3(sigmaMargin, 2), sigmaTotal: r3(sigmaTotal, 2) },
-    items, formulas, takeaways,
+    items, formulas, takeaways, baseLabel,
+    ratings: Object.fromEntries([[home, H, qbH], [away, A, qbA]].map(([t, P, q]) => {
+      const team = t as string, prof = P as typeof H, qb = q as typeof qbH;
+      return [team, {
+        off: r3(prof.off, 2), def: r3(prof.def, 2), elo: Math.round(getElo(team)), weightCurrent: r3(curShare(team)), gamesCurrent: agg.get(team)?.gamesCur ?? 0,
+        offEpa: r3(M.offEpa.get(team) ?? NaN), defEpa: r3(M.defEpa.get(team) ?? NaN),
+        offEpaRank: rankOf(M.offEpa, team, true), defEpaRank: rankOf(M.defEpa, team, false),
+        qb: qb ? { name: qb.name, anya: r3(qb.anya, 2), epa: qb.epa === null ? null : r3(qb.epa), currentGames: qb.currentGames } : null,
+      }];
+    })),
     inventory: { byStatus, byCategory, total: items.length },
     gate: gateFields.map((g) => ({ section: g.section, label: g.label, ok: g.ok, blocks: g.blocks ?? null })),
     campoFaltante,

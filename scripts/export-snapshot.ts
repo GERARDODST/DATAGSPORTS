@@ -20,7 +20,7 @@ import { buildPregameAnalysis, type PregameAnalysis } from "../src/lib/framework
 
 // Equipo que seguimos partido a partido y cuántos de sus partidos ya tienen análisis previo.
 const FOCUS_TEAM = "KC";
-const FOCUS_GAMES_ANALYZED = 1;
+const FOCUS_GAMES_ANALYZED = 2;
 
 const ROOT = path.resolve(__dirname, "..", "snapshot");
 const DIST = path.join(ROOT, "dist");

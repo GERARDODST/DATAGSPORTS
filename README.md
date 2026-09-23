@@ -45,7 +45,11 @@ antes de su fecha** y siguiendo el algoritmo maestro del framework: gate de comp
 ratings con regresión a la media (la temporada anterior pesa la mitad), triangulación
 Log5 / Elo / simulación, marcador proyectado, valor contra los momios de cierre, auditoría y,
 al final, comparación con el resultado real. En la semana 1 todo sale de la temporada
-anterior; cada partido nuevo entra al siguiente modelo con más peso.
+anterior; desde la semana 2 cada partido de la temporada actual pesa el doble que uno del año
+anterior en **todas** las métricas (puntos, EPA, 3er down, zona roja, presión, QB, quién es
+titular "en la base"). La sección del equipo compara los análisis entre sí: probabilidad del
+modelo contra el mercado, error de la proyección, Brier y cómo cambian los ratings partido a
+partido.
 
 Para la semana 1 se necesitan los datos de la temporada anterior:
 
