@@ -74,6 +74,12 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
               </>
             )}
           </p>
+          <Link
+            href={`/modelo/${game.gameId}`}
+            className="inline-block mt-3 text-xs text-accent border border-accent/40 rounded-full px-3 py-1 hover:bg-accent/10"
+          >
+            Ver cómo se construye el modelo de puntos esperados →
+          </Link>
         </div>
       </header>
 

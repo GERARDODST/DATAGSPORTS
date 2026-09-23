@@ -80,6 +80,19 @@ export default async function Home() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10 flex flex-col gap-12">
+        {recentGames[0] && (
+          <Link
+            href={`/modelo/${recentGames[0].gameId}`}
+            className="block bg-surface border border-accent/30 rounded-xl p-4 hover:border-accent transition-colors"
+          >
+            <p className="text-xs uppercase tracking-wide text-accent mb-1">Construcción del modelo</p>
+            <p className="text-sm text-foreground">
+              Mira cómo se calcula el modelo de Puntos Esperados desde datos reales, jugada por jugada, usando{" "}
+              {recentGames[0].awayTeam.abbr} @ {recentGames[0].homeTeam.abbr} como caso de estudio →
+            </p>
+          </Link>
+        )}
+
         <section>
           <SectionTitle
             title="Resultados recientes"
