@@ -184,6 +184,8 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
       wind: toInt(row.wind),
       homeQbName: row.home_qb_name || null,
       awayQbName: row.away_qb_name || null,
+      homeQbId: row.home_qb_id && row.home_qb_id !== "NA" ? row.home_qb_id : null,
+      awayQbId: row.away_qb_id && row.away_qb_id !== "NA" ? row.away_qb_id : null,
     };
     await prisma.game.upsert({
       where: { gameId: row.game_id },

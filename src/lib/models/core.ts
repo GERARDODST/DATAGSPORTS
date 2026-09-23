@@ -20,6 +20,8 @@ export type MGame = {
   mlAway: number | null;
   homeQb: string | null; // QB titular (nflverse schedules: home_qb_name)
   awayQb: string | null;
+  homeQbId: string | null; // gsis id del QB titular (home_qb_id), el mismo id del play-by-play
+  awayQbId: string | null;
   roof: string | null;
   temp: number | null; // °F
   wind: number | null; // mph

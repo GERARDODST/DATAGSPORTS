@@ -1,5 +1,5 @@
 {
- "createdAt": "2026-09-23T08:52:49.202Z",
+ "createdAt": "2026-09-23T09:05:39.713Z",
  "protocol": "Calentamiento 2018–2019 · entrenamiento 2020–2022 (modelos) · validación 2023 (ensamble) · prueba 2024",
  "splits": [
   {
@@ -21,7 +21,7 @@
      "initialLoss": 0.6385866878164629,
      "bestLoss": 0.6380409168642077,
      "evaluations": 18,
-     "seconds": 0.734,
+     "seconds": 0.75,
      "trace": [
       {
        "pass": 1,
@@ -237,7 +237,7 @@
      "initialLoss": 0.6440487053475162,
      "bestLoss": 0.6357045190286151,
      "evaluations": 28,
-     "seconds": 0.077,
+     "seconds": 0.074,
      "trace": [
       {
        "pass": 1,
@@ -527,7 +527,7 @@
      "initialLoss": 0.6411891289005809,
      "bestLoss": 0.6409517975327479,
      "evaluations": 56,
-     "seconds": 4.434,
+     "seconds": 4.276,
      "trace": [
       {
        "pass": 1,
@@ -1047,7 +1047,7 @@
      "initialLoss": 0.6417720992871669,
      "bestLoss": 0.6417720992871669,
      "evaluations": 12,
-     "seconds": 5.194,
+     "seconds": 5.515,
      "trace": [
       {
        "pass": 1,
@@ -1156,7 +1156,7 @@
      "initialLoss": 0.647424436813974,
      "bestLoss": 0.6395247727023156,
      "evaluations": 30,
-     "seconds": 12.009,
+     "seconds": 12.739,
      "trace": [
       {
        "pass": 1,
@@ -1461,7 +1461,7 @@
      "initialLoss": 0.6372742829720744,
      "bestLoss": 0.6366503863606651,
      "evaluations": 24,
-     "seconds": 0.625,
+     "seconds": 0.651,
      "trace": [
       {
        "pass": 1,
@@ -1775,7 +1775,7 @@
      "initialLoss": 0.6463097688930008,
      "bestLoss": 0.6330479130290148,
      "evaluations": 28,
-     "seconds": 0.044,
+     "seconds": 0.055,
      "trace": [
       {
        "pass": 1,
@@ -2065,7 +2065,7 @@
      "initialLoss": 0.6397230494661208,
      "bestLoss": 0.6382336312764872,
      "evaluations": 121,
-     "seconds": 7.093,
+     "seconds": 7.244,
      "trace": [
       {
        "pass": 1,
@@ -3089,7 +3089,7 @@
      "initialLoss": 0.640151825804354,
      "bestLoss": 0.6387523931151987,
      "evaluations": 17,
-     "seconds": 5.476,
+     "seconds": 5.52,
      "trace": [
       {
        "pass": 1,
@@ -3289,7 +3289,7 @@
      "initialLoss": 0.653444254938669,
      "bestLoss": 0.643087993545487,
      "evaluations": 30,
-     "seconds": 7.524,
+     "seconds": 7.495,
      "trace": [
       {
        "pass": 1,
@@ -3757,8 +3757,964 @@
    }
   ]
  },
+ "qbValue": {
+  "params": {
+   "k": 600,
+   "halfLife": 1000000,
+   "teamHalfLife": 8,
+   "k0": 0.05
+  },
+  "grid": [
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6472617613008973
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.647373541925074
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6477750536973176
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6462130322013208
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6463244443476153
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6467357096108572
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6462122806323171
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6463050148599039
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6466507931089706
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6463017021799422
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6464407845971811
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6469335824290995
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6451676531835768
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6453043484771843
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6458007220877449
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6452083127071944
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6453230266913097
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6457428296328426
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6458272445516104
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.645977695713172
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6465097478490701
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.644649515874704
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6447969497796809
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6453302993299258
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6447006408981362
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6448251812687236
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6452785733287063
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6455950820550377
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6457505273498753
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6463001901607213
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6443955841620653
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6445477917140157
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6450978222480888
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.644449302488281
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6445783492884625
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6450472887608963
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6453677133883845
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6455276629075251
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6460934744459046
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6441466687193012
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6443032195655842
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6448686027851414
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6442012719196464
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6443345169287106
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6448180419147057
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6470227752677128
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6472193611012773
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.647890366881878
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.646016652461843
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6462112815030288
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6469016421613071
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.646150967525678
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6463063267735651
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6468717730360733
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6459590516464959
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6461914385489407
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6469850523660897
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6448865150111877
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6451130190741655
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6459108803125515
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6450853417875693
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6452685462109519
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6459251601303768
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6454337027998148
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6456783113680298
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6465189632751759
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6443254577745646
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6445633133604916
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6454026350538794
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6445445435739139
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6447386554127347
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.645432684877307
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6451775378088916
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6454267082022732
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6462866567990846
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.644051101957053
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6442933448956791
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6451497174646526
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6442771538897255
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6444758042781489
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6451859075748334
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6449275630979966
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6451802625006035
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6460565655210305
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6437829010895453
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6440286568396337
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.644899495015226
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6440138573188368
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6442164007622746
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6449406621728744
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.647105088347467
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.647426835993917
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6483742772187588
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6461699115899826
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6464861711180266
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6474819704585278
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6463744753009939
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6466202089134406
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6474376279570013
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6460093712971199
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6463709151618935
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6474756788265704
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6450279779060946
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6453761857965118
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6464982998871011
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6453177475637377
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6455908337852531
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6465071664998062
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6454643208167908
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.645835081530541
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6469954247182303
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6444570406740519
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.644812772310479
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.645977491683558
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6447776368086445
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6450587540614933
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6460102051034354
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6451984312346732
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.645571016713082
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6467521730147096
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6441776602028646
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6445349164429183
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6457148338078624
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6445103930246235
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6447939387368131
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.645758512312212
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6449392340287109
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6453118591285147
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6465089623718854
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.643904767160114
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.644262095447381
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6454529761236998
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6442474500098476
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6445323595753304
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6455069171170523
+   }
+  ],
+  "offLoss": 0.6512575997823007
+ },
  "qb": {
-  "k0": 15,
+  "k0": 120,
   "window": 17,
   "seasonFirst": false,
   "grid": [
@@ -3766,343 +4722,395 @@
     "k0": null,
     "window": 0,
     "seasonFirst": false,
-    "loss": 0.6512575997823007
+    "loss": 0.6437829010895453
    },
    {
     "k0": 15,
     "window": 8,
     "seasonFirst": false,
-    "loss": 0.6510836096390019
+    "loss": 0.6444737013650294
    },
    {
     "k0": 30,
     "window": 8,
     "seasonFirst": false,
-    "loss": 0.6510036939826909
+    "loss": 0.6444011833655574
    },
    {
     "k0": 60,
     "window": 8,
     "seasonFirst": false,
-    "loss": 0.6508737721370995
+    "loss": 0.6442784479750384
    },
    {
     "k0": 120,
     "window": 8,
     "seasonFirst": false,
-    "loss": 0.6506999689181914
+    "loss": 0.6440987546846352
    },
    {
     "k0": 250,
     "window": 8,
     "seasonFirst": false,
-    "loss": 0.6505361092405776
+    "loss": 0.6438812486010212
    },
    {
     "k0": 500,
     "window": 8,
     "seasonFirst": false,
-    "loss": 0.6505066833663035
+    "loss": 0.6437254975126534
    },
    {
     "k0": 15,
     "window": 12,
     "seasonFirst": false,
-    "loss": 0.6495659912711984
+    "loss": 0.6435311023485347
    },
    {
     "k0": 30,
     "window": 12,
     "seasonFirst": false,
-    "loss": 0.649540459839867
+    "loss": 0.6434984237624267
    },
    {
     "k0": 60,
     "window": 12,
     "seasonFirst": false,
-    "loss": 0.6495056221778209
+    "loss": 0.6434449497801878
    },
    {
     "k0": 120,
     "window": 12,
     "seasonFirst": false,
-    "loss": 0.6494818022740788
+    "loss": 0.6433730459274539
    },
    {
     "k0": 250,
     "window": 12,
     "seasonFirst": false,
-    "loss": 0.6495361080033634
+    "loss": 0.6433072810024062
    },
    {
     "k0": 500,
     "window": 12,
     "seasonFirst": false,
-    "loss": 0.6497453562065102
+    "loss": 0.6433072417119824
    },
    {
     "k0": 15,
     "window": 17,
     "seasonFirst": false,
-    "loss": 0.6480736620135982
+    "loss": 0.6426654486812978
    },
    {
     "k0": 30,
     "window": 17,
     "seasonFirst": false,
-    "loss": 0.6480866108651456
+    "loss": 0.6426541728286275
    },
    {
     "k0": 60,
     "window": 17,
     "seasonFirst": false,
-    "loss": 0.6481226427031245
+    "loss": 0.6426403027464986
    },
    {
     "k0": 120,
     "window": 17,
     "seasonFirst": false,
-    "loss": 0.6482205549198103
+    "loss": 0.6426369651457031
    },
    {
     "k0": 250,
     "window": 17,
     "seasonFirst": false,
-    "loss": 0.6484745593467827
+    "loss": 0.6426850232871668
    },
    {
     "k0": 500,
     "window": 17,
     "seasonFirst": false,
-    "loss": 0.6489290842494873
+    "loss": 0.6428266979551756
    },
    {
     "k0": 15,
     "window": 24,
     "seasonFirst": false,
-    "loss": 0.6508427862521641
+    "loss": 0.6451046057669558
    },
    {
     "k0": 30,
     "window": 24,
     "seasonFirst": false,
-    "loss": 0.6507433426808503
+    "loss": 0.6450008401688612
    },
    {
     "k0": 60,
     "window": 24,
     "seasonFirst": false,
-    "loss": 0.6505757171094799
+    "loss": 0.6448191882223576
    },
    {
     "k0": 120,
     "window": 24,
     "seasonFirst": false,
-    "loss": 0.6503357432831345
+    "loss": 0.6445366491861355
    },
    {
     "k0": 250,
     "window": 24,
     "seasonFirst": false,
-    "loss": 0.6500756934449539
+    "loss": 0.6441564228625691
    },
    {
     "k0": 500,
     "window": 24,
     "seasonFirst": false,
-    "loss": 0.6499817845421436
+    "loss": 0.6438321965937086
    },
    {
     "k0": 15,
     "window": 8,
     "seasonFirst": true,
-    "loss": 0.6517070106296756
+    "loss": 0.6450813035887382
    },
    {
     "k0": 30,
     "window": 8,
     "seasonFirst": true,
-    "loss": 0.6516096130976067
+    "loss": 0.6449927986737418
    },
    {
     "k0": 60,
     "window": 8,
     "seasonFirst": true,
-    "loss": 0.6514503920128041
+    "loss": 0.6448419169559908
    },
    {
     "k0": 120,
     "window": 8,
     "seasonFirst": true,
-    "loss": 0.6512325447742072
+    "loss": 0.6446165957627965
    },
    {
     "k0": 250,
     "window": 8,
     "seasonFirst": true,
-    "loss": 0.6510043800750478
+    "loss": 0.6443272818397056
    },
    {
     "k0": 500,
     "window": 8,
     "seasonFirst": true,
-    "loss": 0.6508938919227041
+    "loss": 0.6440813704071033
    },
    {
     "k0": 15,
     "window": 12,
     "seasonFirst": true,
-    "loss": 0.6521436813403343
+    "loss": 0.6453654413271078
    },
    {
     "k0": 30,
     "window": 12,
     "seasonFirst": true,
-    "loss": 0.6520314320306626
+    "loss": 0.645267335623695
    },
    {
     "k0": 60,
     "window": 12,
     "seasonFirst": true,
-    "loss": 0.6518454147009884
+    "loss": 0.6450991141839895
    },
    {
     "k0": 120,
     "window": 12,
     "seasonFirst": true,
-    "loss": 0.6515832052833788
+    "loss": 0.6448450406375109
    },
    {
     "k0": 250,
     "window": 12,
     "seasonFirst": true,
-    "loss": 0.6512867242359877
+    "loss": 0.644511353055152
    },
    {
     "k0": 500,
     "window": 12,
     "seasonFirst": true,
-    "loss": 0.6510995791779407
+    "loss": 0.644215542900848
    },
    {
     "k0": 15,
     "window": 17,
     "seasonFirst": true,
-    "loss": 0.651601598293515
+    "loss": 0.644860485160146
    },
    {
     "k0": 30,
     "window": 17,
     "seasonFirst": true,
-    "loss": 0.6515229488643384
+    "loss": 0.6447909187572151
    },
    {
     "k0": 60,
     "window": 17,
     "seasonFirst": true,
-    "loss": 0.6513946158054879
+    "loss": 0.6446719792170399
    },
    {
     "k0": 120,
     "window": 17,
     "seasonFirst": true,
-    "loss": 0.6512196880621065
+    "loss": 0.6444933188254808
    },
    {
     "k0": 250,
     "window": 17,
     "seasonFirst": true,
-    "loss": 0.651038067849276
+    "loss": 0.6442610935165968
    },
    {
     "k0": 500,
     "window": 17,
     "seasonFirst": true,
-    "loss": 0.6509527943666421
+    "loss": 0.6440588966915481
    },
    {
     "k0": 15,
     "window": 24,
     "seasonFirst": true,
-    "loss": 0.652165740176034
+    "loss": 0.645375603082674
    },
    {
     "k0": 30,
     "window": 24,
     "seasonFirst": true,
-    "loss": 0.6520496890734867
+    "loss": 0.6452765393208623
    },
    {
     "k0": 60,
     "window": 24,
     "seasonFirst": true,
-    "loss": 0.6518575508707531
+    "loss": 0.6451067778060324
    },
    {
     "k0": 120,
     "window": 24,
     "seasonFirst": true,
-    "loss": 0.6515871663587017
+    "loss": 0.6448506305435683
    },
    {
     "k0": 250,
     "window": 24,
     "seasonFirst": true,
-    "loss": 0.6512823681596227
+    "loss": 0.6445146972746455
    },
    {
     "k0": 500,
     "window": 24,
     "seasonFirst": true,
-    "loss": 0.6510911229544925
+    "loss": 0.6442173590501893
    }
   ]
  },
  "context": {
-  "k0": 100,
+  "k0": 10,
   "grid": [
    {
     "k0": null,
-    "loss": 0.6480736620135982,
-    "lossMargin": 4.02684532303639,
-    "lossTotal": 4.026360520900755
+    "loss": 0.6426369651457031,
+    "lossMargin": 4.0172610056186535,
+    "lossTotal": 4.020151306917289
    },
    {
     "k0": 10,
-    "loss": 0.6443906830200855,
-    "lossMargin": 4.020723933136127,
-    "lossTotal": 4.025884504643556
+    "loss": 0.6380225914012474,
+    "lossMargin": 4.009152660405325,
+    "lossTotal": 4.0194517565564345
    },
    {
     "k0": 30,
-    "loss": 0.6443841377910962,
-    "lossMargin": 4.020701915361265,
-    "lossTotal": 4.026161742922325
+    "loss": 0.6380330099048582,
+    "lossMargin": 4.009165115548194,
+    "lossTotal": 4.019804446695338
    },
    {
     "k0": 100,
-    "loss": 0.6443695254996676,
-    "lossMargin": 4.020642635093962,
-    "lossTotal": 4.026828090296954
+    "loss": 0.6380734505871676,
+    "lossMargin": 4.009217920389887,
+    "lossTotal": 4.020592869858751
    },
    {
     "k0": 300,
-    "loss": 0.6443809515692699,
-    "lossMargin": 4.020588327411222,
-    "lossTotal": 4.0278227920813245
+    "loss": 0.6382124856814902,
+    "lossMargin": 4.0094247602098205,
+    "lossTotal": 4.021676053520131
    },
    {
     "k0": 1000,
-    "loss": 0.6446802191535492,
-    "lossMargin": 4.020984510479959,
-    "lossTotal": 4.028542293491428
+    "loss": 0.6387679434854175,
+    "lossMargin": 4.01035242567855,
+    "lossTotal": 4.02242338542183
    },
    {
     "k0": 3000,
-    "loss": 0.6456097064004414,
-    "lossMargin": 4.022531747515197,
-    "lossTotal": 4.028029946471838
+    "loss": 0.6399422492226672,
+    "lossMargin": 4.012422100968756,
+    "lossTotal": 4.021874681100776
    }
   ]
+ },
+ "keyNumbers": {
+  "margin": {
+   "a": 1,
+   "grid": [
+    {
+     "a": null,
+     "score": 4.008835946455057
+    },
+    {
+     "a": 1,
+     "score": 3.8509500610046032
+    },
+    {
+     "a": 5,
+     "score": 3.8557066172969985
+    },
+    {
+     "a": 20,
+     "score": 3.876732874606674
+    },
+    {
+     "a": 100,
+     "score": 3.9314551480310853
+    }
+   ]
+  },
+  "total": {
+   "a": 5,
+   "grid": [
+    {
+     "a": null,
+     "score": 4.019120518052626
+    },
+    {
+     "a": 1,
+     "score": 3.9876505678630743
+    },
+    {
+     "a": 5,
+     "score": 3.9854452168991883
+    },
+    {
+     "a": 20,
+     "score": 3.990476820328736
+    },
+    {
+     "a": 100,
+     "score": 4.005782724817332
+    }
+   ]
+  }
  }
 }

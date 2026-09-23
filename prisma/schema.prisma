@@ -76,6 +76,8 @@ model Game {
   wind           Int?
   homeQbName     String?
   awayQbName     String?
+  homeQbId       String?
+  awayQbId       String?
 
   weekStats PlayerWeekStat[]
   drives    Drive[]

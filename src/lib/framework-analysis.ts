@@ -66,6 +66,7 @@ const SRC = {
 
 const f1 = (v: number | null | undefined, d = 1) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : v.toFixed(d));
 const pctS = (v: number | null | undefined, d = 1) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : `${(v * 100).toFixed(d)}%`);
+const fmtSigned = (v: number) => (v > 0 ? `+${v}` : `${v}`);
 const sgn = (v: number, d = 2) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
 const r3 = (v: number, d = 3) => Number(v.toFixed(d));
 const mean = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / Math.max(1, xs.length);
@@ -573,6 +574,19 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     note: "Lista que cada equipo entrega 90 minutos antes de la patada inicial: confirma quién NO juega. Reemplaza al Doubtful/Questionable del reporte de lesiones.",
     impact: haveInactives ? undefined : "Sin inactivos, las bajas salen solo del reporte de lesiones (Out) y ningún pick puede ser Verde (8.3.12).",
   });
+  // Titulares en duda que SÍ juegan: el modelo no sabe cuánto les resta; el mercado sí lo descuenta.
+  const playingHurt = injPre.filter((i) => i.reportStatus === "Questionable" && !inactiveKeys.has(`${i.teamAbbr}_${i.gsisId}`) && currentStarters.has(`${i.teamAbbr}_${i.gsisId}`));
+  const hurtFmt = (t: string) => {
+    const list = playingHurt.filter((i) => i.teamAbbr === t);
+    return list.length ? list.map((i) => `${i.fullName} (${i.position}, ${i.primaryInjury ?? "lesión"})`).join("; ") : "Ninguno";
+  };
+  add({
+    id: "hurt", section: "4", category: "Disponibilidad de jugadores", label: "Titulares en duda que sí juegan (Questionable, no inactivos)",
+    home: hurtFmt(home), away: hurtFmt(away), source: `${SRC.injuries} + ${SRC.roster}`,
+    status: haveInactives ? (playingHurt.length ? "parcial" : "disponible") : "faltante",
+    note: playingHurt.length ? "Juegan, pero no se sabe a qué porcentaje. Ningún dato público mide cuánto rinde un jugador lesionado; el mercado sí lo incorpora, así que es la primera sospecha cuando el edge es enorme (8.3.18)." : undefined,
+    impact: playingHurt.length ? "El modelo los trata como sanos." : undefined,
+  });
   add({
     id: "depth", section: "4", category: "Disponibilidad de jugadores", label: "Titulares (depth chart de la semana)",
     home: `${depthNow.filter((d) => d.teamAbbr === home).length} titulares listados`, away: `${depthNow.filter((d) => d.teamAbbr === away).length} titulares listados`,
@@ -748,10 +762,20 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   const pHome = fin?.pHome ?? pTriangulated;
   const finalMargin0 = fin?.margin ?? muMargin;
   const finalTotal0 = fin?.total ?? muTotal;
+  // Números clave: distribución discreta del modelo final. El push se separa y la probabilidad de
+  // cubrir se expresa condicionada a que no haya push (así se compara con el momio, que devuelve el push).
+  const disc = models?.discrete ?? null;
+  const noAdj = Math.abs(adjMargin) < 0.01 && Math.abs(adjTotal) < 0.01;
+  const cond = (x: { over: number; push: number; under: number } | null) => (x ? x.over / Math.max(1e-9, x.over + x.under) : null);
+  const spreadDisc = disc && noAdj ? disc.spread : null;
+  const totalDisc = disc && noAdj ? disc.total : null;
   // Con el torneo, la distribución del margen que se dibuja es la del modelo final: mezcla de normales
   // de los modelos (pesos de margen) corrida por la capa de QB y los ajustes 5.3. Masa exacta por punto:
   // P(margen = k) = Σ w_m [Φ((k + ½ − μ_m − c)/σ_m) − Φ((k − ½ − μ_m − c)/σ_m)].
-  if (models && fin && models.weights) {
+  if (disc && noAdj) {
+    for (const k of Object.keys(bins)) delete bins[Number(k)];
+    for (const [k, p] of disc.margin) bins[k] = Math.round(p * SIMULATIONS);
+  } else if (models && fin && models.weights) {
     const wm = models.weights.margin;
     const mixMean = Object.entries(wm).reduce((acc, [k, w]) => acc + w * (models.preds[k]?.margin ?? 0), 0);
     const c = finalMargin0 - mixMean;
@@ -791,10 +815,15 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   formula({ id: "q-proj", section: "6", name: "Puntos esperados por tramo (6.7)", expression: "λ_1Q = puntos finales × %1Q ; λ_1H = puntos finales × %1H (porcentajes regresados con k = 180 posesiones)", substituted: `${home}: ${f1(finHome, 2)}×${f1(q1H, 3)} y ×${f1(h1H, 3)} · ${away}: ${f1(finAway, 2)}×${f1(q1A, 3)} y ×${f1(h1A, 3)}`, result: `1Q ${f1(proj1Q.away)}–${f1(proj1Q.home)} · 1H ${f1(proj1H.away)}–${f1(proj1H.home)} (${away}–${home})` });
   const totalLines = total !== null ? [total - 3, total - 1.5, total, total + 1.5, total + 3] : [];
   const lineTable = totalLines.map((line) => {
-    const pOver = fin?.overLines.find((l) => l.line === line)?.pOver ?? 1 - normalCdf((line - muTotal) / sigmaTotal);
-    return { line, pOver: r3(pOver), pUnder: r3(1 - pOver), read: Math.abs(pOver - 0.5) < 0.03 ? "Sin valor: muy cerca de 50%" : pOver > 0.5 ? "Inclina Over" : "Inclina Under" };
+    const dl = disc && noAdj ? disc.totalLines.find((l) => l.line === line) : null;
+    const pOver = dl ? dl.over : fin?.overLines.find((l) => l.line === line)?.pOver ?? 1 - normalCdf((line - muTotal) / sigmaTotal);
+    const pPush = dl ? dl.push : 0;
+    const pUnder = dl ? dl.under : 1 - pOver;
+    const c = pOver / Math.max(1e-9, pOver + pUnder);
+    return { line, pOver: r3(pOver), pUnder: r3(pUnder), pPush: r3(pPush), read: Math.abs(c - 0.5) < 0.03 ? "Sin valor: muy cerca de 50%" : c > 0.5 ? "Inclina Over" : "Inclina Under" };
   });
-  formula({ id: "p-over", section: "6", name: "Probabilidad de Over por línea (6.8)", expression: fin ? "P(Over L) = Σ w_m·[1 − Φ((L − μ_m)/σ_m)] (mezcla de normales del ensamble)" : "P(Over L) = 1 − Φ((L − λ_total) / σ_total)", substituted: total !== null ? (fin ? `total del ensamble ${f1(finalTotal0, 2)} ± ${f1(fin.sdTotal, 2)}, línea ${total}` : `1 − Φ((${total} − ${f1(muTotal, 2)}) / ${f1(sigmaTotal, 2)})`) : "Sin línea", result: total !== null ? pctS(fin?.pOver ?? 1 - normalCdf((total - muTotal) / sigmaTotal)) : "—" });
+  formula({ id: "p-over", section: "6", name: "Probabilidad de Over por línea (6.8)", expression: totalDisc ? "P(Over L) = Σ_{k > L} p(k),   p(k) ∝ p₀(k)·ω_k (mezcla discretizada × pesos de números clave)" : fin ? "P(Over L) = Σ w_m·[1 − Φ((L − μ_m)/σ_m)] (mezcla de normales del ensamble)" : "P(Over L) = 1 − Φ((L − λ_total) / σ_total)", substituted: total !== null ? (fin ? `total del ensamble ${f1(finalTotal0, 2)} ± ${f1(fin.sdTotal, 2)}, línea ${total}` : `1 − Φ((${total} − ${f1(muTotal, 2)}) / ${f1(sigmaTotal, 2)})`) : "Sin línea", result: total !== null ? (totalDisc ? `Over ${pctS(totalDisc.over)} · push ${pctS(totalDisc.push)} · Under ${pctS(totalDisc.under)}` : pctS(fin?.pOver ?? 1 - normalCdf((total - muTotal) / sigmaTotal))) : "—" });
+  if (spreadDisc && spread !== null) formula({ id: "p-cover", section: "7", name: "Probabilidad de cubrir el spread con números clave", expression: "P(cubre) = Σ_{k > s} p(k) / (1 − p(s)),   p(push) = p(s) si la línea es entera", substituted: `línea ${home} ${fmtSigned(-spread)}: gana ${pctS(spreadDisc.over)}, push ${pctS(spreadDisc.push)}, pierde ${pctS(spreadDisc.under)}`, result: `P(${home} cubre | sin push) = ${pctS(cond(spreadDisc))}` });
   add({ id: "wx", section: "6", category: "Clima y sede", label: "Clima (temperatura · viento)", value: target.roof === "outdoors" ? `${tempF ?? "—"} °F · ${windMph ?? "—"} mph` : `Techado (${target.roof})`, source: `${SRC.games} · temp, wind, roof`, status: target.roof === "outdoors" ? (tempF !== null ? "disponible" : "faltante") : "no_aplica", note: "Es el clima medido en el partido; como pronóstico previo es una aproximación." });
   add({ id: "rain", section: "6", category: "Clima y sede", label: "Lluvia / precipitación", value: "—", source: SRC.none, status: target.roof === "outdoors" ? "faltante" : "no_aplica", note: "nflverse no publica precipitación. Fuente sugerida: Open-Meteo (sección 9.2).", impact: target.roof === "outdoors" ? "No se puede evaluar el ajuste de lluvia intensa (5.3)." : undefined });
   add({ id: "surface", section: "6", category: "Clima y sede", label: "Estadio · superficie", value: `${target.stadium ?? "—"} · ${target.surface ?? "—"}`, source: `${SRC.games} · stadium, surface`, status: "disponible" });
@@ -802,13 +831,13 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   // ============================================================ SECCIÓN 7
   const markets: {
     market: string; pick: string; line: string; odds: number; pImplied: number; pModel: number; edge: number; fairOdds: number;
-    kellyFull: number; kellyQuarter: number; b: number; model: boolean; script: boolean; price: boolean; light: "Verde" | "Amarillo" | "Gris"; won: boolean | null; push: boolean;
+    kellyFull: number; kellyQuarter: number; b: number; model: boolean; script: boolean; price: boolean; light: "Verde" | "Amarillo" | "Gris"; won: boolean | null; push: boolean; pPush: number;
     sides: { pick: string; odds: number; pRaw: number; pImplied: number; pModel: number; edge: number }[]; overround: number;
   }[] = [];
   const played = target.homeScore !== null && target.awayScore !== null;
   const finalMargin = played ? (target.homeScore as number) - (target.awayScore as number) : null;
   const finalTotal = played ? (target.homeScore as number) + (target.awayScore as number) : null;
-  const addMarket = (market: string, sides: { pick: string; line: string; odds: number | null; p: number; won: boolean | null; push?: boolean; scriptOk: boolean }[]) => {
+  const addMarket = (market: string, sides: { pick: string; line: string; odds: number | null; p: number; won: boolean | null; push?: boolean; scriptOk: boolean }[], pPush = 0) => {
     if (sides.some((s) => s.odds === null)) return;
     const raw = sides.map((s) => impliedProbability(s.odds as number));
     const overround = raw.reduce((a, b) => a + b, 0);
@@ -819,12 +848,12 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
       market, pick: best.pick, line: best.line, odds: best.odds as number, pImplied: r3(best.pImplied), pModel: r3(best.p), edge: r3(best.edge),
       fairOdds: fairAmerican(best.p), kellyFull: r3(k.f), kellyQuarter: r3(Math.max(0, k.f / 4)), b: r3(k.b),
       model: best.edge >= 0.03, script: best.scriptOk, price: (best.odds as number) >= fairAmerican(best.p),
-      light: "Gris", won: best.won, push: Boolean(best.push), overround: r3(overround),
+      light: "Gris", won: best.won, push: Boolean(best.push), pPush: r3(pPush), overround: r3(overround),
       sides: scored.map((s) => ({ pick: s.pick, odds: s.odds as number, pRaw: r3(s.pRaw), pImplied: r3(s.pImplied), pModel: r3(s.p), edge: r3(s.edge) })),
     });
   };
-  const pCover = fin?.pCover ?? homeCovers / SIMULATIONS;
-  const pOver = fin?.pOver ?? overs / SIMULATIONS;
+  const pCover = cond(spreadDisc) ?? fin?.pCover ?? homeCovers / SIMULATIONS;
+  const pOver = cond(totalDisc) ?? fin?.pOver ?? overs / SIMULATIONS;
   const fmtLine = (v: number) => (v > 0 ? `+${v}` : `${v}`);
   addMarket("Moneyline", [
     { pick: home, line: "gana", odds: target.homeMoneyline, p: pHome, won: played ? (finalMargin as number) > 0 : null, scriptOk: finalMargin0 > 0 },
@@ -833,11 +862,11 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   if (spread !== null) addMarket("Spread", [
     { pick: home, line: fmtLine(-spread), odds: target.homeSpreadOdds, p: pCover, won: played ? (finalMargin as number) > spread : null, push: played && finalMargin === spread, scriptOk: finalMargin0 > spread },
     { pick: away, line: fmtLine(spread), odds: target.awaySpreadOdds, p: 1 - pCover, won: played ? (finalMargin as number) < spread : null, push: played && finalMargin === spread, scriptOk: finalMargin0 < spread },
-  ]);
+  ], spreadDisc?.push ?? 0);
   if (total !== null) addMarket("Total", [
     { pick: "Over", line: `${total}`, odds: target.overOdds, p: pOver, won: played ? (finalTotal as number) > total : null, push: played && finalTotal === total, scriptOk: finalTotal0 > total },
     { pick: "Under", line: `${total}`, odds: target.underOdds, p: 1 - pOver, won: played ? (finalTotal as number) < total : null, push: played && finalTotal === total, scriptOk: finalTotal0 < total },
-  ]);
+  ], totalDisc?.push ?? 0);
   const mk = (name: string) => markets.find((m) => m.market === name);
   add({ id: "ml", section: "7", category: "Mercado", label: "Moneyline de cierre", home: `${target.homeMoneyline ?? "—"}`, away: `${target.awayMoneyline ?? "—"}`, source: `${SRC.games} · home_moneyline / away_moneyline`, status: target.homeMoneyline !== null ? "disponible" : "faltante", note: "Momio de cierre: el último antes del partido. No hay historial de movimiento de línea." });
   add({ id: "sp", section: "7", category: "Mercado", label: "Spread de cierre (momios)", value: spread !== null ? `${spread >= 0 ? home : away} −${Math.abs(spread)} (${target.homeSpreadOdds ?? "—"} / ${target.awaySpreadOdds ?? "—"})` : "—", source: `${SRC.games} · spread_line, home/away_spread_odds`, status: spread !== null ? "disponible" : "faltante" });
@@ -894,6 +923,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     { id: "8.3.15", rule: "Sin edge claro → no bet", status: markets.some((m) => m.edge >= 0.03) ? "pasa" : "alerta", detail: `Edges: ${markets.map((m) => `${m.market} ${sgn(m.edge * 100, 1)} pp`).join(", ")}.` },
     { id: "8.3.16", rule: "Correlación entre picks del mismo partido (5.7.10)", status: ml && sp && ml.light !== "Gris" && sp.light !== "Gris" && ml.pick === sp.pick ? "alerta" : "pasa", detail: ml && sp && ml.pick === sp.pick ? `Moneyline y spread con ${ml.pick} dependen del mismo supuesto: solo uno puede llevar stake completo.` : "Sin picks correlacionados." },
     { id: "8.3.17", rule: "Campo obligatorio vacío → nunca Verde (9.3)", status: campoFaltante ? "alerta" : "pasa", detail: campoFaltante ? "campo_faltante = verdadero → semáforo máximo Amarillo." : "Sin campos faltantes." },
+    { id: "8.3.18", rule: "Edge de más de 10 pp contra un mercado eficiente → buscar la información que falta", status: markets.some((m) => m.edge > 0.1) ? "alerta" : "pasa", detail: markets.some((m) => m.edge > 0.1) ? `${markets.filter((m) => m.edge > 0.1).map((m) => `${m.market} ${m.pick} ${m.line}: ${sgn(m.edge * 100, 1)} pp`).join(" · ")}. La investigación (Levitt 2004; valor de la línea de cierre) muestra que el cierre es muy difícil de vencer: un edge tan grande suele ser información que el modelo no tiene (una lesión que no deja inactivo, un cambio de plan), no un error del mercado.${playingHurt.length ? ` Candidatos en este partido: ${playingHurt.map((i) => `${i.fullName} (${i.teamAbbr}, ${i.position}, Questionable)`).join(", ")}.` : ""}` : "Ningún edge supera 10 pp." },
   ];
   const dependencies = picks.map((m) => ({
     pick: `${m.market}: ${m.pick} ${m.line}`,
@@ -916,7 +946,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     { phase: "Fase 3 · Puntos y total", step: "λ base + ajustes 5.3 sin doble conteo; 1Q/1H; tabla por línea", status: "hecho" },
     { phase: "Fase 3 · Puntos y total", step: "Simulación por posesiones con la cadena de Markov (5.4 nivel 2)", status: "parcial" },
     { phase: "Fase 4 · Valor", step: "Probabilidad implícita, edge, momio justo, ¼ Kelly", status: "hecho" },
-    { phase: "Fase 5 · Auditoría", step: "17 filtros de la sección 8.3 y dependencia de supuestos", status: "hecho" },
+    { phase: "Fase 5 · Auditoría", step: "18 filtros de la sección 8.3 (17 del framework + edge grande) y dependencia de supuestos", status: "hecho" },
     { phase: "Fase 6 · Salida", step: "Semáforo por mercado con razón y dato faltante", status: "hecho" },
   ];
 
@@ -1037,9 +1067,11 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     if (models) {
       const y = realMargin > 0 ? 1 : realMargin < 0 ? 0 : 0.5;
       const ll = (p: number) => -(y * Math.log(Math.max(1e-6, p)) + (1 - y) * Math.log(Math.max(1e-6, 1 - p)));
-      const names: Record<string, string> = { framework: "Framework", elo: "Elo", kalman: "Kalman", ridge: "Ridge", epa: "EPA", market: "Mercado" };
+      const names: Record<string, string> = { framework: "Framework", elo: "Elo", kalman: "Kalman", ridge: "Ridge", epa: "EPA" };
       const ranked = Object.keys(names).filter((k) => models.preds[k]).map((k) => ({ k, loss: ll(models.preds[k].p ?? 0.5) })).sort((a, b) => a.loss - b.loss);
-      diagnosis.push(`En este partido el modelo más acertado fue ${names[ranked[0].k]} (P = ${pctS(models.preds[ranked[0].k].p)} para ${home}) y el menos acertado ${names[ranked[ranked.length - 1].k]} (${pctS(models.preds[ranked[ranked.length - 1].k].p)}). Esa pérdida ya entra en los pesos del siguiente partido.`);
+      const mk = models.preds.market?.p ?? null;
+      const finalBeatsMarket = mk === null ? null : ll(pHome) < ll(mk);
+      diagnosis.push(`En este partido el modelo más acertado fue ${names[ranked[0].k]} (P = ${pctS(models.preds[ranked[0].k].p)} para ${home}) y el menos acertado ${names[ranked[ranked.length - 1].k]} (${pctS(models.preds[ranked[ranked.length - 1].k].p)}). Esa pérdida ya entra en los pesos del siguiente partido.${mk === null ? "" : ` El modelo final (${pctS(pHome)}) ${finalBeatsMarket ? "le ganó" : "perdió"} contra el mercado (${pctS(mk)}).`}`);
     }
     if (newToBase.length) diagnosis.push(`Jugadores fuera de la base (fichajes, novatos o suplentes que subieron): ${newToBase.length} en el reporte de lesiones. El modelo todavía no sabe medirlos.`);
     diagnosis.push("Las reglas se aplicaron igual que antes del partido: nada se ajustó después de conocer el resultado.");

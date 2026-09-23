@@ -9,6 +9,7 @@ import { prisma } from "../prisma";
 import { type MGame, type Model, type Prediction, type TeamGameEpa, brier, gaussNll, impliedNoVig, logLoss, normalCdf, normalInv, outcome } from "./core";
 
 export type Records = { g: MGame; preds: Record<string, Prediction> }[];
+export type QbGame = { team: string; plays: number; epa: number };
 
 export async function loadModelData(fromSeason = 2018) {
   const rows = await prisma.game.findMany({
@@ -19,11 +20,11 @@ export async function loadModelData(fromSeason = 2018) {
     id: r.gameId, season: r.season, week: r.week, type: r.gameType ?? "REG", date: (r.gameDate as Date).toISOString().slice(0, 10),
     home: r.homeTeamAbbr, away: r.awayTeamAbbr, hs: r.homeScore as number, as: r.awayScore as number, neutral: r.location === "Neutral",
     spread: r.spreadLine, total: r.totalLine, mlHome: r.homeMoneyline, mlAway: r.awayMoneyline,
-    homeQb: r.homeQbName, awayQb: r.awayQbName, roof: r.roof, temp: r.temp, wind: r.wind,
+    homeQb: r.homeQbName, awayQb: r.awayQbName, homeQbId: r.homeQbId, awayQbId: r.awayQbId, roof: r.roof, temp: r.temp, wind: r.wind,
   }));
   const plays = await prisma.play.findMany({
     where: { season: { gte: fromSeason }, playType: { in: ["pass", "run"] }, epa: { not: null } },
-    select: { gameId: true, possessionTeamAbbr: true, defenseTeamAbbr: true, epa: true },
+    select: { gameId: true, possessionTeamAbbr: true, defenseTeamAbbr: true, epa: true, passerPlayerId: true, rusherPlayerId: true, playType: true },
   });
   const bucket = new Map<string, { gameId: string; team: string; opp: string; vals: number[] }>();
   for (const p of plays) {
@@ -39,8 +40,21 @@ export async function loadModelData(fromSeason = 2018) {
     list.push({ gameId: b.gameId, team: b.team, opp: b.opp, epa: Float64Array.from(b.vals) });
     epaByGame.set(b.gameId, list);
   }
+  // Jugadas de QB por partido: pases y sacks (passer_player_id) y carreras de quien también pasó en ese partido.
+  const qbByGame = new Map<string, Map<string, QbGame>>();
+  const passers = new Map<string, Set<string>>();
+  for (const p of plays) if (p.passerPlayerId) { const set = passers.get(p.gameId) ?? new Set<string>(); set.add(p.passerPlayerId); passers.set(p.gameId, set); }
+  for (const p of plays) {
+    const id = p.passerPlayerId ?? (p.rusherPlayerId && passers.get(p.gameId)?.has(p.rusherPlayerId) ? p.rusherPlayerId : null);
+    if (!id || !p.possessionTeamAbbr) continue;
+    const m = qbByGame.get(p.gameId) ?? new Map<string, QbGame>();
+    const q = m.get(id) ?? { team: p.possessionTeamAbbr, plays: 0, epa: 0 };
+    q.plays++; q.epa += p.epa as number;
+    m.set(id, q);
+    qbByGame.set(p.gameId, m);
+  }
   const teams = [...new Set(games.flatMap((g) => [g.home, g.away]))].sort();
-  return { games, epaByGame, teams, plays: plays.length };
+  return { games, epaByGame, qbByGame, teams, plays: plays.length };
 }
 
 export function runWalkForward(games: MGame[], models: Model[]): Records {
@@ -188,6 +202,76 @@ export function addQbLayer(records: Records, base: string, out: string, k0: numb
   return info;
 }
 
+// ------------------------------------------------------------------ Capa de valor por QB
+export type QbValueParams = { k: number; halfLife: number; teamHalfLife: number; k0: number };
+export type QbValueInfo = { homeQb: string | null; awayQb: string | null; vHome: number; vAway: number; baseHome: number; baseAway: number; nHome: number; nAway: number; prior: number; x: number; beta: number; betaTotal: number; shiftMargin: number; shiftTotal: number; n: number };
+
+/**
+ * Valor de cada QB = EPA por jugada propia (pases, sacks y carreras), con decaimiento por partido
+ * (vida media en partidos del QB) y regresión a la media de los QB nuevos:
+ *   v_q = (Σ d·EPA + k·μ_nuevo) / (Σ d·jugadas + k)
+ * μ_nuevo = EPA/jugada de los QB con menos de 300 jugadas previas (nivel de reemplazo medido).
+ * Nivel de QB que ya traen los ratings del equipo: promedio exponencial (vida media en partidos del
+ * equipo) del valor de quien jugó. Diferencia del partido:
+ *   x = (v_titular,L − base_L) − (v_titular,V − base_V)
+ * y su efecto en puntos se estima en línea: β̂ = Σ x·r / (Σ x² + k₀), con r el residuo del modelo.
+ * Es la idea del ajuste de QB de FiveThirtyEight/nfeloqb, medida con EPA en lugar de VALUE.
+ */
+export function addQbValueLayer(records: Records, base: string, out: string, qbByGame: Map<string, Map<string, QbGame>>, params: QbValueParams, startSeason = 2019) {
+  const qb = new Map<string, { s: number; n: number; career: number }>();
+  const teamBase = new Map<string, { s: number; w: number }>();
+  let newS = 0, newN = 0;
+  let sxr = 0, sxx = 0, sxt = 0, sxxT = 0, nObs = 0;
+  const dq = Math.pow(0.5, 1 / params.halfLife), dt = Math.pow(0.5, 1 / params.teamHalfLife);
+  const info = new Map<string, QbValueInfo>();
+  const prior = () => (newN > 50 ? newS / newN : 0);
+  const value = (id: string | null) => {
+    const q = id ? qb.get(id) : undefined;
+    return q ? (q.s + params.k * prior()) / (q.n + params.k) : prior();
+  };
+  const baseOf = (t: string, fallback: number) => { const b = teamBase.get(t); return b && b.w > 0 ? b.s / b.w : fallback; };
+  let i = 0;
+  while (i < records.length) {
+    const date = records[i].g.date;
+    const day: Records = [];
+    while (i < records.length && records[i].g.date === date) day.push(records[i++]);
+    const beta = sxr / (sxx + params.k0), betaT = sxt / (sxxT + params.k0);
+    const pending: { x: number; xt: number; r: number; rt: number | null }[] = [];
+    for (const r of day) {
+      const g = r.g, pr = r.preds[base];
+      const vh = value(g.homeQbId), va = value(g.awayQbId);
+      const bh = baseOf(g.home, vh), ba = baseOf(g.away, va);
+      const x = vh - bh - (va - ba), xt = vh - bh + (va - ba);
+      const sm = beta * x, st = pr.total === null ? 0 : betaT * xt;
+      r.preds[out] = { ...pr, p: sm ? normalCdf(normalInv(pr.p) + sm / (pr.sdMargin ?? 13.5)) : pr.p, margin: pr.margin === null ? null : pr.margin + sm, total: pr.total === null ? null : pr.total + st };
+      info.set(g.id, { homeQb: g.homeQb, awayQb: g.awayQb, vHome: vh, vAway: va, baseHome: bh, baseAway: ba, nHome: g.homeQbId ? qb.get(g.homeQbId)?.career ?? 0 : 0, nAway: g.awayQbId ? qb.get(g.awayQbId)?.career ?? 0 : 0, prior: prior(), x, beta, betaTotal: betaT, shiftMargin: sm, shiftTotal: st, n: nObs });
+      if (g.season >= startSeason && pr.margin !== null) pending.push({ x, xt, r: g.hs - g.as - pr.margin, rt: pr.total === null ? null : g.hs + g.as - pr.total });
+    }
+    for (const p of pending) { sxr += p.x * p.r; sxx += p.x * p.x; if (p.rt !== null) { sxt += p.xt * p.rt; sxxT += p.xt * p.xt; } nObs++; }
+    // Actualizar valores de QB y nivel de QB de cada equipo con lo ocurrido en la fecha.
+    for (const r of day) {
+      const m = qbByGame.get(r.g.id);
+      if (!m) continue;
+      const byTeam = new Map<string, { s: number; w: number }>();
+      for (const [id, q] of m) {
+        const before = value(id);
+        const cur = qb.get(id) ?? { s: 0, n: 0, career: 0 };
+        if (cur.career < 300) { newS += q.epa; newN += q.plays; }
+        qb.set(id, { s: cur.s * dq + q.epa, n: cur.n * dq + q.plays, career: cur.career + q.plays });
+        const t = byTeam.get(q.team) ?? { s: 0, w: 0 };
+        t.s += before * q.plays; t.w += q.plays;
+        byTeam.set(q.team, t);
+      }
+      for (const [team, t] of byTeam) {
+        if (!t.w) continue;
+        const b = teamBase.get(team) ?? { s: 0, w: 0 };
+        teamBase.set(team, { s: b.s * dt + t.s / t.w, w: b.w * dt + 1 });
+      }
+    }
+  }
+  return info;
+}
+
 // ------------------------------------------------------------------ Capa de bajas y clima (tabla 5.3 medida con datos)
 export const AVAIL_GROUPS = ["ol", "skill", "front", "db"] as const;
 export type AvailGroup = (typeof AVAIL_GROUPS)[number];
@@ -198,9 +282,10 @@ export type GameContext = { home: TeamAvail; away: TeamAvail; wind: boolean; dom
 /**
  * Titulares habituales fuera en cada partido. "Titular habitual" = depth_team 1 en al menos la mitad
  * de las últimas 8 semanas publicadas por su equipo ANTES del partido (sin QB: lo cubre la capa de QB).
+ * Con seasonFirst, si ya hay 3+ semanas de la temporada actual se usan solo esas (novatos titulares).
  * "Fuera" = inactivo del día del partido (INA) o en lista de reserva (RES: lesionados, PUP…) esa semana.
  */
-export async function loadGameContext(games: MGame[]) {
+export async function loadGameContext(games: MGame[], seasonFirst = false) {
   const depth = await prisma.depthChartEntry.findMany({ where: { depthTeam: 1 }, select: { season: true, week: true, teamAbbr: true, gsisId: true, position: true } });
   const rs = await prisma.rosterStatus.findMany({ where: { status: { in: ["INA", "RES"] } }, select: { season: true, week: true, teamAbbr: true, gsisId: true, status: true, fullName: true } });
   const wk = (season: number, week: number) => `${season}_${String(week).padStart(2, "0")}`;
@@ -220,7 +305,10 @@ export async function loadGameContext(games: MGame[]) {
     const t = byTeam.get(team);
     if (!t) return null;
     const cur = wk(season, week);
-    const prev = (sortedKeys.get(team) ?? []).filter((k) => k < cur).slice(-8);
+    const all = (sortedKeys.get(team) ?? []).filter((k) => k < cur);
+    // Con "temporada primero", si el equipo ya publicó 3+ semanas este año, solo cuentan esas.
+    const thisSeason = all.filter((k) => k.startsWith(`${season}_`));
+    const prev = seasonFirst && thisSeason.length >= 3 ? thisSeason.slice(-8) : all.slice(-8);
     if (prev.length < 4) return null;
     const cnt = new Map<string, { n: number; g: AvailGroup }>();
     for (const k of prev) for (const [id, g] of t.get(k) as Map<string, AvailGroup>) { const c = cnt.get(id) ?? { n: 0, g }; c.n++; cnt.set(id, c); }

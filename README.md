@@ -88,8 +88,10 @@ El equipo y cuántos de sus partidos se analizan se configuran en `scripts/expor
 ## Torneo de modelos
 
 `src/lib/models/` contiene cinco modelos (framework, Elo, Kalman de Glickman–Stern, ridge de
-puntos y EPA ajustada por rival), un ensamble con pesos exponenciales y una capa de ajuste por
-QB titular. Todos se prueban partido a partido sin ver el futuro (ver
+puntos y EPA ajustada por rival), un ensamble con pesos exponenciales y capas medidas con datos:
+valor por QB, cambio de QB, bajas de titulares y clima, y números clave (distribución discreta del
+margen y del total). `data/research.json` es la biblioteca de investigación (fuentes, bitácora y
+hoja de ruta por sección) que se muestra en la pestaña "Investigación" del laboratorio. Todos se prueban partido a partido sin ver el futuro (ver
 `docs/nfl_framework_v1.md`, sección 5.4.3).
 
 ```bash

@@ -538,6 +538,17 @@ resultados anteriores (prueba *walk-forward*) y los combina según su acierto pa
 | Domo o techo cerrado | ×1.05 ≈ +2.2 pts | +2.63 ± 0.71 | Confirmado |
 | Frío < 0 °C | ×0.93 ≈ −3.1 pts | −0.45 ± 1.83 (57 partidos) | No se sostiene |
 
+- **Valor por QB (reemplaza a la regla binaria como capa principal):** EPA por jugada propia de
+  cada QB en toda su carrera, `v = (Σ EPA + k·μ_nuevo)/(jugadas + k)`, contra el nivel de QB que
+  ya traen los ratings del equipo (promedio exponencial de 8 partidos); la diferencia se convierte
+  a puntos con `β̂ = Σ x·r / (Σ x² + k₀)` en línea. Validación 2023: 0.6444 → 0.6380. La capa
+  binaria queda encima porque la validación la sigue eligiendo (novatos sin jugadas).
+- **Números clave:** la mezcla de normales se discretiza por enteros y se reescala con
+  `ω_k = (obs_k + a)/(esp_k + a)` medido en 2019–2023 (3: ×2.8, 7: ×1.8, 10: ×1.2, empate ×0.2).
+  Spread y total se valoran con probabilidad de push; log score del margen 2024: 3.968 → 3.863.
+- **Regla 8.3.18 (nueva):** un edge de más de 10 pp contra el cierre dispara una alerta de
+  información faltante (Levitt 2004; valor de la línea de cierre), con los titulares "Questionable"
+  que sí juegan como primeros candidatos.
 - **Regla de QB probada y rechazada:** "habitual = el que más inició esta temporada" (arreglaría
   fichajes titulares como Cousins en ATL 2024) empeora la validación: convierte en habitual al
   suplente de un titular lesionado. Queda pendiente un modelo de valor por QB.
@@ -548,10 +559,11 @@ resultados anteriores (prueba *walk-forward*) y los combina según su acierto pa
 | --- | --- | --- |
 | Framework original | 0.6235 | 67.4% |
 | Ensamble + capa de QB | 0.6151 | 68.8% |
-| Modelo final (+ bajas y clima medidos) | **0.6071** | **68.4%** |
+| + bajas y clima medidos | 0.6071 | 68.4% |
+| Modelo final (+ valor de QB) | **0.6048** | **70.2%** |
 | Mercado (momios de cierre) | 0.5892 | 70.9% |
 
-El mercado va adelante, pero la diferencia ya no es significativa (z ≈ 1.6); contra el spread
+El mercado va adelante, pero la diferencia no es significativa (z ≈ 1.7); contra el spread
 ningún modelo se separa del 50% más allá de su error estándar. En el análisis de cada partido
 la probabilidad final es la del modelo final; los factores fijos de la tabla 5.3 para bajas y
 clima ya no se aplican (los reemplaza la capa medida) y la triangulación del framework queda

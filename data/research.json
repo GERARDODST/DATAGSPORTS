@@ -1,0 +1,873 @@
+{
+ "updated": "2026-09-23",
+ "intro": "Esta biblioteca reúne lo que se consultó para construir los modelos de DATAGSPORTS: artículos académicos, modelos públicos, código abierto y análisis de la comunidad de NFL analytics. Está ordenada por las 10 secciones del framework. En cada una: por qué importa para pronosticar, qué dice la investigación, qué ya está implementado (y con qué resultado medido) y qué sigue, en orden de prioridad.",
+ "howToRead": [
+  "Tipo de fuente: artículo (revisado por pares), libro, modelo (sistema público de pronóstico), código (repositorio), análisis (blog o sitio especializado) y datos.",
+  "Uso en DATAGSPORTS: implementado (está en el código), probado y descartado (se midió y no mejoró la validación), inspiración (guió una decisión) o pendiente (siguiente paso).",
+  "Los números de impacto salen del protocolo del laboratorio: se decide con la validación 2023 y se reporta la prueba 2024."
+ ],
+ "path": [
+  {
+   "step": "Expected Points desde cero",
+   "source": "Carter y Machol (1971)",
+   "what": "EP por yarda en 1er down, promediando los puntos de la siguiente anotación.",
+   "result": "Correlación 0.80 con el EPA de nflverse.",
+   "decision": "Base del modelo v1."
+  },
+  {
+   "step": "Cadena de Markov con iteración de valor",
+   "source": "Goldner (2012); Advanced Football Analytics",
+   "what": "160 estados (down × distancia × zona) resueltos por iteración de valor con shrinkage jerárquico.",
+   "result": "Correlación 0.945 con nflverse.",
+   "decision": "Modelo v2 del laboratorio; falta el reloj (semi-Markov)."
+  },
+  {
+   "step": "Framework: λ + triangulación",
+   "source": "Documento del framework; Pitagórico (Morey), Log5 (James), Elo",
+   "what": "Puntos esperados con regresión a la media y tres métodos promediados.",
+   "result": "Log-loss 2024: 0.6235 · acierto 67.4%.",
+   "decision": "Punto de partida para comparar."
+  },
+  {
+   "step": "Torneo de 5 modelos + ensamble Hedge",
+   "source": "Glickman y Stern (1998); FiveThirtyEight; Harville (1980); Open Source Football; Freund y Schapire (1997)",
+   "what": "Cinco modelos walk-forward combinados con pesos exponenciales por acierto.",
+   "result": "Log-loss 2024: 0.6185.",
+   "decision": "Ningún modelo gana todos los años; el ensamble es el más estable."
+  },
+  {
+   "step": "Corrección del modelo de EPA",
+   "source": "Diagnóstico propio",
+   "what": "La ventaja de local casi no pasa por el EPA; se agregó un término de localía a la conversión EPA → puntos.",
+   "result": "Entrenamiento: 0.6474 → 0.6395.",
+   "decision": "Implementado."
+  },
+  {
+   "step": "Capa binaria de cambio de QB",
+   "source": "FiveThirtyEight (ajuste de QB); residuos propios",
+   "what": "Si arranca un QB distinto al habitual (últimos 17 partidos), el margen se corrige ≈ 2 pts.",
+   "result": "Log-loss 2024: 0.6185 → 0.6151.",
+   "decision": "Implementado; la regla 'temporada primero' se probó y se descartó."
+  },
+  {
+   "step": "Tabla 5.3 medida con datos",
+   "source": "Framework 5.3; análisis de clima (NFL Analytics, Pinnacle)",
+   "what": "Titulares fuera por grupo y clima con regresión en línea sobre los residuos.",
+   "result": "Log-loss 2024: 0.6151 → 0.6071. Viento y domo confirmados; frío no; bajas valen 0.6–0.9 pts, no 1.8.",
+   "decision": "Reemplaza los factores fijos de bajas y clima."
+  },
+  {
+   "step": "Valor por QB",
+   "source": "FiveThirtyEight/nfeloqb; EPA por jugada (nflfastR)",
+   "what": "EPA por jugada propia de cada QB regresada al nivel de un QB nuevo, contra el nivel que ya traen los ratings.",
+   "result": "Validación 2023: 0.6444 → 0.6380. Log-loss 2024: 0.6048 · acierto 70.2%.",
+   "decision": "Implementado; corrige casos como Cousins en ATL 2024."
+  },
+  {
+   "step": "Números clave (3, 7, 10)",
+   "source": "Stern (1991); Wong, Sharp Sports Betting",
+   "what": "Distribución discreta del margen y del total con pesos ω medidos.",
+   "result": "Log score del margen 2024: 3.968 → 3.863 (total: 3.979 → 3.949). Push en spreads enteros 2023–2024: la curva continua predecía 8, la discreta 13; hubo 18.",
+   "decision": "Implementado para spread, total y push."
+  },
+  {
+   "step": "Auditoría: edge mayor a 10 pp",
+   "source": "Levitt (2004); valor de la línea de cierre",
+   "what": "Un edge enorme contra el cierre suele ser información que falta, no un error del mercado.",
+   "result": "Regla 8.3.18.",
+   "decision": "Implementado como alerta."
+  },
+  {
+   "step": "Titulares en duda que sí juegan",
+   "source": "Diagnóstico del partido 4 (KC @ LAC 2024)",
+   "what": "El modelo daba 44.8% a LAC y el mercado 25.6%. Justin Herbert jugó con el tobillo lesionado (Questionable): el mercado lo sabía, el modelo no.",
+   "result": "Nuevo dato del análisis y candidatos nombrados en la alerta 8.3.18.",
+   "decision": "Implementado como dato; medir su efecto requiere más temporadas de reportes (pendiente)."
+  },
+  {
+   "step": "Descartados",
+   "source": "Validación 2023",
+   "what": "Recalibración de Platt, stacking logístico, QB habitual por temporada, titulares habituales por temporada.",
+   "result": "Todos empeoran la validación (aunque el stacking parecía mejor en 2024).",
+   "decision": "No se usan: elegirlos por 2024 sería sobreajuste."
+  }
+ ],
+ "sections": [
+  {
+   "id": "1",
+   "title": "Liga, conferencia y contexto",
+   "why": "El contexto (descanso, viajes, horario, partido divisional) mueve pocos puntos, pero es información que los ratings no tienen porque no depende de la calidad del equipo. Es de los pocos lugares donde se puede sumar información nueva sin contar doble.",
+   "sources": [
+    {
+     "who": "ESPN Stats & Info",
+     "title": "A guide to NFL FPI",
+     "year": 2016,
+     "type": "modelo",
+     "url": "https://www.espn.com/blog/statsinfo/post/_/id/123048/a-guide-to-nfl-fpi",
+     "idea": "El Football Power Index ajusta por viajes, días de descanso y altitud además de la eficiencia por EPA.",
+     "use": "inspiración"
+    },
+    {
+     "who": "FiveThirtyEight",
+     "title": "How our NFL predictions work",
+     "year": 2019,
+     "type": "modelo",
+     "url": "https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work",
+     "idea": "El Elo de 538 agrega ajustes por descanso (bye week), distancia de viaje y playoffs.",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "Partido divisional, sede neutral y días de descanso como datos del análisis.",
+     "status": "disponible"
+    }
+   ],
+   "next": [
+    {
+     "what": "Medir descanso, viaje (husos horarios) y partidos de jueves con la misma regresión de residuos que la tabla 5.3.",
+     "why": "Es información nueva y medible con nflverse (home_rest, away_rest, sede).",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "2",
+   "title": "Localía, récords e historial directo",
+   "why": "La ventaja de local es un parámetro de todos los modelos. Si está mal medida, todos los pronósticos se sesgan en la misma dirección. Los récords engañan: el diferencial de puntos predice mejor que las victorias.",
+   "sources": [
+    {
+     "who": "Sportico / NBC Sports",
+     "title": "NFL home-field advantage declines",
+     "year": 2020,
+     "type": "análisis",
+     "url": "https://www.sportico.com/leagues/football/2020/nfl-home-field-advantage-1234617561/",
+     "idea": "La ventaja de local pasó de ~3 puntos (regla histórica) a ~2 antes de 2020 y ~1 en 2020 sin público (local 127-128-1).",
+     "use": "implementado"
+    },
+    {
+     "who": "Arxiv 2401.16392",
+     "title": "A comprehensive survey of the home advantage in American football",
+     "year": 2024,
+     "type": "artículo",
+     "url": "https://arxiv.org/pdf/2401.16392",
+     "idea": "Revisión de la ventaja de local en el fútbol americano: magnitud, tendencia a la baja y causas (público, viaje, árbitros).",
+     "use": "inspiración"
+    },
+    {
+     "who": "Arxiv 2104.11595",
+     "title": "Does home advantage without crowd exist in American football?",
+     "year": 2021,
+     "type": "artículo",
+     "url": "https://arxiv.org/pdf/2104.11595",
+     "idea": "Estudia la temporada sin público para separar el efecto del público del de viaje y familiaridad.",
+     "use": "inspiración"
+    },
+    {
+     "who": "Football Outsiders",
+     "title": "Pythagoras on the Gridiron",
+     "year": 2003,
+     "type": "análisis",
+     "url": "https://www.footballoutsiders.com/stat-analysis/2003/pythagoras-gridiron",
+     "idea": "Win% esperado con exponente 2.37 (Daryl Morey); la diferencia entre récord real y pitagórico regresa.",
+     "use": "implementado"
+    },
+    {
+     "who": "Brian Burke (Advanced NFL Stats)",
+     "title": "Luck and NFL outcomes",
+     "year": 2007,
+     "type": "análisis",
+     "url": "https://www.advancedfootballanalytics.com/2007/08/luck-and-nfl-outcomes-3.html",
+     "idea": "Buena parte de los récords es suerte; los partidos cerrados son casi monedas al aire.",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "Ventaja de local como estado del filtro de Kalman (cambia con el tiempo) y parámetro optimizado del Elo (quedó en 20 puntos Elo ≈ 0.9 pts).",
+     "status": "implementado"
+    },
+    {
+     "what": "Suerte según el Pitagórico y 5 enfrentamientos directos desde 2018.",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Ventaja de local por estadio (altitud en Denver, viajes largos) medida con residuos.",
+     "why": "La literatura sugiere que la localía no es igual en todas las sedes.",
+     "priority": "baja"
+    }
+   ]
+  },
+  {
+   "id": "3",
+   "title": "Quarterbacks y unidad ofensiva",
+   "why": "El QB es la posición que más mueve un pronóstico: el mercado mueve de 3 a 7 puntos cuando cambia el titular. Medir bien al QB y a la ofensiva es la mejora con más retorno medido hasta ahora.",
+   "sources": [
+    {
+     "who": "Carter y Machol",
+     "title": "Operations Research on Football",
+     "year": 1971,
+     "type": "artículo",
+     "url": "https://pubsonline.informs.org/doi/10.1287/opre.19.2.541",
+     "idea": "El primer modelo de Expected Points: 8,373 jugadas de 1969; el valor de tener el balón depende de la yarda.",
+     "use": "implementado"
+    },
+    {
+     "who": "Yurko, Ventura y Horowitz",
+     "title": "nflWAR: a reproducible method for offensive player evaluation in football",
+     "year": 2019,
+     "type": "artículo",
+     "url": "https://arxiv.org/abs/1802.00998",
+     "idea": "EP con regresión logística multinomial, WP con modelo aditivo y WAR por jugador con modelos multinivel; todo reproducible con datos públicos.",
+     "use": "inspiración"
+    },
+    {
+     "who": "Baldwin y Carl (nflfastR)",
+     "title": "nflfastR EP, WP, CP, xYAC and xPass models",
+     "year": 2020,
+     "type": "código",
+     "url": "https://opensourcefootball.com/posts/2020-09-28-nflfastr-ep-wp-and-cp-models/",
+     "idea": "Modelos de EP y WP con XGBoost; de ahí salen el EPA y el CPOE que usamos.",
+     "use": "implementado"
+    },
+    {
+     "who": "Open Source Football",
+     "title": "Estimating Team Ability From EPA",
+     "year": 2021,
+     "type": "análisis",
+     "url": "https://opensourcefootball.com/posts/2021-06-27-estimating-team-ability-from-epa/",
+     "idea": "Modelo multinivel de EPA/jugada con ofensiva y defensa; el EPA tiene colas pesadas (conviene t de Student o recorte).",
+     "use": "implementado"
+    },
+    {
+     "who": "FiveThirtyEight / nfeloqb (greerreNFL)",
+     "title": "QB Elo adjustment y nfeloqb",
+     "year": 2023,
+     "type": "código",
+     "url": "https://github.com/greerreNFL/nfeloqb",
+     "idea": "VALUE por QB = −2.2·Att + 3.7·Comp + Yds/5 + 11.3·TD − 14.1·INT − 8·Sacks − 1.1·RushAtt + 0.6·RushYds + 15.9·RushTD; valor rodante con regresión y previa por posición de draft.",
+     "use": "implementado"
+    },
+    {
+     "who": "Ben Baldwin / Acme Packing Company",
+     "title": "A primer on EPA; EPA + CPOE composite",
+     "year": 2020,
+     "type": "análisis",
+     "url": "https://www.acmepackingcompany.com/by-the-numbers/2020/1/3/21048802/epa-primer-from-aaron-jones-to-aaron-rodgers-winston-baldwin-hermsmeyer-jamaal-williams",
+     "idea": "EPA por dropback y CPOE combinados son el mejor predictor público del rendimiento futuro del QB; el CPOE es muy estable año a año.",
+     "use": "pendiente"
+    },
+    {
+     "who": "Aaron Schatz (FTN / Football Outsiders)",
+     "title": "DVOA: Defense-adjusted Value Over Average",
+     "year": 2003,
+     "type": "modelo",
+     "url": "https://ftnfantasy.com/learn-more-about-dvoa",
+     "idea": "Éxito jugada por jugada ajustado por rival y situación; basado en The Hidden Game of Football (Carroll, Palmer y Thorn).",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "EPA por jugada ajustada por rival (ridge), con recorte de colas y término de localía.",
+     "status": "implementado"
+    },
+    {
+     "what": "Valor por QB con EPA por jugada propia (toda la carrera, regresada a un QB nuevo).",
+     "status": "implementado"
+    },
+    {
+     "what": "QBR de ESPN y CPOE como datos del análisis.",
+     "status": "disponible"
+    }
+   ],
+   "next": [
+    {
+     "what": "Usar EPA + CPOE en el valor del QB.",
+     "why": "El CPOE es la parte más estable del rendimiento del QB (Baldwin).",
+     "priority": "alta"
+    },
+    {
+     "what": "Previa de QB novato según su posición de draft (nfeloqb) y curva de edad (FPI).",
+     "why": "Hoy un novato arranca con el nivel promedio de un QB nuevo.",
+     "priority": "media"
+    },
+    {
+     "what": "EPA de pase y de carrera por separado.",
+     "why": "El pase es más estable y predictivo que la carrera.",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "4",
+   "title": "Defensa, lesiones y disponibilidad",
+   "why": "La defensa es menos estable que la ofensiva de un año a otro, y las lesiones son la información de última hora que más mueve las líneas. Saber cuánto vale cada baja evita exagerar o ignorar noticias.",
+   "sources": [
+    {
+     "who": "Open Source Football",
+     "title": "Estimating Team Ability From EPA",
+     "year": 2021,
+     "type": "análisis",
+     "url": "https://opensourcefootball.com/posts/2021-06-27-estimating-team-ability-from-epa/",
+     "idea": "Hay más variación en habilidad ofensiva que defensiva; la defensa regresa más a la media.",
+     "use": "inspiración"
+    },
+    {
+     "who": "Boyd's Bets",
+     "title": "NFL players & positions that impact point spreads the most",
+     "year": 2024,
+     "type": "análisis",
+     "url": "https://www.boydsbets.com/nfl-player-values-against-the-point-spread/",
+     "idea": "Valores por posición que usan las casas: el QB domina; el resto vale fracciones de punto.",
+     "use": "inspiración"
+    },
+    {
+     "who": "Análisis de mercado de lesiones",
+     "title": "Offensive line injuries are underpriced",
+     "year": 2026,
+     "type": "análisis",
+     "url": "https://nflbettingstrategies.com/articles/nfl-injury-impact-betting-lines/",
+     "idea": "Sostiene que el mercado subvalora a la línea ofensiva; nuestros datos lo matizan (−0.59 ± 0.30 pts por titular, z ≈ −1.9).",
+     "use": "probado"
+    }
+   ],
+   "done": [
+    {
+     "what": "Capa de bajas medida: titulares habituales (depth chart) inactivos o en reserva, por grupo de posición.",
+     "status": "implementado"
+    },
+    {
+     "what": "Inactivos oficiales del día del partido y reporte de lesiones filtrado por fecha (sin fuga).",
+     "status": "implementado"
+    },
+    {
+     "what": "Titulares 'Questionable' que sí juegan, listados como información que el modelo no puede medir (caso Herbert, S4 2024).",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Valor individual por jugador (snaps, EPA en sus jugadas, WAR) en lugar de contar titulares.",
+     "why": "No es lo mismo perder a un All-Pro que a un titular promedio.",
+     "priority": "alta"
+    },
+    {
+     "what": "Detectar a titulares que juegan lesionados (Questionable que sí juega), como Herbert en la S4 2024.",
+     "why": "El mercado lo sabe y el modelo no: explica grandes desacuerdos.",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "5",
+   "title": "Modelo matemático y probabilidades",
+   "why": "Es el corazón del pronóstico: convertir datos en una probabilidad bien calibrada. La literatura coincide en que los modelos dinámicos (que cambian con el tiempo) y la combinación de varios modelos superan a cualquier fórmula única.",
+   "sources": [
+    {
+     "who": "Glickman y Stern",
+     "title": "A State-Space Model for National Football League Scores",
+     "year": 1998,
+     "type": "artículo",
+     "url": "https://www.glicko.net/research/nfl.pdf",
+     "idea": "La fuerza de cada equipo es un estado autorregresivo que cambia semana a semana y entre temporadas; se estima con filtro de Kalman.",
+     "use": "implementado"
+    },
+    {
+     "who": "Stern",
+     "title": "On the Probability of Winning a Football Game (The American Statistician 45(3))",
+     "year": 1991,
+     "type": "artículo",
+     "url": "https://www.tandfonline.com/doi/abs/10.1080/00031305.1991.10475798",
+     "idea": "El margen del favorito ≈ Normal(spread, 13.86); base para convertir spreads en probabilidades.",
+     "use": "implementado"
+    },
+    {
+     "who": "Arxiv 1211.4000",
+     "title": "The Performance of Betting Lines for Predicting the Outcome of NFL Games",
+     "year": 2012,
+     "type": "artículo",
+     "url": "https://arxiv.org/pdf/1211.4000",
+     "idea": "Evalúa qué tan bien las líneas predicen resultados; confirma el margen ≈ normal alrededor del spread.",
+     "use": "implementado"
+    },
+    {
+     "who": "Harville",
+     "title": "Predictions for National Football League Games via Linear-Model Methodology (JASA 75)",
+     "year": 1980,
+     "type": "artículo",
+     "url": "https://www.tandfonline.com/doi/abs/10.1080/01621459.1980.10477504",
+     "idea": "Calificaciones por mínimos cuadrados con componentes aleatorios; antecedente de las ratings de Massey.",
+     "use": "implementado"
+    },
+    {
+     "who": "FiveThirtyEight",
+     "title": "nfl-elo-game (forecast.py)",
+     "year": 2018,
+     "type": "código",
+     "url": "https://github.com/fivethirtyeight/nfl-elo-game",
+     "idea": "Elo con K = 20, ventaja de local 65, multiplicador de margen con corrección de autocorrelación y regresión de 1/3 entre temporadas.",
+     "use": "implementado"
+    },
+    {
+     "who": "Baio y Blangiardo",
+     "title": "Bayesian hierarchical model for the prediction of football results",
+     "year": 2010,
+     "type": "artículo",
+     "url": "https://discovery.ucl.ac.uk/16040/1/16040.pdf",
+     "idea": "Ataque y defensa con previas jerárquicas que encogen hacia la media (fútbol soccer, Poisson).",
+     "use": "inspiración"
+    },
+    {
+     "who": "Goldner",
+     "title": "A Markov Model of Football: Using Stochastic Processes to Model a Football Drive",
+     "year": 2012,
+     "type": "artículo",
+     "url": "http://mcclendonmath.com/papers/goldner.pdf",
+     "idea": "Cadena de Markov absorbente con down, distancia y yarda; probabilidades de absorción y puntos esperados por posesión.",
+     "use": "implementado"
+    },
+    {
+     "who": "Romer",
+     "title": "Do Firms Maximize? Evidence from Professional Football",
+     "year": 2006,
+     "type": "artículo",
+     "url": "https://eml.berkeley.edu/~dromer/papers/PAPER_NFL_JULY05_FORWEB_CORRECTED.pdf",
+     "idea": "Programación dinámica sobre play-by-play: los equipos son demasiado conservadores en 4to down.",
+     "use": "inspiración"
+    },
+    {
+     "who": "Freund y Schapire (1997); van der Hoeven, van Erven y Kotłowski (2018)",
+     "title": "Hedge / The Many Faces of Exponential Weights in Online Learning",
+     "year": 1997,
+     "type": "libro",
+     "url": "https://proceedings.mlr.press/v75/hoeven18a/hoeven18a.pdf",
+     "idea": "Pesos exponenciales por pérdida acumulada; con log-loss el arrepentimiento está acotado por ln(M)/η.",
+     "use": "implementado"
+    },
+    {
+     "who": "Brian Burke",
+     "title": "NFL Win Prediction Methodology",
+     "year": 2007,
+     "type": "modelo",
+     "url": "https://www.advancedfootballanalytics.com/2007/09/nfl-win-prediction-methodology.html",
+     "idea": "Regresión logística con eficiencias de equipo elegidas por su poder predictivo, no explicativo.",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "Cinco modelos walk-forward (framework, Elo, Kalman, ridge, EPA) con ensamble Hedge optimizado.",
+     "status": "implementado"
+    },
+    {
+     "what": "Capas medidas: valor de QB, cambio de QB, bajas y clima.",
+     "status": "implementado"
+    },
+    {
+     "what": "Distribución discreta con números clave.",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Simulación de partido completo con la cadena de Markov con reloj (semi-Markov).",
+     "why": "Daría 1Q, 1H y totales desde la mecánica del juego, no solo desde promedios.",
+     "priority": "media"
+    },
+    {
+     "what": "Versión bayesiana completa (MCMC) del modelo de Kalman para tener incertidumbre de parámetros.",
+     "why": "Glickman y Stern usan Gibbs sampling; hoy los hiperparámetros se fijan por optimización.",
+     "priority": "baja"
+    }
+   ]
+  },
+  {
+   "id": "6",
+   "title": "Over/Under y desarrollo por cuartos",
+   "why": "El total depende de ritmo, clima y estilo más que de quién es mejor. Es el mercado donde el clima pesa más y donde los números clave del total (41, 44, 47, 51) cambian el valor.",
+   "sources": [
+    {
+     "who": "NFL Analytics",
+     "title": "Weather & NFL Scoring: It's the Wind",
+     "year": 2025,
+     "type": "análisis",
+     "url": "https://nflanalytic.com/explainer-weather-and-scoring.html",
+     "idea": "Domos 46.9 pts; al aire libre el total cae de 44.7 (sin viento) a 40.5 con viento fuerte.",
+     "use": "implementado"
+    },
+    {
+     "who": "Pinnacle",
+     "title": "NFL points totals and the effect of the weather",
+     "year": 2020,
+     "type": "análisis",
+     "url": "https://www.pinnacle.com/betting-resources/en/football/nfl-points-totals-and-the-effect-of-the-weather/5zn2av8e4w2g9sf9",
+     "idea": "El viento afecta pases largos y goles de campo; la temperatura importa mucho menos.",
+     "use": "implementado"
+    },
+    {
+     "who": "Wharton Sports Analytics",
+     "title": "Whether Weather, Wind Speed and Temperature, Impacts Offensive Production",
+     "year": 2022,
+     "type": "artículo",
+     "url": "https://wsb.wharton.upenn.edu/wp-content/uploads/2022/09/2022_Football_Parks_Weather.pdf",
+     "idea": "Estudio del efecto de viento y temperatura en la producción ofensiva.",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "Total del ensamble + clima medido (viento −3.55 ± 1.47, domo +2.63 ± 0.71, frío no significativo).",
+     "status": "implementado"
+    },
+    {
+     "what": "Números clave del total con distribución discreta.",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Lluvia pronosticada (Open-Meteo, archivo de pronósticos).",
+     "why": "Es el último dato de clima que falta; el dominio está bloqueado en el entorno en la nube.",
+     "priority": "media"
+    },
+    {
+     "what": "Modelo de ritmo (jugadas por partido) separado de la eficiencia.",
+     "why": "Dos equipos lentos y eficientes producen totales distintos a dos rápidos e ineficientes.",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "7",
+   "title": "Cuotas, probabilidad implícita y valor",
+   "why": "Pronosticar bien no basta: hay que ganarle al precio. La investigación muestra que el cierre de las casas es muy eficiente, así que la meta realista es encontrar pocos partidos con información que el mercado todavía no incorporó.",
+   "sources": [
+    {
+     "who": "Levitt",
+     "title": "Why are gambling markets organised so differently from financial markets?",
+     "year": 2004,
+     "type": "artículo",
+     "url": "https://www.stat.berkeley.edu/users/aldous/157/Papers/Levitt_Gambling_2004.pdf",
+     "idea": "Las casas predicen mejor que los apostadores y fijan precios que explotan sus sesgos (favoritos, locales).",
+     "use": "implementado"
+    },
+    {
+     "who": "Joseph Buchdahl / Pinnacle",
+     "title": "Closing Line Value demystified",
+     "year": 2023,
+     "type": "análisis",
+     "url": "https://www.pinnacleoddsdropper.com/blog/closing-line-value--clv-demystified-by-expert-joseph-buchdahl",
+     "idea": "El valor contra la línea de cierre (CLV) es el mejor indicador de ventaja a largo plazo; se necesitan muchas menos apuestas para demostrarlo.",
+     "use": "pendiente"
+    },
+    {
+     "who": "Kelly; Thorp",
+     "title": "A New Interpretation of Information Rate; The Kelly Criterion in Blackjack, Sports Betting and the Stock Market",
+     "year": 1956,
+     "type": "artículo",
+     "url": "https://en.wikipedia.org/wiki/Kelly_criterion",
+     "idea": "Tamaño de apuesta que maximiza el crecimiento logarítmico; en la práctica se usa una fracción (¼) por el error del modelo.",
+     "use": "implementado"
+    },
+    {
+     "who": "Stanford Wong",
+     "title": "Sharp Sports Betting",
+     "year": 2001,
+     "type": "libro",
+     "url": "https://www.amazon.com/Sharp-Sports-Betting-Stanford-Wong/dp/0935926240",
+     "idea": "Los márgenes se amontonan en 3 y 7; los teasers que cruzan ambos números (Wong teasers) fueron rentables.",
+     "use": "implementado"
+    },
+    {
+     "who": "nfelo",
+     "title": "Using Market Regression to Improve Prediction Accuracy in the NFL",
+     "year": 2023,
+     "type": "análisis",
+     "url": "https://www.nfeloapp.com/analysis/using-market-regression-to-improve-prediction-accuracy-in-the-nfl/",
+     "idea": "Regresar el modelo hacia el spread del mercado mejora la precisión; se decidió no hacerlo para mantener el modelo independiente.",
+     "use": "probado"
+    }
+   ],
+   "done": [
+    {
+     "what": "Probabilidad implícita sin margen, edge, momio justo y ¼ Kelly.",
+     "status": "implementado"
+    },
+    {
+     "what": "Spread y total con probabilidad de push (números clave); Kelly condicionado a que no haya push.",
+     "status": "implementado"
+    },
+    {
+     "what": "Regla 8.3.18: un edge mayor a 10 pp dispara una alerta de información faltante.",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Registrar cada pick antes del partido y medir su CLV contra el cierre.",
+     "why": "Es la métrica que la comunidad usa para saber si hay ventaja real con pocas apuestas.",
+     "priority": "alta"
+    },
+    {
+     "what": "Momios de varias casas y movimiento de línea (The Odds API).",
+     "why": "Permite buscar el mejor precio y medir CLV desde la apertura; requiere una clave de pago.",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "8",
+   "title": "Auditoría de contradicciones",
+   "why": "Con miles de partidos es fácil engañarse: encontrar un patrón que \"funciona\" por casualidad. La auditoría y un protocolo de validación estricto son lo que separa un estudio real de datos de una racha.",
+   "sources": [
+    {
+     "who": "Gneiting y Raftery",
+     "title": "Strictly Proper Scoring Rules, Prediction, and Estimation",
+     "year": 2007,
+     "type": "artículo",
+     "url": "https://sites.stat.washington.edu/raftery/Research/PDF/Gneiting2007jasa.pdf",
+     "idea": "Solo las reglas de puntuación propias (log score, Brier) premian decir la probabilidad verdadera; el log score es la única propia y local.",
+     "use": "implementado"
+    },
+    {
+     "who": "Brier; Murphy",
+     "title": "Verification of forecasts expressed in terms of probability; A new vector partition of the probability score",
+     "year": 1950,
+     "type": "artículo",
+     "url": "https://en.wikipedia.org/wiki/Brier_score",
+     "idea": "Brier = calibración − resolución + incertidumbre: separa decir bien las probabilidades de distinguir partidos.",
+     "use": "implementado"
+    },
+    {
+     "who": "Yurko, Ventura y Horowitz",
+     "title": "nflWAR (procedimiento de calibración)",
+     "year": 2019,
+     "type": "artículo",
+     "url": "https://arxiv.org/abs/1802.00998",
+     "idea": "Gráficas de calibración por grupos de probabilidad para validar modelos de WP.",
+     "use": "implementado"
+    },
+    {
+     "who": "Arxiv 2311.03490",
+     "title": "Analytics, have some humility: a statistical view of fourth-down decision making",
+     "year": 2023,
+     "type": "artículo",
+     "url": "https://arxiv.org/pdf/2311.03490",
+     "idea": "Las recomendaciones de los modelos tienen incertidumbre grande; hay que reportarla antes de afirmar ventajas.",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "Protocolo: calentamiento 2018–19, entrenamiento 2020–22, validación 2023, prueba 2024.",
+     "status": "implementado"
+    },
+    {
+     "what": "Calibración, prueba pareada contra el mercado (z) y error estándar contra el spread.",
+     "status": "implementado"
+    },
+    {
+     "what": "Experimentos descartados documentados (Platt, stacking, reglas por temporada).",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Intervalos por bootstrap para todas las métricas.",
+     "why": "285 partidos por temporada dejan mucha incertidumbre; hay que mostrarla siempre.",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "9",
+   "title": "Fuentes de datos y completitud",
+   "why": "Cada mejora medible hasta ahora vino de un dato nuevo (QB, inactivos, clima), no de una fórmula más complicada. Completar datos reales es la palanca más fuerte.",
+   "sources": [
+    {
+     "who": "nflverse",
+     "title": "nflreadr: diccionarios de datos (play-by-play, schedules, rosters)",
+     "year": 2024,
+     "type": "datos",
+     "url": "https://nflreadr.nflverse.com/articles/dictionary_schedules.html",
+     "idea": "Play-by-play con EPA/WP/CPOE, calendario con momios de cierre, rosters semanales, depth charts, lesiones, QBR y más.",
+     "use": "implementado"
+    },
+    {
+     "who": "nflfastR",
+     "title": "Get started with nflfastR",
+     "year": 2022,
+     "type": "código",
+     "url": "https://nflfastr.com/articles/nflfastR.html",
+     "idea": "Sucesor de nflscrapR; genera el play-by-play con los modelos de EP y WP.",
+     "use": "implementado"
+    }
+   ],
+   "done": [
+    {
+     "what": "2018–2024: calendario, play-by-play (2019+), lesiones, depth charts, inactivos, presión (PFR), QBR.",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Next Gen Stats y FTN charting que nflverse ya publica (separación, presión por jugada, tiempo al lanzar).",
+     "why": "Datos de seguimiento que miden al QB y a la línea mejor que el box score.",
+     "priority": "media"
+    },
+    {
+     "what": "Lluvia (Open-Meteo) y momios de varias casas (The Odds API).",
+     "why": "Los dos faltantes que bloquean el semáforo Verde.",
+     "priority": "media"
+    }
+   ]
+  },
+  {
+   "id": "10",
+   "title": "Algoritmo maestro y reproducibilidad",
+   "why": "Un estudio de datos solo vale si se puede repetir: mismo código, mismos datos, mismo resultado. nflWAR insiste en esto como condición para que la analítica de NFL avance.",
+   "sources": [
+    {
+     "who": "Yurko, Ventura y Horowitz",
+     "title": "nflWAR: a reproducible method",
+     "year": 2019,
+     "type": "artículo",
+     "url": "https://arxiv.org/abs/1802.00998",
+     "idea": "Reproducibilidad con datos públicos como principio de diseño.",
+     "use": "inspiración"
+    }
+   ],
+   "done": [
+    {
+     "what": "Todo en scripts: extracción, optimización (npm run models:optimize), reporte y exportación; parámetros versionados.",
+     "status": "implementado"
+    }
+   ],
+   "next": [
+    {
+     "what": "Corrida semanal automática y registro de picks antes de cada partido.",
+     "why": "Convierte el estudio en seguimiento en vivo sin posibilidad de ajustar después.",
+     "priority": "alta"
+    }
+   ]
+  }
+ ],
+ "models": [
+  {
+   "name": "FiveThirtyEight Elo (+QB)",
+   "who": "Nate Silver, Neil Paine",
+   "method": "Elo con margen, localía, viaje, descanso y ajuste por QB (VALUE)",
+   "public": "Código y datos (hasta 2023)",
+   "url": "https://github.com/fivethirtyeight/nfl-elo-game",
+   "ours": "Modelo Elo del torneo + capa de valor por QB con EPA"
+  },
+  {
+   "name": "nfelo / nfeloqb",
+   "who": "Robby Greer",
+   "method": "Elo de 538 mejorado, previas por mercado de victorias, regresión al mercado y modelo de QB",
+   "public": "Código",
+   "url": "https://github.com/greerreNFL/nfelo",
+   "ours": "Idea del valor de QB relativo al equipo; no usamos regresión al mercado (independencia)"
+  },
+  {
+   "name": "ESPN FPI",
+   "who": "ESPN Stats & Info",
+   "method": "EPA por unidad ajustada por rival, viaje, descanso y altitud; QB con curva de edad; 10,000 simulaciones",
+   "public": "Metodología",
+   "url": "https://www.espn.com/blog/statsinfo/post/_/id/123048/a-guide-to-nfl-fpi",
+   "ours": "Modelo de EPA ajustada por rival; pendiente viaje/descanso"
+  },
+  {
+   "name": "DVOA",
+   "who": "Aaron Schatz (FTN)",
+   "method": "Éxito por jugada según down y distancia, ajustado por rival y situación",
+   "public": "Metodología",
+   "url": "https://ftnfantasy.com/learn-more-about-dvoa",
+   "ours": "Usamos EPA en vez de puntos de éxito; misma idea de ajuste por rival"
+  },
+  {
+   "name": "nflfastR EP / WP",
+   "who": "Ben Baldwin, Sebastian Carl",
+   "method": "XGBoost con era, down, distancia, yarda, tiempo y marcador",
+   "public": "Código",
+   "url": "https://opensourcefootball.com/posts/2020-09-28-nflfastr-ep-wp-and-cp-models/",
+   "ours": "Fuente del EPA; nuestra cadena de Markov lo replica con r = 0.945"
+  },
+  {
+   "name": "Glickman–Stern",
+   "who": "Mark Glickman, Hal Stern",
+   "method": "Espacio de estados AR(1) con filtro de Kalman y MCMC",
+   "public": "Artículo",
+   "url": "https://www.glicko.net/research/nfl.pdf",
+   "ours": "Modelo Kalman ofensiva/defensa del torneo"
+  },
+  {
+   "name": "Advanced NFL Stats",
+   "who": "Brian Burke",
+   "method": "Regresión logística con eficiencias; WP en vivo; cadena de Markov de posesiones",
+   "public": "Metodología",
+   "url": "https://www.advancedfootballanalytics.com/2007/09/nfl-win-prediction-methodology.html",
+   "ours": "Inspiración para elegir métricas por poder predictivo"
+  }
+ ],
+ "people": [
+  {
+   "name": "Virgil Carter",
+   "role": "QB de los Bengals y pionero",
+   "contribution": "Primer modelo de Expected Points (1971) con Robert Machol."
+  },
+  {
+   "name": "Hal Stern",
+   "role": "Estadístico (UC Irvine)",
+   "contribution": "Distribución normal del margen alrededor del spread; modelo de espacio de estados con Glickman."
+  },
+  {
+   "name": "Mark Glickman",
+   "role": "Estadístico (Harvard)",
+   "contribution": "Sistemas Glicko y modelos dinámicos de fuerza de equipos."
+  },
+  {
+   "name": "Brian Burke",
+   "role": "Advanced NFL Stats / ESPN",
+   "contribution": "Popularizó EP, EPA y WP en la comunidad."
+  },
+  {
+   "name": "Ben Baldwin y Sebastian Carl",
+   "role": "nflfastR / Open Source Football",
+   "contribution": "Modelos públicos de EP, WP y CPOE; datos abiertos de nflverse."
+  },
+  {
+   "name": "Ron Yurko, Sam Ventura, Max Horowitz",
+   "role": "Carnegie Mellon",
+   "contribution": "nflscrapR y nflWAR: evaluación reproducible con datos públicos."
+  },
+  {
+   "name": "Aaron Schatz",
+   "role": "Football Outsiders / FTN",
+   "contribution": "DVOA y el análisis por jugada ajustado por rival."
+  },
+  {
+   "name": "Nate Silver y Neil Paine",
+   "role": "FiveThirtyEight",
+   "contribution": "Elo de NFL con ajuste por QB, código abierto."
+  },
+  {
+   "name": "Robby Greer",
+   "role": "nfelo",
+   "contribution": "Continuación del Elo de 538, modelo de QB y regresión al mercado."
+  },
+  {
+   "name": "Steven Levitt",
+   "role": "Economista (Chicago)",
+   "contribution": "Cómo las casas fijan precios y explotan sesgos de los apostadores."
+  },
+  {
+   "name": "David Romer",
+   "role": "Economista (Berkeley)",
+   "contribution": "Programación dinámica para decisiones de 4to down."
+  }
+ ]
+}

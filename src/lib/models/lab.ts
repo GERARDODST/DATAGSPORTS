@@ -12,10 +12,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { type MGame, type Model, type TeamGameEpa, clampP, logit, logLoss, outcome } from "./core";
 import { FrameworkModel, EloModel, KalmanModel, RidgeModel, EpaModel, type EloParams } from "./models";
-import { addContextLayer, addEnsemble, addQbLayer, mixtureProb, olsWithSe, contextFeatures, runWalkForward, score, withMarket, MARGIN_FEATURES, TOTAL_FEATURES, type ContextInfo, type GameContext, type QbInfo, type Records, type WeightSnapshot } from "./backtest";
+import { addContextLayer, addEnsemble, addQbLayer, addQbValueLayer, type QbValueInfo, type QbValueParams, mixtureProb, olsWithSe, contextFeatures, runWalkForward, score, withMarket, MARGIN_FEATURES, TOTAL_FEATURES, type ContextInfo, type GameContext, type QbGame, type QbInfo, type Records, type WeightSnapshot } from "./backtest";
 import { optimize, type TraceEntry } from "./optimize";
+import { discreteLogScore, fitKeyWeights, lineProbs, weightedPmf, RANGE, type Kind, type KeyWeights } from "./discrete";
 
-export type LabData = { games: MGame[]; epaByGame: Map<string, TeamGameEpa[]>; teams: string[]; ctx: Map<string, GameContext> };
+export type LabData = { games: MGame[]; epaByGame: Map<string, TeamGameEpa[]>; qbByGame: Map<string, Map<string, QbGame>>; teams: string[]; ctx: Map<string, GameContext> };
 type Spec = {
   key: string;
   label: string;
@@ -78,8 +79,10 @@ export type ParamsFile = {
     models: Record<string, { best: Record<string, number>; start: Record<string, number>; initialLoss: number; bestLoss: number; evaluations: number; seconds: number; trace: TraceEntry[] }>;
   }[];
   ensemble: { eta: number; gamma: number; grid: { eta: number; gamma: number; loss: number }[] };
+  qbValue: { params: QbValueParams | null; grid: (QbValueParams & { loss: number })[]; offLoss: number };
   qb: { k0: number | null; window: number; seasonFirst: boolean; grid: { k0: number | null; window: number; seasonFirst: boolean; loss: number }[] };
   context: { k0: number | null; grid: { k0: number | null; loss: number; lossMargin: number; lossTotal: number }[] };
+  keyNumbers: Record<Kind, { a: number | null; grid: { a: number | null; score: number }[] }>;
 };
 
 /** Optimiza cada modelo en un split (walk-forward con datos hasta el final del entrenamiento). */
@@ -131,11 +134,23 @@ export function tuneEnsemble(d: LabData, params: Record<string, Record<string, n
   const rec: Records = base.map((r) => ({ g: r.g, preds: { ...r.preds } }));
   addEnsemble(rec, MODEL_KEYS, { eta: best.eta, gamma: best.gamma, startSeason: 2019 });
   const vs = rec.filter((r) => r.g.season === validSeason);
-  const qbGrid: { k0: number | null; window: number; seasonFirst: boolean; loss: number }[] = [{ k0: null, window: 0, seasonFirst: false, loss: vs.reduce((s, r) => s + logLoss(r.preds.ensemble.p, outcome(r.g)), 0) / vs.length }];
+  const vLoss = (key: string) => vs.reduce((s, r) => s + logLoss(r.preds[key].p, outcome(r.g)), 0) / vs.length;
+  // 1) Valor por QB (EPA/jugada propia regresada) sobre el ensamble.
+  const qvGrid: (QbValueParams & { loss: number })[] = [];
+  for (const k of [300, 600, 1000]) for (const halfLife of [32, 64, 128, 256, 1e6]) for (const teamHalfLife of [4, 8, 16]) for (const k0 of [0.05, 0.25, 1]) {
+    addQbValueLayer(rec, "ensemble", "qv", d.qbByGame, { k, halfLife, teamHalfLife, k0 });
+    qvGrid.push({ k, halfLife, teamHalfLife, k0, loss: vLoss("qv") });
+  }
+  const offLoss = vLoss("ensemble");
+  const bestQv = qvGrid.reduce((a, b) => (b.loss < a.loss ? b : a));
+  const qvParams: QbValueParams | null = bestQv.loss < offLoss ? { k: bestQv.k, halfLife: bestQv.halfLife, teamHalfLife: bestQv.teamHalfLife, k0: bestQv.k0 } : null;
+  addQbValueLayer(rec, "ensemble", "qv", d.qbByGame, qvParams ?? { k: 600, halfLife: 64, teamHalfLife: 8, k0: 1e12 });
+  // 2) Capa binaria de cambio de QB encima del valor (null = no aporta).
+  const qbGrid: { k0: number | null; window: number; seasonFirst: boolean; loss: number }[] = [{ k0: null, window: 0, seasonFirst: false, loss: vLoss("qv") }];
   for (const seasonFirst of [false, true]) {
     for (const window of [8, 12, 17, 24]) {
       for (const k0 of [15, 30, 60, 120, 250, 500]) {
-        addQbLayer(rec, "ensemble", "qb", k0, window, seasonFirst);
+        addQbLayer(rec, "qv", "qb", k0, window, seasonFirst);
         qbGrid.push({ k0, window, seasonFirst, loss: vs.reduce((s, r) => s + logLoss(r.preds.qb.p, outcome(r.g)), 0) / vs.length });
       }
     }
@@ -143,7 +158,7 @@ export function tuneEnsemble(d: LabData, params: Record<string, Record<string, n
   const bestQb = qbGrid.reduce((a, b) => (b.loss < a.loss ? b : a));
   // Capa de bajas y clima: previa k₀ elegida en la validación (null = sin capa). Se mide con la
   // log-loss de victoria y, como información, con la pérdida normal del margen y del total.
-  addQbLayer(rec, "ensemble", "qb", bestQb.k0 ?? 1e9, bestQb.window || 8, bestQb.seasonFirst);
+  addQbLayer(rec, "qv", "qb", bestQb.k0 ?? 1e12, bestQb.window || 8, bestQb.seasonFirst);
   const ctxGrid = [null, 10, 30, 100, 300, 1000, 3000].map((k0) => {
     const key = k0 === null ? "qb" : "final";
     if (k0 !== null) addContextLayer(rec, "qb", "final", d.ctx, k0);
@@ -156,8 +171,22 @@ export function tuneEnsemble(d: LabData, params: Record<string, Record<string, n
     };
   });
   const bestCtx = ctxGrid.reduce((a, b) => (b.loss < a.loss ? b : a));
-  return { eta: best.eta, gamma: best.gamma, grid, qb: { k0: bestQb.k0, window: bestQb.window, seasonFirst: bestQb.seasonFirst, grid: qbGrid }, context: { k0: bestCtx.k0, grid: ctxGrid } };
+  addContextLayer(rec, "qb", "final", d.ctx, bestCtx.k0 ?? 1e12);
+  // Números clave: previa a de los pesos ω, ajustados con 2019–(validación − 1) y medidos en la validación.
+  const keyNumbers = Object.fromEntries((["margin", "total"] as Kind[]).map((kind) => {
+    const g = [null, 1, 5, 20, 100].map((a) => {
+      const kw = a === null ? null : fitKeyWeights(rec, kind, (r) => r.g.season >= 2019 && r.g.season < validSeason, shiftOf(kind), a);
+      return { a, score: vs.reduce((acc, r) => acc + discreteLogScore(weightedPmf(r, kind, shiftOf(kind)(r), kw), kind, observed(r, kind)), 0) / vs.length };
+    });
+    const b = g.reduce((x, y) => (y.score < x.score ? y : x));
+    return [kind, { a: b.a, grid: g }];
+  })) as ParamsFile["keyNumbers"];
+  return { keyNumbers, eta: best.eta, gamma: best.gamma, grid, qbValue: { params: qvParams, grid: qvGrid, offLoss }, qb: { k0: bestQb.k0, window: bestQb.window, seasonFirst: bestQb.seasonFirst, grid: qbGrid }, context: { k0: bestCtx.k0, grid: ctxGrid } };
 }
+
+const shiftOf = (kind: Kind) => (r: Records[number]) =>
+  kind === "margin" ? (r.preds.final.margin as number) - (r.preds.ensemble.margin as number) : (r.preds.final.total as number) - (r.preds.ensemble.total as number);
+const observed = (r: Records[number], kind: Kind) => (kind === "margin" ? r.g.hs - r.g.as : r.g.hs + r.g.as);
 
 export async function readParams(): Promise<ParamsFile | null> {
   try {
@@ -173,17 +202,24 @@ export function runFinal(d: LabData, pf: ParamsFile | null) {
   const t0 = Date.now();
   const records = runWalkForward(d.games, buildModels(d, params));
   const weights = addEnsemble(records, MODEL_KEYS, { eta: pf?.ensemble.eta ?? 1, gamma: pf?.ensemble.gamma ?? 0.98, startSeason: 2019 });
+  const qvParams = pf?.qbValue?.params ?? null;
+  const qbValue = addQbValueLayer(records, "ensemble", "qv", d.qbByGame, qvParams ?? { k: 600, halfLife: 64, teamHalfLife: 8, k0: 1e12 });
   const k0 = pf?.qb?.k0 ?? null;
-  const qb = addQbLayer(records, "ensemble", "qb", k0 ?? 1e9, pf?.qb?.window || 8, pf?.qb?.seasonFirst ?? false);
+  const qb = addQbLayer(records, "qv", "qb", k0 ?? 1e12, pf?.qb?.window || 8, pf?.qb?.seasonFirst ?? false);
   const ctxK0 = pf?.context?.k0 ?? null;
   const context = addContextLayer(records, "qb", "final", d.ctx, ctxK0 ?? 1e12);
+  // Pesos de números clave para los partidos de 2024: ajustados solo con 2019–2023.
+  const kw: Record<Kind, KeyWeights | null> = {
+    margin: pf?.keyNumbers?.margin.a !== null && pf?.keyNumbers?.margin ? fitKeyWeights(records, "margin", (r) => r.g.season >= 2019 && r.g.season <= 2023, shiftOf("margin"), pf.keyNumbers.margin.a as number) : null,
+    total: pf?.keyNumbers?.total.a !== null && pf?.keyNumbers?.total ? fitKeyWeights(records, "total", (r) => r.g.season >= 2019 && r.g.season <= 2023, shiftOf("total"), pf.keyNumbers.total.a as number) : null,
+  };
   withMarket(records);
-  return { records, weights, params, qb, k0, context, ctxK0, ctx: d.ctx, seconds: (Date.now() - t0) / 1000 };
+  return { records, weights, params, kw, qbValue, qvParams, qb, k0, context, ctxK0, ctx: d.ctx, seconds: (Date.now() - t0) / 1000 };
 }
 
 export type FinalRun = ReturnType<typeof runFinal>;
 
-export const LABELS_EXTRA = { ensemble: "Ensamble (Hedge)", qb: "Ensamble + capa de QB", final: "Final: ensamble + QB + bajas y clima", market: "Mercado (momios de cierre)" };
+export const LABELS_EXTRA = { ensemble: "Ensamble (Hedge)", qv: "+ valor de QB", qb: "+ cambio de QB", final: "Final: + bajas y clima medidos", market: "Mercado (momios de cierre)" };
 
 const PERIODS: { key: string; label: string; test: (g: MGame) => boolean }[] = [
   { key: "train", label: "Entrenamiento 2020–2022", test: (g) => g.season >= 2020 && g.season <= 2022 },
@@ -194,7 +230,7 @@ const r4 = (v: number | null | undefined, d = 4) => (v === null || v === undefin
 
 /** Resumen para la página del laboratorio. */
 export function labSummary(run: FinalRun, pf: ParamsFile | null) {
-  const keys = [...MODEL_KEYS, "ensemble", "qb", "final", "market"];
+  const keys = [...MODEL_KEYS, "ensemble", "qv", "qb", "final", "market"];
   const labels: Record<string, string> = { ...Object.fromEntries(SPECS.map((s) => [s.key, s.label])), ...LABELS_EXTRA };
   const leaderboard = PERIODS.map((p) => ({
     period: p.key, label: p.label,
@@ -227,7 +263,9 @@ export function labSummary(run: FinalRun, pf: ParamsFile | null) {
     ensemble: pf ? { eta: pf.ensemble.eta, gamma: pf.ensemble.gamma, grid: pf.ensemble.grid.map((g) => ({ ...g, loss: r4(g.loss, 5) })) } : null,
     qb: pf?.qb ? { k0: pf.qb.k0, window: pf.qb.window, seasonFirst: pf.qb.seasonFirst, grid: pf.qb.grid.map((g) => ({ ...g, loss: r4(g.loss, 5) })) } : null,
     qbStats: qbStats(run),
+    qbValue: pf?.qbValue ? { params: pf.qbValue.params, offLoss: r4(pf.qbValue.offLoss, 5), grid: pf.qbValue.grid.map((g) => ({ ...g, loss: r4(g.loss, 5) })), top: qbValueTable(run) } : null,
     context: contextEvidence(run, pf),
+    keyNumbers: keyNumbersEvidence(run, pf),
     experiments: experiments(run),
     optimization: pf?.splits.map((s) => ({
       split: s.split,
@@ -251,7 +289,7 @@ export function gameModels(run: FinalRun, gameId: string) {
   const before = run.records.filter((x) => x.g.date < r.g.date && x.g.season === season);
   const sample = before.length >= 16 ? before : run.records.filter((x) => x.g.season === season - 1);
   const sampleLabel = before.length >= 16 ? `${season} antes de este partido (${before.length} partidos)` : `temporada ${season - 1} completa (${sample.length} partidos): todavía no hay suficientes partidos de ${season}`;
-  const keys = [...MODEL_KEYS, "ensemble", "qb", "final", "market"];
+  const keys = [...MODEL_KEYS, "ensemble", "qv", "qb", "final", "market"];
   const table = keys.map((k) => {
     const rows = sample.filter((x) => x.preds[k]);
     const ll = rows.reduce((s, x) => s + logLoss(x.preds[k].p, outcome(x.g)), 0) / Math.max(1, rows.length);
@@ -260,7 +298,8 @@ export function gameModels(run: FinalRun, gameId: string) {
   });
   const qb = run.qb.get(gameId) ?? null;
   const shift = r.preds.final && r.preds.ensemble.margin !== null && r.preds.final.margin !== null ? r.preds.final.margin - r.preds.ensemble.margin : 0;
-  const shiftQb = r.preds.qb && r.preds.ensemble.margin !== null && r.preds.qb.margin !== null ? r.preds.qb.margin - r.preds.ensemble.margin : 0;
+  const shiftQb = r.preds.qb && r.preds.qv.margin !== null && r.preds.qb.margin !== null ? r.preds.qb.margin - r.preds.qv.margin : 0;
+  const qv = run.qbValue.get(gameId) as QbValueInfo | undefined;
   const shiftTotal = r.preds.final?.total !== null && r.preds.ensemble.total !== null ? (r.preds.final.total as number) - r.preds.ensemble.total : 0;
   const lineProb = (line: number | null, kind: "margin" | "total") => (line === null ? null : r4(mixtureProb(r, line, kind, kind === "margin" ? shift : shiftTotal), 4));
   return {
@@ -268,14 +307,16 @@ export function gameModels(run: FinalRun, gameId: string) {
     weights: mix ? { win: rnd(mix.win), margin: rnd(mix.margin), total: rnd(mix.total) } : null,
     table, sampleLabel,
     ensemble: {
-      pHome: r4(r.preds.final.p) as number, pHomeNoQb: r4(r.preds.ensemble.p) as number, pHomeQb: r4(r.preds.qb.p) as number,
+      pHome: r4(r.preds.final.p) as number, pHomeNoQb: r4(r.preds.ensemble.p) as number, pHomeQv: r4(r.preds.qv.p) as number, pHomeQb: r4(r.preds.qb.p) as number,
       margin: r4(r.preds.final.margin, 2) as number, sdMargin: r4(r.preds.final.sdMargin, 2) as number,
       total: r4(r.preds.final.total, 2) as number, sdTotal: r4(r.preds.final.sdTotal, 2) as number,
       pCover: lineProb(r.g.spread, "margin"), pOver: lineProb(r.g.total, "total"),
     },
     qb: qb ? { ...qb, delta: r4(qb.delta, 2), shift: r4(shiftQb, 2), homeQb: r.g.homeQb, awayQb: r.g.awayQb } : null,
     context: contextForGame(run, gameId),
+    qbValue: qv ? { homeQb: qv.homeQb, awayQb: qv.awayQb, vHome: r4(qv.vHome) as number, vAway: r4(qv.vAway) as number, baseHome: r4(qv.baseHome) as number, baseAway: r4(qv.baseAway) as number, nHome: qv.nHome, nAway: qv.nAway, prior: r4(qv.prior) as number, x: r4(qv.x) as number, beta: r4(qv.beta, 1) as number, shiftMargin: r4(qv.shiftMargin, 2) as number, shiftTotal: r4(qv.shiftTotal, 2) as number, n: qv.n } : null,
     overLines: r.g.total === null ? [] : [-3, -1.5, 0, 1.5, 3].map((dl) => ({ line: (r.g.total as number) + dl, pOver: lineProb((r.g.total as number) + dl, "total") as number })),
+    discrete: discreteForGame(run, r),
   };
 }
 /** Regresión logística por Newton–Raphson (IRLS) con penalización ridge l2 (sin penalizar el intercepto). */
@@ -351,6 +392,7 @@ function contextForGame(run: FinalRun, gameId: string) {
  */
 function contextEvidence(run: FinalRun, pf: ParamsFile | null) {
   const rows = run.records.filter((r) => r.g.season >= 2019 && run.ctx.has(r.g.id) && r.preds.qb?.margin !== null && r.preds.qb?.total !== null);
+  // (residuos respecto al modelo con las capas de QB, que es la base sobre la que actúa esta capa)
   if (rows.length < 50) return null;
   const F = rows.map((r) => contextFeatures(run.ctx.get(r.g.id) as GameContext));
   const m = olsWithSe(F.map((f) => f.margin), rows.map((r) => r.g.hs - r.g.as - (r.preds.qb.margin as number)));
@@ -375,6 +417,64 @@ function contextEvidence(run: FinalRun, pf: ParamsFile | null) {
     margin: MARGIN_FEATURES.map((name, j) => fmt(name, m[j], j, "margin")),
     total: TOTAL_FEATURES.map((name, j) => fmt(name, t[j], j, "total")),
   };
+}
+
+/** Distribución discreta (números clave) del margen y del total del modelo final para un partido. */
+function discreteForGame(run: FinalRun, r: Records[number]) {
+  if (!run.kw.margin && !run.kw.total) return null;
+  const pm = weightedPmf(r, "margin", shiftOf("margin")(r), run.kw.margin);
+  const pt = weightedPmf(r, "total", shiftOf("total")(r), run.kw.total);
+  const line = (pmf: Float64Array, kind: Kind, l: number | null) => {
+    if (l === null) return null;
+    const p = lineProbs(pmf, kind, l);
+    return { over: r4(p.over) as number, push: r4(p.push) as number, under: r4(p.under) as number };
+  };
+  return {
+    margin: Array.from({ length: 81 }, (_, j) => { const k = j - 40; return [k, r4(pm[k - RANGE.margin.lo], 5) as number]; }),
+    pHomeWin: r4(lineProbs(pm, "margin", 0).over) as number, pTie: r4(lineProbs(pm, "margin", 0).push) as number,
+    spread: line(pm, "margin", r.g.spread),
+    total: line(pt, "total", r.g.total),
+    totalLines: r.g.total === null ? [] : [-3, -1.5, 0, 1.5, 3].map((dl) => ({ line: (r.g.total as number) + dl, ...(line(pt, "total", (r.g.total as number) + dl) as { over: number; push: number; under: number }) })),
+  };
+}
+
+/** Evidencia de los números clave: pesos ω por margen, puntuación discreta vs continua y push. */
+function keyNumbersEvidence(run: FinalRun, pf: ParamsFile | null) {
+  if (!run.kw.margin) return null;
+  const score = (season: number, kind: Kind, kw: KeyWeights | null) => {
+    const v = run.records.filter((r) => r.g.season === season);
+    return r4(v.reduce((acc, r) => acc + discreteLogScore(weightedPmf(r, kind, shiftOf(kind)(r), kw), kind, observed(r, kind)), 0) / v.length);
+  };
+  const pushes = (kw: KeyWeights | null, seasons: number[]) => {
+    let pred = 0, real = 0, n = 0;
+    for (const r of run.records.filter((x) => seasons.includes(x.g.season) && x.g.spread !== null && Number.isInteger(x.g.spread))) {
+      pred += lineProbs(weightedPmf(r, "margin", shiftOf("margin")(r), kw), "margin", r.g.spread as number).push;
+      real += r.g.hs - r.g.as === r.g.spread ? 1 : 0; n++;
+    }
+    return { games: n, predicted: r4(pred, 1), real };
+  };
+  const kwm = run.kw.margin;
+  return {
+    a: { margin: pf?.keyNumbers?.margin.a ?? null, total: pf?.keyNumbers?.total.a ?? null },
+    grid: pf?.keyNumbers ?? null,
+    weights: Array.from({ length: 18 }, (_, k) => ({ k, observed: kwm.observed[k], expected: r4(kwm.expected[k], 1), omega: r4(kwm.weights[k], 2) })),
+    games: kwm.games,
+    scores: { margin: { continuous: score(2024, "margin", null), discrete: score(2024, "margin", run.kw.margin) }, total: { continuous: score(2024, "total", null), discrete: score(2024, "total", run.kw.total) } },
+    pushes: [[2023], [2024], [2023, 2024]].map((ss) => ({ label: ss.join("–"), continuous: pushes(null, ss), discrete: pushes(run.kw.margin, ss) })),
+  };
+}
+
+/** Valores de QB al final de la corrida (titulares de 2024 con más jugadas): para la tabla del laboratorio. */
+function qbValueTable(run: FinalRun) {
+  const last = new Map<string, { name: string; team: string; v: number; n: number }>();
+  for (const r of run.records) {
+    if (r.g.season !== 2024) continue;
+    const q = run.qbValue.get(r.g.id);
+    if (!q) continue;
+    if (r.g.homeQb) last.set(r.g.homeQb, { name: r.g.homeQb, team: r.g.home, v: q.vHome, n: q.nHome });
+    if (r.g.awayQb) last.set(r.g.awayQb, { name: r.g.awayQb, team: r.g.away, v: q.vAway, n: q.nAway });
+  }
+  return [...last.values()].filter((q) => q.n >= 300).sort((a, b) => b.v - a.v).map((q) => ({ ...q, v: r4(q.v) as number }));
 }
 
 /** Residuos por tipo de partido según el QB: la evidencia que justifica la capa. */

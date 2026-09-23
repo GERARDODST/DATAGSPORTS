@@ -22,7 +22,7 @@ import { gameModels, labSummary, readParams, runFinal } from "../src/lib/models/
 
 // Equipo que seguimos partido a partido y cuántos de sus partidos ya tienen análisis previo.
 const FOCUS_TEAM = "KC";
-const FOCUS_GAMES_ANALYZED = 3;
+const FOCUS_GAMES_ANALYZED = 4;
 
 const ROOT = path.resolve(__dirname, "..", "snapshot");
 const DIST = path.join(ROOT, "dist");
@@ -252,6 +252,8 @@ async function main() {
   const modelsLab = labSummary(modelRun, modelParams);
   const modelsJson = JSON.stringify(modelsLab);
   await writeFile(path.join(DIST, "data", "models.json"), modelsJson);
+  // Biblioteca de investigación (fuentes, bitácora y hoja de ruta): se publica tal cual.
+  await writeFile(path.join(DIST, "data", "research.json"), await readFile(path.join(process.cwd(), "data", "research.json"), "utf8"));
   const test = modelsLab.leaderboard.find((p) => p.period === "test");
   console.log(`   ${modelsLab.games} partidos en ${modelsLab.runSeconds} s · models.json ${(modelsJson.length / 1024).toFixed(0)} KB`);
   for (const r of test?.rows ?? []) console.log(`   2024 · ${r.label.padEnd(40)} log-loss ${r.logLoss} · acierto ${r.accuracy}`);
