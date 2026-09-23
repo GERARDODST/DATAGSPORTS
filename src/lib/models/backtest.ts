@@ -1,0 +1,248 @@
+/**
+ * Motor walk-forward: recorre las fechas en orden, pide a cada modelo su predicción para todos los
+ * partidos de la fecha y solo después le da los resultados. Así ninguna predicción ve el futuro.
+ *
+ * Sobre esas predicciones se construye el ensamble con pesos exponenciales (Hedge / promedio
+ * bayesiano de modelos) y se calculan las métricas por periodo.
+ */
+import { prisma } from "../prisma";
+import { type MGame, type Model, type Prediction, type TeamGameEpa, brier, gaussNll, impliedNoVig, logLoss, normalCdf, normalInv, outcome } from "./core";
+
+export type Records = { g: MGame; preds: Record<string, Prediction> }[];
+
+export async function loadModelData(fromSeason = 2018) {
+  const rows = await prisma.game.findMany({
+    where: { season: { gte: fromSeason }, homeScore: { not: null }, awayScore: { not: null }, gameDate: { not: null } },
+    orderBy: [{ gameDate: "asc" }, { gameId: "asc" }],
+  });
+  const games: MGame[] = rows.map((r) => ({
+    id: r.gameId, season: r.season, week: r.week, type: r.gameType ?? "REG", date: (r.gameDate as Date).toISOString().slice(0, 10),
+    home: r.homeTeamAbbr, away: r.awayTeamAbbr, hs: r.homeScore as number, as: r.awayScore as number, neutral: r.location === "Neutral",
+    spread: r.spreadLine, total: r.totalLine, mlHome: r.homeMoneyline, mlAway: r.awayMoneyline,
+    homeQb: r.homeQbName, awayQb: r.awayQbName,
+  }));
+  const plays = await prisma.play.findMany({
+    where: { season: { gte: fromSeason }, playType: { in: ["pass", "run"] }, epa: { not: null } },
+    select: { gameId: true, possessionTeamAbbr: true, defenseTeamAbbr: true, epa: true },
+  });
+  const bucket = new Map<string, { gameId: string; team: string; opp: string; vals: number[] }>();
+  for (const p of plays) {
+    if (!p.possessionTeamAbbr || !p.defenseTeamAbbr) continue;
+    const k = `${p.gameId}|${p.possessionTeamAbbr}`;
+    const b = bucket.get(k) ?? { gameId: p.gameId, team: p.possessionTeamAbbr, opp: p.defenseTeamAbbr, vals: [] };
+    b.vals.push(p.epa as number);
+    bucket.set(k, b);
+  }
+  const epaByGame = new Map<string, TeamGameEpa[]>();
+  for (const b of bucket.values()) {
+    const list = epaByGame.get(b.gameId) ?? [];
+    list.push({ gameId: b.gameId, team: b.team, opp: b.opp, epa: Float64Array.from(b.vals) });
+    epaByGame.set(b.gameId, list);
+  }
+  const teams = [...new Set(games.flatMap((g) => [g.home, g.away]))].sort();
+  return { games, epaByGame, teams, plays: plays.length };
+}
+
+export function runWalkForward(games: MGame[], models: Model[]): Records {
+  const out: Records = [];
+  let i = 0;
+  while (i < games.length) {
+    const date = games[i].date;
+    const day: MGame[] = [];
+    while (i < games.length && games[i].date === date) day.push(games[i++]);
+    for (const g of day) {
+      const preds: Record<string, Prediction> = {};
+      for (const m of models) preds[m.key] = m.predict(g);
+      out.push({ g, preds });
+    }
+    for (const m of models) m.update(day);
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ Ensamble (Hedge)
+export type EnsembleParams = { eta: number; gamma: number; startSeason: number };
+export type WeightSnapshot = { date: string; season: number; week: number; win: Record<string, number>; margin: Record<string, number>; total: Record<string, number> };
+
+/**
+ * Pesos w_m ∝ exp(−η·L_m), con L_m = Σ γ^(semanas transcurridas)·pérdida. Con η = 1 y la pérdida
+ * logarítmica, la mezcla lineal es exactamente el promedio bayesiano de modelos (BMA) con olvido γ.
+ * Probabilidad de victoria: mezcla lineal. Margen y total: mezcla de normales (media y varianza de la mezcla).
+ */
+export function addEnsemble(records: Records, keys: string[], params: EnsembleParams) {
+  const L = { win: new Map<string, number>(), margin: new Map<string, number>(), total: new Map<string, number>() };
+  for (const k of keys) { L.win.set(k, 0); L.margin.set(k, 0); L.total.set(k, 0); }
+  const weights: WeightSnapshot[] = [];
+  const wOf = (map: Map<string, number>, avail: string[]) => {
+    const min = Math.min(...avail.map((k) => map.get(k) as number));
+    const raw = avail.map((k) => Math.exp(-params.eta * ((map.get(k) as number) - min)));
+    const s = raw.reduce((a, b) => a + b, 0);
+    return Object.fromEntries(avail.map((k, j) => [k, raw[j] / s]));
+  };
+  let i = 0;
+  let lastWeekIndex: number | null = null;
+  while (i < records.length) {
+    const date = records[i].g.date;
+    const day: Records = [];
+    while (i < records.length && records[i].g.date === date) day.push(records[i++]);
+    const weekIndex = Math.floor(Date.parse(date) / (7 * 86400000));
+    if (lastWeekIndex !== null && weekIndex > lastWeekIndex) {
+      const f = params.gamma ** (weekIndex - lastWeekIndex);
+      for (const map of Object.values(L)) for (const k of keys) map.set(k, (map.get(k) as number) * f);
+    }
+    lastWeekIndex = weekIndex;
+    const withMargin = keys.filter((k) => day[0].preds[k].margin !== null);
+    const withTotal = keys.filter((k) => day[0].preds[k].total !== null);
+    const w = { win: wOf(L.win, keys), margin: wOf(L.margin, withMargin), total: wOf(L.total, withTotal) };
+    weights.push({ date, season: day[0].g.season, week: day[0].g.week, ...w });
+    for (const r of day) {
+      const p = keys.reduce((s, k) => s + w.win[k] * r.preds[k].p, 0);
+      const mix = (avail: string[], wt: Record<string, number>, mu: (pr: Prediction) => number, sd: (pr: Prediction) => number) => {
+        const m = avail.reduce((s, k) => s + wt[k] * mu(r.preds[k]), 0);
+        const v = avail.reduce((s, k) => s + wt[k] * (sd(r.preds[k]) ** 2 + (mu(r.preds[k]) - m) ** 2), 0);
+        return { m, sd: Math.sqrt(v) };
+      };
+      const mm = mix(withMargin, w.margin, (x) => x.margin as number, (x) => x.sdMargin as number);
+      const tt = mix(withTotal, w.total, (x) => x.total as number, (x) => x.sdTotal as number);
+      r.preds.ensemble = { p, margin: mm.m, sdMargin: mm.sd, total: tt.m, sdTotal: tt.sd };
+      (r as { mixture?: unknown }).mixture = { win: w.win, margin: w.margin, total: w.total };
+    }
+    if (day[0].g.season < params.startSeason) continue;
+    for (const r of day) {
+      const y = outcome(r.g);
+      for (const k of keys) {
+        const pr = r.preds[k];
+        L.win.set(k, (L.win.get(k) as number) + logLoss(pr.p, y));
+        if (pr.margin !== null) L.margin.set(k, (L.margin.get(k) as number) + gaussNll(r.g.hs - r.g.as, pr.margin, pr.sdMargin as number));
+        if (pr.total !== null) L.total.set(k, (L.total.get(k) as number) + gaussNll(r.g.hs + r.g.as, pr.total, pr.sdTotal as number));
+      }
+    }
+  }
+  return weights;
+}
+
+/** P(margen > línea) bajo la mezcla de normales del ensamble: Σ w_m Φ((μ_m − línea)/σ_m). */
+export function mixtureProb(r: Records[number], line: number, kind: "margin" | "total", shift = 0) {
+  const mix = (r as { mixture?: { margin: Record<string, number>; total: Record<string, number> } }).mixture;
+  if (!mix) return null;
+  const wt = mix[kind];
+  return Object.entries(wt).reduce((s, [k, w]) => {
+    const pr = r.preds[k];
+    const mu = kind === "margin" ? pr.margin : pr.total;
+    const sd = kind === "margin" ? pr.sdMargin : pr.sdTotal;
+    return s + w * (1 - normalCdf((line - (mu as number) - shift) / (sd as number)));
+  }, 0);
+}
+
+// ------------------------------------------------------------------ Capa de ajuste por QB titular
+export type QbInfo = { usualHome: string | null; usualAway: string | null; changeHome: boolean; changeAway: boolean; delta: number; n: number };
+
+/**
+ * Si un equipo arranca con un QB distinto a su titular habitual (el que más partidos inició de sus
+ * últimos N; N se elige en la validación), el margen se corrige δ puntos en su contra. δ se estima en línea con los residuos de
+ * partidos anteriores con cambio de QB, con una previa de k₀ partidos en δ = 0:
+ *   δ̂ = Σ residuos / (n + k₀).
+ * Cada modelo se desplaza en su escala: μ' = μ − δ·s y P' = Φ(Φ⁻¹(P) − δ·s/σ), s = +1 local, −1 visita.
+ */
+export function addQbLayer(records: Records, base: string, out: string, k0: number, window = 8, startSeason = 2019) {
+  const hist = new Map<string, string[]>();
+  const usual = (t: string) => {
+    const h = (hist.get(t) ?? []).slice(-window);
+    if (h.length < 3) return null;
+    const c = new Map<string, number>();
+    h.forEach((q) => c.set(q, (c.get(q) ?? 0) + 1));
+    return [...c.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  };
+  let sum = 0, n = 0;
+  const info = new Map<string, QbInfo>();
+  let i = 0;
+  while (i < records.length) {
+    const date = records[i].g.date;
+    const day: Records = [];
+    while (i < records.length && records[i].g.date === date) day.push(records[i++]);
+    const delta = n + k0 > 0 ? sum / (n + k0) : 0;
+    const pending: { res: number }[] = [];
+    for (const r of day) {
+      const g = r.g;
+      const uh = usual(g.home), ua = usual(g.away);
+      const ch = Boolean(uh && g.homeQb && g.homeQb !== uh), ca = Boolean(ua && g.awayQb && g.awayQb !== ua);
+      const s = (ch ? 1 : 0) - (ca ? 1 : 0); // +1: solo el local cambió; −1: solo la visita
+      const pr = r.preds[base];
+      const shift = -delta * s;
+      const sd = pr.sdMargin ?? 13.5;
+      r.preds[out] = { ...pr, p: s ? normalCdf(normalInv(pr.p) + shift / sd) : pr.p, margin: pr.margin === null ? null : pr.margin + shift };
+      info.set(g.id, { usualHome: uh, usualAway: ua, changeHome: ch, changeAway: ca, delta, n });
+      if (s && g.season >= startSeason && pr.margin !== null) pending.push({ res: -(g.hs - g.as - pr.margin) * s });
+    }
+    for (const p of pending) { sum += p.res; n++; }
+    for (const r of day) {
+      if (r.g.homeQb) hist.set(r.g.home, [...(hist.get(r.g.home) ?? []), r.g.homeQb]);
+      if (r.g.awayQb) hist.set(r.g.away, [...(hist.get(r.g.away) ?? []), r.g.awayQb]);
+    }
+  }
+  return info;
+}
+
+// ------------------------------------------------------------------ Métricas
+export function marketPrediction(g: MGame, sd = 13.45): Prediction | null {
+  const p = impliedNoVig(g.mlHome, g.mlAway) ?? (g.spread !== null ? normalCdf(g.spread / sd) : null);
+  if (p === null) return null;
+  return { p, margin: g.spread, sdMargin: sd, total: g.total, sdTotal: sd };
+}
+
+export type Score = {
+  n: number; logLoss: number; brier: number; accuracy: number;
+  marginMae: number | null; marginRmse: number | null; totalMae: number | null; marginNll: number | null;
+  vsMarket: { diff: number; se: number; z: number } | null;
+  ats: { n: number; wins: number; losses: number; pushes: number; rate: number; se: number } | null;
+  calibration: { bin: number; n: number; predicted: number; observed: number }[];
+};
+
+export function score(records: Records, key: string, filter: (g: MGame) => boolean, atsThreshold = 1.5): Score {
+  const rs = records.filter((r) => filter(r.g) && r.preds[key]);
+  let ll = 0, br = 0, acc = 0, mae = 0, mse = 0, tmae = 0, nll = 0, nm = 0, nt = 0;
+  const diffs: number[] = [];
+  const bins = Array.from({ length: 10 }, (_, b) => ({ bin: b, n: 0, sp: 0, so: 0 }));
+  const ats = { n: 0, wins: 0, losses: 0, pushes: 0 };
+  for (const r of rs) {
+    const pr = r.preds[key];
+    const y = outcome(r.g);
+    ll += logLoss(pr.p, y); br += brier(pr.p, y);
+    acc += y === 0.5 ? 0.5 : (pr.p >= 0.5) === (y === 1) ? 1 : 0;
+    const b = bins[Math.min(9, Math.floor(pr.p * 10))];
+    b.n++; b.sp += pr.p; b.so += y;
+    const mk = marketPrediction(r.g);
+    if (mk) diffs.push(logLoss(pr.p, y) - logLoss(mk.p, y));
+    const m = r.g.hs - r.g.as;
+    if (pr.margin !== null) {
+      mae += Math.abs(m - pr.margin); mse += (m - pr.margin) ** 2; nll += gaussNll(m, pr.margin, pr.sdMargin as number); nm++;
+      if (r.g.spread !== null && key !== "market" && Math.abs(pr.margin - r.g.spread) >= atsThreshold) {
+        ats.n++;
+        const side = pr.margin > r.g.spread ? 1 : -1;
+        const res = (m - r.g.spread) * side;
+        if (res > 0) ats.wins++; else if (res < 0) ats.losses++; else ats.pushes++;
+      }
+    }
+    if (pr.total !== null) { tmae += Math.abs(r.g.hs + r.g.as - pr.total); nt++; }
+  }
+  const n = rs.length;
+  const md = diffs.reduce((a, b) => a + b, 0) / Math.max(1, diffs.length);
+  const sdd = Math.sqrt(diffs.reduce((a, b) => a + (b - md) ** 2, 0) / Math.max(1, diffs.length - 1));
+  const decided = ats.wins + ats.losses;
+  const rate = decided ? ats.wins / decided : 0;
+  return {
+    n, logLoss: ll / n, brier: br / n, accuracy: acc / n,
+    marginMae: nm ? mae / nm : null, marginRmse: nm ? Math.sqrt(mse / nm) : null, totalMae: nt ? tmae / nt : null, marginNll: nm ? nll / nm : null,
+    vsMarket: diffs.length && key !== "market" ? { diff: md, se: sdd / Math.sqrt(diffs.length), z: md / (sdd / Math.sqrt(diffs.length)) } : null,
+    ats: ats.n ? { ...ats, rate, se: Math.sqrt((rate * (1 - rate)) / Math.max(1, decided)) } : null,
+    calibration: bins.filter((b) => b.n).map((b) => ({ bin: b.bin, n: b.n, predicted: b.sp / b.n, observed: b.so / b.n })),
+  };
+}
+
+export function withMarket(records: Records) {
+  for (const r of records) {
+    const mk = marketPrediction(r.g);
+    if (mk) r.preds.market = mk;
+  }
+  return records;
+}

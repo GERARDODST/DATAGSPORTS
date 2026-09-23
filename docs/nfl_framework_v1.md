@@ -497,6 +497,45 @@ agregar el tiempo restante al estado (semi-Markov) y el marcador.
 La página publicada (vista "Laboratorio") muestra el mapa de calor de los 160 estados, la
 convergencia de la iteración, EP por down, la validación v1/v2 y el simulador interactivo.
 
+#### 5.4.3 Torneo de modelos: un modelo nuevo por partido (implementado)
+
+`src/lib/models/` reconstruye, para cada fecha desde 2018, cinco modelos con solo los
+resultados anteriores (prueba *walk-forward*) y los combina según su acierto pasado:
+
+| Modelo | Idea | Referencia |
+| --- | --- | --- |
+| Framework | λ con regresión a la media + triangulación Log5 / Elo / normal (este documento) | Secciones 5.3–5.7 |
+| Elo | Rating por victorias con multiplicador de margen | FiveThirtyEight, `forecast.py` |
+| Kalman | Ofensiva y defensa como estados ocultos con evolución semanal y AR(1) entre temporadas | Glickman y Stern (1998) |
+| Ridge de puntos | Mínimos cuadrados penalizados con decaimiento exponencial | Harville (1980), Massey |
+| EPA ajustada | EPA/jugada recortada, ajustada por rival con ridge y convertida a puntos | Open Source Football (2021) |
+
+- **Ensamble (Hedge):** `P = Σ w_m p_m`, `w_m ∝ exp(−η L_m)`, `L_m` = log-loss pasada con
+  olvido `γ` por semana. Margen y total como mezcla de normales:
+  `P(cubre s) = Σ w_m Φ((μ_m − s)/σ_m)`.
+- **Capa de QB (hallazgo con datos):** si un equipo arranca con un QB distinto al que más
+  partidos inició en sus últimos 17, el margen se corrige `δ̂ = Σ residuos/(n + k₀)` en su
+  contra. En 2019–2024 los residuos son −1.8 ± 0.7 (cambia el local) y +2.3 ± 0.7 (cambia
+  la visita).
+- **Protocolo sin fuga:** 2018–2019 calentamiento; 2020–2022 entrenamiento (parámetros de
+  cada modelo por descenso de coordenadas); 2023 validación (η, γ, ventana y k₀ de la capa de
+  QB); 2024 prueba. `npm run models:optimize` guarda todo en `data/model-params.json`.
+- **Descartado en validación:** recalibración de Platt y stacking logístico (este último
+  daba la mejor log-loss de 2024, pero empeoraba 2023 y asignaba pesos negativos: sobreajuste).
+
+**Resultado en la prueba 2024 (285 partidos, nada ajustado con ellos):**
+
+| | Log-loss | Acierto |
+| --- | --- | --- |
+| Framework original | 0.6235 | 67.4% |
+| Modelo final (ensamble + QB) | **0.6151** | **68.8%** |
+| Mercado (momios de cierre) | 0.5892 | 70.9% |
+
+El mercado sigue siendo mejor (z ≈ 2.3), y contra el spread ningún modelo se separa del 50%
+más allá de su error estándar. En el análisis de cada partido la probabilidad final es la del
+ensamble, más la capa de QB, más los ajustes de la tabla 5.3 con información nueva. La
+triangulación del framework queda como uno de los cinco modelos.
+
 ### 5.5 Probabilidad por mercado
 
 | Mercado | Prob. estimada | Dato que apoya | Dato que contradice | Riesgo |

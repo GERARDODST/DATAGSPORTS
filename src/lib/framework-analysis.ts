@@ -8,6 +8,8 @@
  *    datos, y si no se pudo evaluar, por qué
  */
 import { prisma } from "./prisma";
+import type { GameModels } from "./models/lab";
+import { normalInv } from "./models/core";
 
 const PYTH_EXP = 2.37;
 const PRIOR_SEASON_WEIGHT = 0.5;
@@ -116,7 +118,7 @@ function passerRating(cmp: number, att: number, yds: number, td: number, int: nu
   return { a, b, c, d, rating: ((a + b + c + d) / 6) * 100 };
 }
 
-export async function buildPregameAnalysis(gameId: string) {
+export async function buildPregameAnalysis(gameId: string, models: GameModels | null = null) {
   const target = await prisma.game.findUniqueOrThrow({ where: { gameId }, include: { homeTeam: true, awayTeam: true } });
   if (!target.gameDate) throw new Error(`${gameId} no tiene fecha`);
   const cutoff = target.gameDate;
@@ -611,7 +613,8 @@ export async function buildPregameAnalysis(gameId: string) {
   const windMph = target.wind;
   const tempF = target.temp;
   const OFF_POS = ["QB", "WR", "TE", "RB", "FB", "T", "G", "C", "OL"];
-  const offStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && OFF_POS.includes(i.position ?? ""));
+  // Con el torneo de modelos, la baja del QB la cubre la capa de QB estimada con datos: no se cuenta dos veces.
+  const offStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && OFF_POS.includes(i.position ?? "") && !(models && i.position === "QB"));
   const defStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && !OFF_POS.includes(i.position ?? "") && !["K", "P", "LS"].includes(i.position ?? ""));
   const newToBase = injuryDetail.filter((i) => !i.inBase);
   type Adj = { condition: string; data: string; met: boolean | null; inBase: boolean; factor: number; appliesTo: "total" | "home" | "away"; applied: boolean; reason: string };
@@ -704,10 +707,54 @@ export async function buildPregameAnalysis(gameId: string) {
     { key: "elo", label: "Elo (regresión de 1/3 entre temporadas)", p: pElo },
     { key: "sim", label: `Simulación (${SIMULATIONS.toLocaleString("es-MX")} partidos)`, p: pSim },
   ];
-  const pHome = mean(methods.map((m) => m.p));
+  const pTriangulated = mean(methods.map((m) => m.p));
   const divergence = Math.max(...methods.map((m) => m.p)) - Math.min(...methods.map((m) => m.p));
   const confidence = divergence <= 0.05 ? "alta" : divergence <= 0.1 ? "media" : "baja";
-  formula({ id: "tri", section: "5", name: "Probabilidad triangulada (sección 10, fase 2)", expression: "P = promedio(Log5, Elo, Simulación); divergencia = máx − mín", substituted: `(${pctS(pLog5)} + ${pctS(pElo)} + ${pctS(pSim)}) / 3; divergencia ${pctS(divergence)}`, result: `${pctS(pHome)} · confianza ${confidence}` });
+  formula({ id: "tri", section: "5", name: "Probabilidad triangulada (sección 10, fase 2)", expression: "P = promedio(Log5, Elo, Simulación); divergencia = máx − mín", substituted: `(${pctS(pLog5)} + ${pctS(pElo)} + ${pctS(pSim)}) / 3; divergencia ${pctS(divergence)}`, result: `${pctS(pTriangulated)} · confianza ${confidence}` });
+
+  // Probabilidad final: ensamble del torneo de modelos (si está disponible) + ajustes 5.3 con información nueva.
+  // Los ajustes se trasladan como un corrimiento del margen y del total: P' = Φ(Φ⁻¹(P) + Δ/σ).
+  const adjMargin = (muHome - baseHome) - (muAway - baseAway);
+  const adjTotal = (muHome - baseHome) + (muAway - baseAway);
+  const shiftP = (p: number | null, delta: number, sd: number) => (p === null ? null : normalCdf(normalInv(p) + delta / sd));
+  const ens = models?.ensemble ?? null;
+  const fin = ens
+    ? {
+        pHome: shiftP(ens.pHome, adjMargin, ens.sdMargin) as number,
+        margin: ens.margin + adjMargin, total: ens.total + adjTotal, sdMargin: ens.sdMargin, sdTotal: ens.sdTotal,
+        pCover: shiftP(ens.pCover, adjMargin, ens.sdMargin), pOver: shiftP(ens.pOver, adjTotal, ens.sdTotal),
+        overLines: (models?.overLines ?? []).map((l) => ({ line: l.line, pOver: shiftP(l.pOver, adjTotal, ens.sdTotal) as number })),
+      }
+    : null;
+  const pHome = fin?.pHome ?? pTriangulated;
+  const finalMargin0 = fin?.margin ?? muMargin;
+  const finalTotal0 = fin?.total ?? muTotal;
+  // Con el torneo, la distribución del margen que se dibuja es la del modelo final: mezcla de normales
+  // de los modelos (pesos de margen) corrida por la capa de QB y los ajustes 5.3. Masa exacta por punto:
+  // P(margen = k) = Σ w_m [Φ((k + ½ − μ_m − c)/σ_m) − Φ((k − ½ − μ_m − c)/σ_m)].
+  if (models && fin && models.weights) {
+    const wm = models.weights.margin;
+    const mixMean = Object.entries(wm).reduce((acc, [k, w]) => acc + w * (models.preds[k]?.margin ?? 0), 0);
+    const c = finalMargin0 - mixMean;
+    for (const k of Object.keys(bins)) delete bins[Number(k)];
+    for (let k = -40; k <= 40; k++) {
+      const mass = Object.entries(wm).reduce((acc, [key, w]) => {
+        const pr = models.preds[key];
+        if (!pr || pr.margin === null || pr.sdMargin === null) return acc;
+        const lo = k === -40 ? -Infinity : (k - 0.5 - pr.margin - c) / pr.sdMargin;
+        const hi = k === 40 ? Infinity : (k + 0.5 - pr.margin - c) / pr.sdMargin;
+        return acc + w * ((hi === Infinity ? 1 : normalCdf(hi)) - (lo === -Infinity ? 0 : normalCdf(lo)));
+      }, 0);
+      bins[k] = Math.round(mass * SIMULATIONS);
+    }
+  }
+  if (models && ens) {
+    const w = models.weights?.win ?? {};
+    const names: Record<string, string> = { framework: "Framework", elo: "Elo", kalman: "Kalman", ridge: "Ridge", epa: "EPA" };
+    formula({ id: "ens", section: "5", name: "Ensamble de 5 modelos (Hedge: pesos por acierto pasado)", expression: "P = Σ w_m·p_m, con w_m ∝ exp(−η·L_m) y L_m = pérdida logarítmica pasada con olvido γ", substituted: Object.keys(names).filter((k) => models.preds[k]).map((k) => `${f1(w[k] ?? 0, 3)}×${pctS(models.preds[k].p)}`).join(" + "), result: pctS(ens.pHomeNoQb) });
+    if (models.qb) formula({ id: "qb-layer", section: "5", name: "Capa de QB titular (estimada con datos)", expression: "P' = Φ(Φ⁻¹(P) − δ·s/σ), s = +1 si solo el local cambió de QB, −1 si solo la visita, 0 si ninguno o ambos", substituted: `δ = ${f1(models.qb.delta, 2)} pts (${models.qb.n} partidos previos con cambio) · local: ${models.qb.homeQb ?? "—"} (habitual ${models.qb.usualHome ?? "—"}) · visita: ${models.qb.awayQb ?? "—"} (habitual ${models.qb.usualAway ?? "—"})`, result: `${pctS(ens.pHome)} (corrimiento ${sgn(models.qb.shift ?? 0, 2)} pts)` });
+    formula({ id: "final-p", section: "5", name: "Probabilidad final con los ajustes 5.3 de información nueva", expression: "P_final = Φ(Φ⁻¹(P') + Δ_margen/σ_margen)", substituted: `Φ(Φ⁻¹(${pctS(ens.pHome)}) + ${sgn(adjMargin, 2)}/${f1(ens.sdMargin, 2)})`, result: pctS(pHome) });
+  }
 
   // ============================================================ SECCIÓN 6
   const lgQ1 = leagueAvg(M.q1Share), lgH1 = leagueAvg(M.h1Share);
@@ -717,16 +764,18 @@ export async function buildPregameAnalysis(gameId: string) {
   };
   const q1H = shrinkShare(M.q1Share.get(home), lgQ1, home), q1A = shrinkShare(M.q1Share.get(away), lgQ1, away);
   const h1H = shrinkShare(M.h1Share.get(home), lgH1, home), h1A = shrinkShare(M.h1Share.get(away), lgH1, away);
-  const proj1Q = { home: muHome * q1H, away: muAway * q1A };
-  const proj1H = { home: muHome * h1H, away: muAway * h1A };
+  // Puntos por equipo del modelo final: local = (total + margen)/2, visita = (total − margen)/2.
+  const finHome = (finalTotal0 + finalMargin0) / 2, finAway = (finalTotal0 - finalMargin0) / 2;
+  const proj1Q = { home: finHome * q1H, away: finAway * q1A };
+  const proj1H = { home: finHome * h1H, away: finAway * h1A };
   add({ id: "q-share", section: "6", category: "Modelo", label: "% de sus puntos que anota en 1Q · 1H (regresado)", home: `${pctS(q1H)} · ${pctS(h1H)}`, away: `${pctS(q1A)} · ${pctS(h1A)}`, source: `${SRC.pbp} · drive_quarter_start, fixed_drive_result`, status: "derivado" });
-  formula({ id: "q-proj", section: "6", name: "Puntos esperados por tramo (6.7)", expression: "λ_1Q = λ_final × %1Q ; λ_1H = λ_final × %1H (porcentajes regresados con k = 180 posesiones)", substituted: `${home}: ${f1(muHome, 2)}×${f1(q1H, 3)} y ×${f1(h1H, 3)} · ${away}: ${f1(muAway, 2)}×${f1(q1A, 3)} y ×${f1(h1A, 3)}`, result: `1Q ${f1(proj1Q.away)}–${f1(proj1Q.home)} · 1H ${f1(proj1H.away)}–${f1(proj1H.home)} (${away}–${home})` });
+  formula({ id: "q-proj", section: "6", name: "Puntos esperados por tramo (6.7)", expression: "λ_1Q = puntos finales × %1Q ; λ_1H = puntos finales × %1H (porcentajes regresados con k = 180 posesiones)", substituted: `${home}: ${f1(finHome, 2)}×${f1(q1H, 3)} y ×${f1(h1H, 3)} · ${away}: ${f1(finAway, 2)}×${f1(q1A, 3)} y ×${f1(h1A, 3)}`, result: `1Q ${f1(proj1Q.away)}–${f1(proj1Q.home)} · 1H ${f1(proj1H.away)}–${f1(proj1H.home)} (${away}–${home})` });
   const totalLines = total !== null ? [total - 3, total - 1.5, total, total + 1.5, total + 3] : [];
   const lineTable = totalLines.map((line) => {
-    const pOver = 1 - normalCdf((line - muTotal) / sigmaTotal);
+    const pOver = fin?.overLines.find((l) => l.line === line)?.pOver ?? 1 - normalCdf((line - muTotal) / sigmaTotal);
     return { line, pOver: r3(pOver), pUnder: r3(1 - pOver), read: Math.abs(pOver - 0.5) < 0.03 ? "Sin valor: muy cerca de 50%" : pOver > 0.5 ? "Inclina Over" : "Inclina Under" };
   });
-  formula({ id: "p-over", section: "6", name: "Probabilidad de Over por línea (6.8)", expression: "P(Over L) = 1 − Φ((L − λ_total) / σ_total)", substituted: total !== null ? `1 − Φ((${total} − ${f1(muTotal, 2)}) / ${f1(sigmaTotal, 2)})` : "Sin línea", result: total !== null ? pctS(1 - normalCdf((total - muTotal) / sigmaTotal)) : "—" });
+  formula({ id: "p-over", section: "6", name: "Probabilidad de Over por línea (6.8)", expression: fin ? "P(Over L) = Σ w_m·[1 − Φ((L − μ_m)/σ_m)] (mezcla de normales del ensamble)" : "P(Over L) = 1 − Φ((L − λ_total) / σ_total)", substituted: total !== null ? (fin ? `total del ensamble ${f1(finalTotal0, 2)} ± ${f1(fin.sdTotal, 2)}, línea ${total}` : `1 − Φ((${total} − ${f1(muTotal, 2)}) / ${f1(sigmaTotal, 2)})`) : "Sin línea", result: total !== null ? pctS(fin?.pOver ?? 1 - normalCdf((total - muTotal) / sigmaTotal)) : "—" });
   add({ id: "wx", section: "6", category: "Clima y sede", label: "Clima (temperatura · viento)", value: target.roof === "outdoors" ? `${tempF ?? "—"} °F · ${windMph ?? "—"} mph` : `Techado (${target.roof})`, source: `${SRC.games} · temp, wind, roof`, status: target.roof === "outdoors" ? (tempF !== null ? "disponible" : "faltante") : "no_aplica", note: "Es el clima medido en el partido; como pronóstico previo es una aproximación." });
   add({ id: "rain", section: "6", category: "Clima y sede", label: "Lluvia / precipitación", value: "—", source: SRC.none, status: target.roof === "outdoors" ? "faltante" : "no_aplica", note: "nflverse no publica precipitación. Fuente sugerida: Open-Meteo (sección 9.2).", impact: target.roof === "outdoors" ? "No se puede evaluar el ajuste de lluvia intensa (5.3)." : undefined });
   add({ id: "surface", section: "6", category: "Clima y sede", label: "Estadio · superficie", value: `${target.stadium ?? "—"} · ${target.surface ?? "—"}`, source: `${SRC.games} · stadium, surface`, status: "disponible" });
@@ -755,20 +804,20 @@ export async function buildPregameAnalysis(gameId: string) {
       sides: scored.map((s) => ({ pick: s.pick, odds: s.odds as number, pRaw: r3(s.pRaw), pImplied: r3(s.pImplied), pModel: r3(s.p), edge: r3(s.edge) })),
     });
   };
-  const pCover = homeCovers / SIMULATIONS;
-  const pOver = overs / SIMULATIONS;
+  const pCover = fin?.pCover ?? homeCovers / SIMULATIONS;
+  const pOver = fin?.pOver ?? overs / SIMULATIONS;
   const fmtLine = (v: number) => (v > 0 ? `+${v}` : `${v}`);
   addMarket("Moneyline", [
-    { pick: home, line: "gana", odds: target.homeMoneyline, p: pHome, won: played ? (finalMargin as number) > 0 : null, scriptOk: muMargin > 0 },
-    { pick: away, line: "gana", odds: target.awayMoneyline, p: 1 - pHome, won: played ? (finalMargin as number) < 0 : null, scriptOk: muMargin < 0 },
+    { pick: home, line: "gana", odds: target.homeMoneyline, p: pHome, won: played ? (finalMargin as number) > 0 : null, scriptOk: finalMargin0 > 0 },
+    { pick: away, line: "gana", odds: target.awayMoneyline, p: 1 - pHome, won: played ? (finalMargin as number) < 0 : null, scriptOk: finalMargin0 < 0 },
   ]);
   if (spread !== null) addMarket("Spread", [
-    { pick: home, line: fmtLine(-spread), odds: target.homeSpreadOdds, p: pCover, won: played ? (finalMargin as number) > spread : null, push: played && finalMargin === spread, scriptOk: muMargin > spread },
-    { pick: away, line: fmtLine(spread), odds: target.awaySpreadOdds, p: 1 - pCover, won: played ? (finalMargin as number) < spread : null, push: played && finalMargin === spread, scriptOk: muMargin < spread },
+    { pick: home, line: fmtLine(-spread), odds: target.homeSpreadOdds, p: pCover, won: played ? (finalMargin as number) > spread : null, push: played && finalMargin === spread, scriptOk: finalMargin0 > spread },
+    { pick: away, line: fmtLine(spread), odds: target.awaySpreadOdds, p: 1 - pCover, won: played ? (finalMargin as number) < spread : null, push: played && finalMargin === spread, scriptOk: finalMargin0 < spread },
   ]);
   if (total !== null) addMarket("Total", [
-    { pick: "Over", line: `${total}`, odds: target.overOdds, p: pOver, won: played ? (finalTotal as number) > total : null, push: played && finalTotal === total, scriptOk: muTotal > total },
-    { pick: "Under", line: `${total}`, odds: target.underOdds, p: 1 - pOver, won: played ? (finalTotal as number) < total : null, push: played && finalTotal === total, scriptOk: muTotal < total },
+    { pick: "Over", line: `${total}`, odds: target.overOdds, p: pOver, won: played ? (finalTotal as number) > total : null, push: played && finalTotal === total, scriptOk: finalTotal0 > total },
+    { pick: "Under", line: `${total}`, odds: target.underOdds, p: 1 - pOver, won: played ? (finalTotal as number) < total : null, push: played && finalTotal === total, scriptOk: finalTotal0 < total },
   ]);
   const mk = (name: string) => markets.find((m) => m.market === name);
   add({ id: "ml", section: "7", category: "Mercado", label: "Moneyline de cierre", home: `${target.homeMoneyline ?? "—"}`, away: `${target.awayMoneyline ?? "—"}`, source: `${SRC.games} · home_moneyline / away_moneyline`, status: target.homeMoneyline !== null ? "disponible" : "faltante", note: "Momio de cierre: el último antes del partido. No hay historial de movimiento de línea." });
@@ -817,7 +866,7 @@ export async function buildPregameAnalysis(gameId: string) {
     { id: "8.3.6", rule: "Ambas defensas top-10 → penalizar Over y favorito grande", status: top10(M.defEpa, home, false) && top10(M.defEpa, away, false) ? (to?.pick === "Over" ? "alerta" : "pasa") : "no_aplica", detail: `${home} ${rk(M.defEpa, home, false)} y ${away} ${rk(M.defEpa, away, false)} en EPA permitido${to ? `; el pick de total es ${to.pick}` : ""}.` },
     { id: "8.3.7", rule: "Diferenciar yardas de puntos (zona roja, explosivas, pérdidas, 3er down)", status: "pasa", detail: `TD% zona roja ${home} ${pctS(M.rzTd.get(home))} vs ${away} ${pctS(M.rzTd.get(away))}; puntos por posesión ${f1(M.ptsPerDrive.get(home), 2)} vs ${f1(M.ptsPerDrive.get(away), 2)}.` },
     { id: "8.3.8", rule: "Tabla de dependencia de supuestos", status: "pasa", detail: "Generada abajo para cada pick." },
-    { id: "8.3.9", rule: "Spread grande (≥ 7) con total bajo", status: spread !== null && Math.abs(spread) >= 7 ? (muTotal < (total ?? 99) ? "alerta" : "pasa") : "no_aplica", detail: `Spread de ${Math.abs(spread ?? 0)}.` },
+    { id: "8.3.9", rule: "Spread grande (≥ 7) con total bajo", status: spread !== null && Math.abs(spread) >= 7 ? (finalTotal0 < (total ?? 99) ? "alerta" : "pasa") : "no_aplica", detail: `Spread de ${Math.abs(spread ?? 0)}.` },
     { id: "8.3.10", rule: "Team total Over: ¿el equipo anota touchdowns y no solo yardas?", status: "no_evaluable", detail: "No hay línea de team total en la fuente." },
     { id: "8.3.11", rule: "Partido divisional: no asumir más puntos", status: target.divGame ? "pasa" : "no_aplica", detail: target.divGame ? "Divisional, sin ajuste al alza." : "No es divisional." },
     { id: "8.3.12", rule: "Sin lesiones, clima o alineación confirmada → nunca Verde", status: campoFaltante ? "alerta" : "pasa", detail: campoFaltante ? `Faltan: ${gateFields.filter((g) => !g.ok).map((g) => g.label).join("; ")}.` : "Completo." },
@@ -923,12 +972,13 @@ export async function buildPregameAnalysis(gameId: string) {
       injuryDetail.length ? `Bajas${haveInactives ? " confirmadas por los inactivos oficiales" : " del reporte"}: ${injuryDetail.filter((i) => i.confirmedOut).map((i) => `${i.name} (${i.team})`).join(", ") || "ninguna"}. ${injuryDetail.some((i) => i.inBase && i.confirmedOut) ? `Titulares de la base fuera: ${injuryDetail.filter((i) => i.inBase && i.confirmedOut).map((i) => i.name).join(", ")}.` : "Ninguna era titular en la base, así que no mueven la proyección."}` : "Sin bajas importantes reportadas antes del partido.",
     ],
     "5": [
-      `Proyección ${away} ${f1(muAway)} – ${home} ${f1(muHome)} (total ${f1(muTotal)}). Los tres métodos dan entre ${pctS(Math.min(...methods.map((m) => m.p)))} y ${pctS(Math.max(...methods.map((m) => m.p)))} a ${home}: confianza ${confidence}.`,
+      ...(fin ? [`Modelo final (ensamble de 5 modelos${models?.qb?.shift ? " + capa de QB" : ""}): ${away} ${f1(finAway)} – ${home} ${f1(finHome)}, P(${home}) ${pctS(pHome)}. La triangulación del framework sola daba ${pctS(pTriangulated)}.`] : []),
+      `Framework: ${away} ${f1(muAway)} – ${home} ${f1(muHome)} (total ${f1(muTotal)}). Sus tres métodos dan entre ${pctS(Math.min(...methods.map((m) => m.p)))} y ${pctS(Math.max(...methods.map((m) => m.p)))} a ${home}: confianza ${confidence}.`,
       currentSeasonGames ? `Los partidos de ${target.season} ya pesan ${pctS(curShare(home), 0)} en los ratings de ${home} y ${pctS(curShare(away), 0)} en los de ${away}; el resto sigue saliendo de ${priorSeason}.` : `Semana 1: los ratings salen por completo de ${priorSeason}.`,
       `${metAdj} de ${adjustments.length} condiciones de la tabla 5.3 se cumplen; ${appliedAdj} se aplicaron (el resto ya está en la base o no se cumple).`,
     ],
     "6": [
-      total !== null ? `Total proyectado ${f1(muTotal)} contra una línea de ${total}: ${muTotal < total ? "el modelo inclina Under" : "el modelo inclina Over"} en ${lineTable.filter((l) => (muTotal < total ? l.pUnder > 0.53 : l.pOver > 0.53)).length} de ${lineTable.length} líneas revisadas.` : "Sin línea de total.",
+      total !== null ? `Total proyectado ${f1(finalTotal0)} contra una línea de ${total}: ${finalTotal0 < total ? "el modelo inclina Under" : "el modelo inclina Over"} en ${lineTable.filter((l) => (finalTotal0 < total ? l.pUnder > 0.53 : l.pOver > 0.53)).length} de ${lineTable.length} líneas revisadas.` : "Sin línea de total.",
       `Primera mitad proyectada ${away} ${f1(proj1H.away)} – ${home} ${f1(proj1H.home)}; no hay línea de 1H para valorarla.`,
     ],
     "7": [
@@ -947,12 +997,12 @@ export async function buildPregameAnalysis(gameId: string) {
   if (played) {
     const realTotal = finalTotal as number, realMargin = finalMargin as number;
     if (total !== null) {
-      const closer = Math.abs(muTotal - realTotal) < Math.abs(total - realTotal) ? "El modelo estuvo más cerca que el mercado." : "El mercado estuvo más cerca.";
-      diagnosis.push(`Total: proyectado ${f1(muTotal)}, real ${realTotal}, línea ${total}. ${closer}`);
+      const closer = Math.abs(finalTotal0 - realTotal) < Math.abs(total - realTotal) ? "El modelo estuvo más cerca que el mercado." : "El mercado estuvo más cerca.";
+      diagnosis.push(`Total: proyectado ${f1(finalTotal0)}, real ${realTotal}, línea ${total}. ${closer}`);
     }
     if (spread !== null) {
-      const closer = Math.abs(muMargin - realMargin) < Math.abs(spread - realMargin) ? "el modelo estuvo más cerca" : "el mercado estuvo más cerca";
-      diagnosis.push(`Margen para ${home}: proyectado ${sgn(muMargin, 1)}, mercado ${sgn(spread, 1)}, real ${sgn(realMargin, 0)}: ${closer}.`);
+      const closer = Math.abs(finalMargin0 - realMargin) < Math.abs(spread - realMargin) ? "el modelo estuvo más cerca" : "el mercado estuvo más cerca";
+      diagnosis.push(`Margen para ${home}: proyectado ${sgn(finalMargin0, 1)}, mercado ${sgn(spread, 1)}, real ${sgn(realMargin, 0)}: ${closer}.`);
     }
     for (const [t, v] of [[home, hg], [away, ag]] as const) {
       const baseEpa = M.offEpa.get(t);
@@ -965,6 +1015,13 @@ export async function buildPregameAnalysis(gameId: string) {
       const bk = ((ml.sides.find((x) => x.pick === home)?.pImplied ?? 0.5) - (realMargin > 0 ? 1 : 0)) ** 2;
       diagnosis.push(`Brier del modelo ${f1(bm, 3)} contra ${f1(bk, 3)} del mercado: ${bm < bk ? "el modelo fue más preciso" : "el mercado fue más preciso"} en la probabilidad de victoria.`);
     }
+    if (models) {
+      const y = realMargin > 0 ? 1 : realMargin < 0 ? 0 : 0.5;
+      const ll = (p: number) => -(y * Math.log(Math.max(1e-6, p)) + (1 - y) * Math.log(Math.max(1e-6, 1 - p)));
+      const names: Record<string, string> = { framework: "Framework", elo: "Elo", kalman: "Kalman", ridge: "Ridge", epa: "EPA", market: "Mercado" };
+      const ranked = Object.keys(names).filter((k) => models.preds[k]).map((k) => ({ k, loss: ll(models.preds[k].p ?? 0.5) })).sort((a, b) => a.loss - b.loss);
+      diagnosis.push(`En este partido el modelo más acertado fue ${names[ranked[0].k]} (P = ${pctS(models.preds[ranked[0].k].p)} para ${home}) y el menos acertado ${names[ranked[ranked.length - 1].k]} (${pctS(models.preds[ranked[ranked.length - 1].k].p)}). Esa pérdida ya entra en los pesos del siguiente partido.`);
+    }
     if (newToBase.length) diagnosis.push(`Jugadores fuera de la base (fichajes, novatos o suplentes que subieron): ${newToBase.length} en el reporte de lesiones. El modelo todavía no sabe medirlos.`);
     diagnosis.push("Las reglas se aplicaron igual que antes del partido: nada se ajustó después de conocer el resultado.");
   }
@@ -972,8 +1029,8 @@ export async function buildPregameAnalysis(gameId: string) {
     ? {
         homeScore: target.homeScore as number,
         awayScore: target.awayScore as number,
-        marginError: r3(muMargin - (finalMargin as number), 1),
-        totalError: r3(muTotal - (finalTotal as number), 1),
+        marginError: r3(finalMargin0 - (finalMargin as number), 1),
+        totalError: r3(finalTotal0 - (finalTotal as number), 1),
         winnerCorrect: (pHome >= 0.5) === ((finalMargin as number) > 0),
         brierModel: r3((pHome - ((finalMargin as number) > 0 ? 1 : 0)) ** 2),
         brierMarket: ml ? r3(((mk("Moneyline")?.sides.find((s) => s.pick === home)?.pImplied ?? 0.5) - ((finalMargin as number) > 0 ? 1 : 0)) ** 2) : null,
@@ -1010,10 +1067,13 @@ export async function buildPregameAnalysis(gameId: string) {
     injuries: injuryDetail,
     adjustments: adjustments.map((a) => ({ ...a, factor: a.factor })),
     base: { home: r3(baseHome, 2), away: r3(baseAway, 2) },
-    projection: { home: r3(muHome, 1), away: r3(muAway, 1), margin: r3(muMargin, 1), total: r3(muTotal, 1), q1: { home: r3(proj1Q.home, 1), away: r3(proj1Q.away, 1) }, h1: { home: r3(proj1H.home, 1), away: r3(proj1H.away, 1) } },
+    projectionFramework: { home: r3(muHome, 1), away: r3(muAway, 1), margin: r3(muMargin, 1), total: r3(muTotal, 1) },
+    projection: { home: r3(finHome, 1), away: r3(finAway, 1), margin: r3(finalMargin0, 1), total: r3(finalTotal0, 1), q1: { home: r3(proj1Q.home, 1), away: r3(proj1Q.away, 1) }, h1: { home: r3(proj1H.home, 1), away: r3(proj1H.away, 1) } },
     lineTable,
     methods: methods.map((m) => ({ ...m, p: r3(m.p) })),
-    pHome: r3(pHome), divergence: r3(divergence), confidence,
+    pHome: r3(pHome), pTriangulated: r3(pTriangulated), divergence: r3(divergence), confidence,
+    models,
+    final: fin ? { pHome: r3(pHome), margin: r3(finalMargin0, 1), total: r3(finalTotal0, 1), sdMargin: r3(fin.sdMargin, 2), sdTotal: r3(fin.sdTotal, 2), adjMargin: r3(adjMargin, 2), adjTotal: r3(adjTotal, 2) } : null,
     markets, checks, dependencies, algorithm,
     marginBins: Object.entries(bins).map(([k, v]) => [Number(k), v]).sort((a, b) => a[0] - b[0]),
     simulations: SIMULATIONS,

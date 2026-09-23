@@ -17,6 +17,8 @@ import { prisma } from "../src/lib/prisma";
 import { buildFieldPositionEpModel, ownEpaForPlay } from "../src/lib/expected-points";
 import { buildMarkovModel, pearson } from "../src/lib/markov-model";
 import { buildPregameAnalysis, type PregameAnalysis } from "../src/lib/framework-analysis";
+import { loadModelData } from "../src/lib/models/backtest";
+import { gameModels, labSummary, readParams, runFinal } from "../src/lib/models/lab";
 
 // Equipo que seguimos partido a partido y cuántos de sus partidos ya tienen análisis previo.
 const FOCUS_TEAM = "KC";
@@ -240,12 +242,25 @@ async function main() {
     process.stdout.write(`\r   semana ${week}/${weeks[weeks.length - 1]} exportada`);
   }
 
+  // Torneo de modelos: walk-forward de 2018 a hoy con los parámetros optimizados (data/model-params.json).
+  console.log("\n-> Torneo de modelos (walk-forward)");
+  const modelData = await loadModelData(2018);
+  const modelParams = await readParams();
+  if (!modelParams) console.log("   Sin data/model-params.json: se usan los parámetros iniciales (corre npm run models:optimize)");
+  const modelRun = runFinal(modelData, modelParams);
+  const modelsLab = labSummary(modelRun, modelParams);
+  const modelsJson = JSON.stringify(modelsLab);
+  await writeFile(path.join(DIST, "data", "models.json"), modelsJson);
+  const test = modelsLab.leaderboard.find((p) => p.period === "test");
+  console.log(`   ${modelsLab.games} partidos en ${modelsLab.runSeconds} s · models.json ${(modelsJson.length / 1024).toFixed(0)} KB`);
+  for (const r of test?.rows ?? []) console.log(`   2024 · ${r.label.padEnd(40)} log-loss ${r.logLoss} · acierto ${r.accuracy}`);
+
   const focusGames = games
     .filter((g) => g.homeTeamAbbr === FOCUS_TEAM || g.awayTeamAbbr === FOCUS_TEAM)
     .slice(0, FOCUS_GAMES_ANALYZED);
   for (const g of focusGames) {
     console.log(`\n-> Modelo previo al partido: ${g.gameId} (solo datos antes del ${g.gameDate?.toISOString().slice(0, 10)})`);
-    const analysis = await buildPregameAnalysis(g.gameId);
+    const analysis = await buildPregameAnalysis(g.gameId, gameModels(modelRun, g.gameId));
     core.pregame[g.gameId] = analysis;
     core.focus.analyzed.push(g.gameId);
     console.log(

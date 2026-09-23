@@ -85,6 +85,22 @@ fecha de publicación: un registro posterior al inicio del partido se excluye (f
 El equipo y cuántos de sus partidos se analizan se configuran en `scripts/export-snapshot.ts`
 (`FOCUS_TEAM`, `FOCUS_GAMES_ANALYZED`).
 
+## Torneo de modelos
+
+`src/lib/models/` contiene cinco modelos (framework, Elo, Kalman de Glickman–Stern, ridge de
+puntos y EPA ajustada por rival), un ensamble con pesos exponenciales y una capa de ajuste por
+QB titular. Todos se prueban partido a partido sin ver el futuro (ver
+`docs/nfl_framework_v1.md`, sección 5.4.3).
+
+```bash
+npm run data:extract-pbp -- --season=2019   # … hasta 2024: EPA para el modelo de EPA
+npm run models:optimize   # entrena 2020–22, valida 2023, guarda data/model-params.json
+npm run models:report     # tabla del torneo por periodo (entrenamiento, validación, prueba)
+```
+
+La exportación vuelve a correr el torneo completo (~2 s), escribe `data/models.json` para el
+laboratorio y le pasa a cada partido analizado sus predicciones, pesos y tabla a la fecha.
+
 ## Versión publicada (sin servidor)
 
 `npm run snapshot:export -- --season=2024` genera en `snapshot/dist/` una versión estática
@@ -105,6 +121,8 @@ los datos o el modelo se ve volviendo a exportar y publicar.
 | `npm run data:extract -- --season=YYYY --games-only` | Solo calendario y resultados (historial para H2H y Elo) |
 | `npm run data:extract-pbp -- --season=YYYY` | Descarga play-by-play (posesiones y jugadas) |
 | `npm run data:extract-context -- --season=YYYY` | Lesiones, depth charts, presión (PFR), QBR de ESPN e inactivos oficiales |
+| `npm run models:optimize` | Optimiza los modelos del torneo y el ensamble (guarda `data/model-params.json`) |
+| `npm run models:report` | Imprime la tabla del torneo por periodo |
 | `npm run snapshot:export -- --season=YYYY` | Genera la versión estática publicable en `snapshot/dist/` |
 
 ## Modelo de datos (`prisma/schema.prisma`)

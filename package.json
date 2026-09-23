@@ -13,7 +13,9 @@
     "data:extract": "tsx scripts/extract-nflverse.ts",
     "data:extract-pbp": "tsx scripts/extract-pbp.ts",
     "data:extract-context": "tsx scripts/extract-context.ts",
-    "snapshot:export": "tsx scripts/export-snapshot.ts"
+    "snapshot:export": "tsx scripts/export-snapshot.ts",
+    "models:optimize": "tsx scripts/optimize-models.ts",
+    "models:report": "tsx scripts/model-report.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
