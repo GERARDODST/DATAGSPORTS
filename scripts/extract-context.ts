@@ -4,6 +4,8 @@
  * - injuries_{season}.csv: reporte oficial de lesiones (secciones 4.2 y 9.3)
  * - depth_charts_{season}.csv: alineación proyectada de cada semana (sección 6.1)
  * - advstats_week_def_{season}.csv (PFR): presiones al QB por partido (sección 4)
+ * - espn_data/qbr_*_level.csv: QBR de ESPN por partido y por temporada (sección 3.4)
+ * - roster_weekly_{season}.csv: inactivos oficiales del día del partido (sección 6.1, regla 8.3.12)
  *
  * Uso: npm run data:extract-context -- --season=2024
  */
@@ -104,6 +106,53 @@ async function main() {
     await insertChunks(rows, (chunk) => prisma.teamGamePressure.createMany({ data: chunk }));
     console.log(`-> Presión defensiva (PFR): ${rows.length} equipo-partido`);
   } else console.log("-> Presión defensiva (PFR): no publicada para esta temporada");
+
+  // QBR de ESPN: por semana y por temporada (la de la temporada se guarda con week = 0).
+  const qbrWeek = await fetchCsv(`${RELEASES_BASE}/espn_data/qbr_week_level.csv`);
+  const qbrSeason = await fetchCsv(`${RELEASES_BASE}/espn_data/qbr_season_level.csv`);
+  await prisma.qbrEntry.deleteMany({ where: { season } });
+  const qbrRows = [
+    ...(qbrWeek ?? []).filter((r) => toInt(r.season) === season).map((r) => ({ r, week: toInt(r.week_num ?? r.game_week) ?? 0 })),
+    ...(qbrSeason ?? []).filter((r) => toInt(r.season) === season).map((r) => ({ r, week: 0 })),
+  ]
+    .filter(({ r }) => r.qbr_total && r.qbr_total !== "NA")
+    .map(({ r, week }) => ({
+      id: `${season}_${r.season_type}_${week}_${r.player_id}_${r.team_abb}`,
+      season,
+      seasonType: r.season_type,
+      week,
+      teamAbbr: r.team_abb,
+      espnId: r.player_id,
+      name: r.name_display,
+      qbrTotal: Number(r.qbr_total),
+      qbPlays: toInt(r.qb_plays) ?? 0,
+      epaTotal: r.epa_total && r.epa_total !== "NA" ? Number(r.epa_total) : null,
+    }));
+  const seen = new Set<string>();
+  const qbrUnique = qbrRows.filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)));
+  await insertChunks(qbrUnique, (chunk) => prisma.qbrEntry.createMany({ data: chunk }));
+  console.log(`-> QBR de ESPN: ${qbrUnique.filter((r) => r.week > 0).length} QB-partido y ${qbrUnique.filter((r) => r.week === 0).length} QB-temporada`);
+
+  // Roster semanal: estado de cada jugador (ACT, INA, RES...). INA son los inactivos oficiales del partido.
+  const roster = await fetchCsv(`${RELEASES_BASE}/weekly_rosters/roster_weekly_${season}.csv`);
+  await prisma.rosterStatus.deleteMany({ where: { season } });
+  if (roster) {
+    const rows = roster
+      .filter((r) => r.status && r.status !== "ACT")
+      .map((r, i) => ({
+        id: `${season}_${r.week}_${r.team}_${r.gsis_id || i}_${i}`,
+        season,
+        week: toInt(r.week) ?? 0,
+        teamAbbr: r.team,
+        gsisId: r.gsis_id && r.gsis_id !== "NA" ? r.gsis_id : null,
+        fullName: r.full_name,
+        position: r.position || null,
+        status: r.status,
+        statusDescription: r.status_description_abbr && r.status_description_abbr !== "NA" ? r.status_description_abbr : null,
+      }));
+    await insertChunks(rows, (chunk) => prisma.rosterStatus.createMany({ data: chunk }));
+    console.log(`-> Roster semanal: ${rows.length} jugadores no activos (${rows.filter((r) => r.status === "INA").length} inactivos del día del partido)`);
+  } else console.log("-> Roster semanal: no publicado para esta temporada");
 
   console.log("\nContexto cargado.\n");
 }

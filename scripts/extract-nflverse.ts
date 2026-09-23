@@ -139,6 +139,8 @@ async function loadRosterPlayers(season: number, knownTeams: Set<string>): Promi
   return knownPlayers;
 }
 
+const FRANCHISE: Record<string, string> = { OAK: "LV", SD: "LAC", STL: "LA" };
+
 async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<string, string>> {
   console.log("-> Calendario (games.csv)");
   const rows = await fetchCsv(`${RELEASES_BASE}/schedules/games.csv`);
@@ -147,7 +149,9 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
   const lookup = new Map<string, string>();
   let loaded = 0;
   let skipped = 0;
-  for (const row of seasonRows) {
+  for (const raw of seasonRows) {
+    // Franquicias que cambiaron de ciudad: se guardan con su abreviatura actual para que el Elo y el historial sigan al mismo equipo.
+    const row: CsvRow = { ...raw, home_team: FRANCHISE[raw.home_team] ?? raw.home_team, away_team: FRANCHISE[raw.away_team] ?? raw.away_team };
     if (!knownTeams.has(row.home_team) || !knownTeams.has(row.away_team)) {
       skipped++;
       continue;
@@ -299,6 +303,12 @@ async function main() {
   console.log(`\n=== Extracción NFLverse -> DATAGSPORTS (temporada ${season}) ===\n`);
 
   const knownTeams = await loadTeams();
+  // --games-only: solo resultados y momios de esa temporada (historial para H2H y Elo), sin rosters ni stats.
+  if (process.argv.includes("--games-only")) {
+    await loadGames(season, knownTeams);
+    console.log("\nExtracción completa (solo calendario).\n");
+    return;
+  }
   const knownPlayers = await loadRosterPlayers(season, knownTeams);
   const gameLookup = await loadGames(season, knownTeams);
   await loadWeeklyStats(season, knownPlayers, knownTeams, gameLookup);

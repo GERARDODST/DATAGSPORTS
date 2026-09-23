@@ -252,3 +252,37 @@ model TeamGamePressure {
   @@index([season, teamAbbr])
   @@map("team_game_pressure")
 }
+
+/// QBR de ESPN (nflverse espn_data): week = 0 es el valor de la temporada completa.
+model QbrEntry {
+  id         String @id
+  season     Int
+  seasonType String
+  week       Int
+  teamAbbr   String
+  espnId     String
+  name       String
+  qbrTotal   Float
+  qbPlays    Int
+  epaTotal   Float?
+
+  @@index([season, name])
+  @@map("qbr_entries")
+}
+
+/// Estado de cada jugador en el roster semanal (nflverse weekly_rosters).
+/// INA = inactivo oficial del día del partido (se anuncia 90 minutos antes).
+model RosterStatus {
+  id                String  @id
+  season            Int
+  week              Int
+  teamAbbr          String
+  gsisId            String?
+  fullName          String
+  position          String?
+  status            String
+  statusDescription String?
+
+  @@index([season, week, teamAbbr])
+  @@map("roster_status")
+}

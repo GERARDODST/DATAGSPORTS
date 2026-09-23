@@ -539,6 +539,11 @@
   .evo-label:hover { text-decoration: underline; }
   @media (max-width: 560px) { .evo-row { grid-template-columns: 1fr auto; } .evo-row .prob-compare { grid-column: 1 / -1; grid-row: 2; } }
 
+  .gap-plan { display: flex; flex-direction: column; gap: 8px; }
+  .gap-plan h4 { margin: 8px 0 0; font-size: 13px; }
+  .gap-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gap-change { display: flex; align-items: center; gap: 6px; }
+
   @media (prefers-reduced-motion: no-preference) {
     .game, .callout, .weeks button, .tabs a { transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease; }
   }
@@ -1735,7 +1740,8 @@ const GLOSSARY = {
   epa: ["EPA (Expected Points Added)", "Puntos esperados que suma o resta una jugada. Se calcula como EP después − EP antes, donde EP depende del down, la distancia y la yarda. EPA/jugada positivo = la ofensiva avanza hacia anotar."],
   cpoe: ["CPOE", "Completion Percentage Over Expected: cuántos puntos porcentuales completa el QB por encima de lo esperado según la dificultad de cada pase (distancia, presión, ubicación)."],
   anya: ["ANY/A", "Adjusted Net Yards per Attempt = (yardas + 20·TD − 45·INT − yardas perdidas en sacks) / (intentos + sacks). Premia touchdowns y castiga intercepciones y sacks; predice mejor que el passer rating."],
-  qbr: ["QBR", "Total QBR de ESPN (0–100). Métrica propietaria: no se publica su fórmula ni está en nflverse, por eso aparece como faltante."],
+  qbr: ["QBR", "Total QBR de ESPN (0–100; 50 = promedio). Mide la aportación del QB por jugada, incluidas carreras y sacks, ajustada por la dificultad. Su fórmula es propietaria, pero ESPN publica los valores y nflverse los redistribuye."],
+  inactive: ["Inactivos oficiales", "Lista que cada equipo entrega 90 minutos antes del partido con los jugadores que no van a jugar. Confirma las dudas del reporte de lesiones (Doubtful, Questionable)."],
   passerRating: ["Passer rating", "Rating oficial de la NFL (0 a 158.3) con 4 componentes por intento: % de pases completos, yardas, TD e INT. No considera sacks ni carreras."],
   success: ["Success rate", "% de jugadas exitosas: ganar al menos 40% de la distancia en 1er down, 60% en 2do y el 100% en 3ro o 4to down."],
   pressure: ["Pressure rate", "Presiones (hurries + golpes al QB + sacks) divididas entre los dropbacks del rival. Mide qué tan seguido la defensa incomoda al QB."],
@@ -1786,7 +1792,7 @@ const AUTO_TERMS = [
   ["Elo", "elo"], ["λ", "lambda"], ["σ", "sigma"], ["Monte Carlo", "montecarlo"], ["Triangulación", "triang"],
   ["Moneyline", "moneyline"], ["Spread", "spread"], ["Edge", "edge"], ["Kelly", "kelly"], ["Brier", "brier"],
   ["Momio justo", "fair"], ["implícita", "implied"], ["Depth chart", "depth"], ["depth chart", "depth"],
-  ["regresión a la media", "shrink"], ["regresada a la media", "shrink"], ["regresado a la media", "shrink"], ["Out / Doubtful", "injury"],
+  ["regresión a la media", "shrink"], ["inactivos", "inactive"], ["Inactivos", "inactive"], ["regresada a la media", "shrink"], ["regresado a la media", "shrink"], ["Out / Doubtful", "injury"],
   ["reporte de lesiones", "injury"], ["Reporte oficial de lesiones", "injury"], ["PFR", "pfr"], ["nflverse", "nflverse"], ["HFA", "hfa"],
   ["ventaja de local", "hfa"], ["1Q", "quarters"], ["1H", "quarters"], ["Semáforo", "light"], ["fuga de datos", "leak"], ["Divergencia", "divergence"],
 ];
@@ -1896,7 +1902,7 @@ const FW_SECTIONS = [
 const GROUPS = {
   "2": [["Historial y récords", () => true]],
   "3": [["Quarterback", (it) => it.id.startsWith("qb-")], ["Eficiencia ofensiva del equipo", (it) => it.id.startsWith("o-")]],
-  "4": [["Eficiencia defensiva", (it) => it.id.startsWith("d-")], ["Disponibilidad de jugadores", (it) => it.id === "inj" || it.id === "depth"]],
+  "4": [["Eficiencia defensiva", (it) => it.id.startsWith("d-")], ["Disponibilidad de jugadores", (it) => ["inj", "inactive", "depth"].includes(it.id)]],
 };
 let pregameFilter = "todos";
 const openSections = new Set();
@@ -1993,6 +1999,32 @@ function sectionBlock(a, def, bodyHtml) {
     </details>`;
 }
 
+const GAP_KIND = {
+  resuelto: { label: "Resuelto con datos reales", cls: "ok", icon: "✓", color: "var(--accent)" },
+  red: { label: "Fuente lista, bloqueada por la red", cls: "warn", icon: "⇆", color: "var(--s4)" },
+  clave: { label: "Necesita una clave de API (de pago)", cls: "no", icon: "$", color: "var(--neg)" },
+  sin_fuente: { label: "No existe antes del partido", cls: "muted", icon: "–", color: "var(--muted)" },
+};
+function gapPlanPanel(a) {
+  const plan = a.gapPlan ?? [];
+  if (!plan.length) return "";
+  const kinds = Object.keys(GAP_KIND).filter((k) => plan.some((g) => g.kind === k));
+  return `
+    <div class="gap-plan">
+      <div class="gap-summary">${kinds.map((k) => `<span class="pill ${GAP_KIND[k].cls}">${GAP_KIND[k].icon} ${plan.filter((g) => g.kind === k).length} · ${GAP_KIND[k].label}</span>`).join("")}</div>
+      ${kinds.map((k) => `
+        <h4 style="color:${GAP_KIND[k].color}">${GAP_KIND[k].icon} ${GAP_KIND[k].label}</h4>
+        <div class="gap-cards">${plan.filter((g) => g.kind === k).map((g) => `
+          <div class="gap-card" style="--cat:${GAP_KIND[k].color}">
+            <div class="gap-top"><span class="muted">Sección ${esc(g.section)}</span></div>
+            <strong>${annotate(g.label)}</strong>
+            <div class="gap-change">${statusPill(g.before)}<span class="flow-arrow" aria-hidden="true">→</span>${statusPill(g.now)}</div>
+            <p>${annotate(g.detail)}</p>
+            <p class="m-src">${esc(g.source)}</p>
+          </div>`).join("")}</div>`).join("")}
+    </div>`;
+}
+
 function inventoryPanel(a) {
   const statuses = ["disponible", "derivado", "parcial", "faltante", "no_aplica"];
   const cats = Object.keys(a.inventory.byCategory);
@@ -2014,13 +2046,14 @@ function inventoryPanel(a) {
           <thead><tr><th>Categoría</th>${statuses.map((st) => `<th class="r">${STATUS_META[st].label}</th>`).join("")}</tr></thead>
           <tbody>${cats.map((c) => `<tr><td><i class="dot" style="background:${CAT_COLOR[c] ?? "var(--muted)"}"></i> ${esc(c)}</td>${statuses.map((st) => { const n = a.inventory.byCategory[c][st]; return `<td class="r num ${n ? "" : "muted"}">${n || "·"}</td>`; }).join("")}</tr>`).join("")}</tbody>
         </table></div>`, { icon: "▦", open: false })}
+      ${group("Cómo se completan los faltantes: solo con fuentes reales", gapPlanPanel(a), { icon: "⇄", count: (a.gapPlan ?? []).length })}
       ${group("Lo que falta o está incompleto, y qué bloquea", `<div class="gap-cards">${gaps.map((it) => `
           <div class="gap-card" style="--cat:${CAT_COLOR[it.category] ?? "var(--muted)"}">
             <div class="gap-top">${statusPill(it.status)}<span class="muted">Sección ${esc(it.section)} · ${esc(it.category)}</span></div>
             <strong>${annotate(it.label)}</strong>
             ${it.note ? `<p>${annotate(it.note)}</p>` : ""}
             ${it.impact ? `<p class="impact">Si falta: ${esc(it.impact)}</p>` : ""}
-          </div>`).join("")}</div>`, { icon: "!", count: gaps.length })}
+          </div>`).join("")}</div>`, { icon: "!", count: gaps.length, open: false })}
     </section>`;
 }
 
@@ -2222,10 +2255,10 @@ function renderPregame(gameId) {
 
     ${sectionBlock(a, sec("4"), `
       ${grouped("4")}
-      ${group("Bajas del reporte de lesiones (Out / Doubtful)", `
+      ${group("Bajas: reporte de lesiones e inactivos oficiales", `
         <div class="table-scroll"><table class="compact">
-          <thead><tr><th>Jugador</th><th>Equipo</th><th>Pos ${info("positions")}</th><th>Estado</th><th>Lesión</th><th>Publicado</th><th>¿Titular esta semana?</th><th>¿Titular en la base?</th></tr></thead>
-          <tbody>${a.injuries.map((i) => `<tr><td>${esc(i.name)}</td><td>${esc(i.team)}</td><td>${esc(i.position ?? "—")}</td><td>${esc(i.status)}</td><td class="muted">${esc(i.injury ?? "—")}</td><td class="muted">${esc(fmtDate(i.date))}</td><td>${i.starterNow ? "Sí" : "No"}</td><td>${i.inBase ? "Sí" : `No (${i.baseWeeks} sem.)`}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">Sin bajas reportadas.</td></tr>`}</tbody>
+          <thead><tr><th>Jugador</th><th>Equipo</th><th>Pos ${info("positions")}</th><th>Estado</th><th>Lesión</th><th>Publicado</th><th>¿Inactivo oficial? ${info("inactive")}</th><th>¿Titular esta semana?</th><th>¿Titular en la base?</th></tr></thead>
+          <tbody>${a.injuries.map((i) => `<tr><td>${esc(i.name)}</td><td>${esc(i.team)}</td><td>${esc(i.position ?? "—")}</td><td>${esc(i.status)}</td><td class="muted">${esc(i.injury ?? "—")}</td><td class="muted">${i.date ? esc(fmtDate(i.date)) : "—"}</td><td>${i.inactive ? '<span class="pill no">Sí, no juega</span>' : '<span class="pill muted">No</span>'}</td><td>${i.starterNow ? "Sí" : "No"}</td><td>${i.inBase ? "Sí" : `No (${i.baseWeeks} sem.)`}</td></tr>`).join("") || `<tr><td colspan="9" class="muted">Sin bajas reportadas.</td></tr>`}</tbody>
         </table></div>
         ${pg && pg.injuredLate.length ? cloud("warn", "Excluido por fuga de datos", `<p>${esc(pg.injuredLate.join("; "))}: publicado después del inicio del partido.${info("leak")}</p>`, "!") : ""}`, { icon: "✚", count: a.injuries.length, open: false })}`)}
 

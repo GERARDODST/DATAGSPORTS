@@ -56,6 +56,8 @@ const SRC = {
   injuries: "nflverse · injuries/injuries_{temporada}.csv",
   depth: "nflverse · depth_charts/depth_charts_{temporada}.csv",
   pfr: "nflverse (PFR) · pfr_advstats/advstats_week_def_{temporada}.csv",
+  qbr: "nflverse (ESPN) · espn_data/qbr_season_level.csv + qbr_week_level.csv",
+  roster: "nflverse · weekly_rosters/roster_weekly_{temporada}.csv",
   model: "Cálculo propio (src/lib/framework-analysis.ts)",
   none: "Sin fuente cargada",
 };
@@ -133,6 +135,12 @@ export async function buildPregameAnalysis(gameId: string) {
     orderBy: [{ gameDate: "asc" }, { gameId: "asc" }],
   });
   const priorIds = prior.map((g) => g.gameId);
+  // Historial completo cargado (todas las temporadas antes del partido): solo para H2H y Elo.
+  const history = await prisma.game.findMany({
+    where: { gameDate: { lt: cutoff }, homeScore: { not: null } },
+    orderBy: [{ gameDate: "asc" }, { gameId: "asc" }],
+  });
+  const firstSeason = history[0]?.season ?? priorSeason;
   const weightOf = (season: number) => (season === target.season ? 1 : PRIOR_SEASON_WEIGHT);
   const currentSeasonGames = prior.filter((g) => g.season === target.season).length;
   const priorSeasonGames = prior.length - currentSeasonGames;
@@ -308,7 +316,9 @@ export async function buildPregameAnalysis(gameId: string) {
   };
   const homeLast5 = teamGames(home).filter((g) => g.homeTeamAbbr === home && g.location !== "Neutral").slice(-5).map((g) => fmtGame(g, home));
   const awayLast5 = teamGames(away).filter((g) => g.awayTeamAbbr === away && g.location !== "Neutral").slice(-5).map((g) => fmtGame(g, away));
-  const h2h = prior.filter((g) => [g.homeTeamAbbr, g.awayTeamAbbr].sort().join() === [home, away].sort().join()).slice(-5).map((g) => fmtGame(g, home));
+  const isH2h = (g: (typeof prior)[number]) => [g.homeTeamAbbr, g.awayTeamAbbr].sort().join() === [home, away].sort().join();
+  const h2h = history.filter(isH2h).slice(-5).map((g) => fmtGame(g, home));
+  const h2hInBase = prior.filter(isH2h).length;
   const rec = (list: { win: boolean }[]) => `${list.filter((x) => x.win).length}–${list.filter((x) => !x.win).length}`;
   const avg = (list: { pf: number; pa: number }[], k: "pf" | "pa") => f1(mean(list.map((x) => x[k])));
   add({ id: "l5home", section: "2", category: "Récords e historial", label: `Últimos 5 de ${home} en casa (récord · PF/PA)`, value: `${rec(homeLast5)} · ${avg(homeLast5, "pf")} / ${avg(homeLast5, "pa")}`, source: `${SRC.games} · home_score, away_score`, status: homeLast5.length >= 5 ? "derivado" : "parcial" });
@@ -316,8 +326,8 @@ export async function buildPregameAnalysis(gameId: string) {
   add({
     id: "h2h", section: "2", category: "Récords e historial", label: "Últimos 5 enfrentamientos directos",
     value: h2h.length ? `${h2h.length} de 5 · ${home} ${h2h.filter((x) => x.win).length}–${h2h.filter((x) => !x.win).length} ${away}` : "0 de 5",
-    source: `${SRC.games} · temporadas cargadas: ${priorSeason}–${target.season}`, status: h2h.length >= 5 ? "derivado" : h2h.length ? "parcial" : "faltante",
-    note: h2h.length < 5 ? `Solo hay ${h2h.length} cara a cara en las temporadas cargadas; se necesitarían temporadas anteriores a ${priorSeason}.` : undefined,
+    source: `${SRC.games} · temporadas cargadas: ${firstSeason}–${target.season}`, status: h2h.length >= 5 ? "derivado" : h2h.length ? "parcial" : "faltante",
+    note: h2h.length < 5 ? `Solo hay ${h2h.length} cara a cara en las temporadas cargadas; se necesitarían temporadas anteriores a ${firstSeason}.` : `Del ${h2h[0].date.slice(0, 4)} al ${h2h[h2h.length - 1].date.slice(0, 4)} (con solo ${priorSeason}–${target.season} había ${h2hInBase}).`,
     impact: h2h.length < 5 ? "Baja confianza histórica (sección 9.3, secciones 1–2)." : undefined,
   });
 
@@ -432,7 +442,31 @@ export async function buildPregameAnalysis(gameId: string) {
   qbRows("ANY/A (rango entre QBs con 200+ intentos)", (q) => `${f1(q.anya, 2)} (${rankOf(qbAnyaAll, q.id, true)}º de ${qbAnyaAll.size})`, `${SRC.weekly} + ${SRC.pbp}`, "derivado");
   qbRows("EPA por jugada del QB", (q) => (q.epa === null ? "—" : sgn(q.epa, 3)), `${SRC.pbp} · epa (jugadas con passer_player_id)`, "derivado");
   qbRows("CPOE (% de pases completos sobre lo esperado)", (q) => (q.cpoe === null ? "—" : `${sgn(q.cpoe, 1)} pp`), `${SRC.pbp} · cpoe`, "disponible");
-  add({ id: "qb-qbr", section: "3", category: "QB y ofensiva", label: "QBR (ESPN)", value: "—", source: SRC.none, status: "faltante", note: "Métrica propietaria de ESPN, no está en nflverse.", impact: "Ninguno: EPA/jugada y CPOE cubren lo mismo (sección 3.4)." });
+  // QBR de ESPN: la temporada anterior completa (week = 0) y, de la actual, solo las semanas ya jugadas (el total de la temporada actual sería fuga).
+  const qbrRows = await prisma.qbrEntry.findMany({
+    where: {
+      seasonType: "Regular",
+      OR: [{ season: priorSeason, week: 0 }, { season: target.season, week: { gt: 0, lt: target.week } }],
+    },
+  });
+  const qbrPrior = qbrRows.filter((r) => r.season === priorSeason && r.qbPlays >= 200).sort((x, y) => y.qbrTotal - x.qbrTotal);
+  const qbrText = (name: string | null) => {
+    if (!name) return null;
+    const base = qbrPrior.find((r) => r.name === name) ?? qbrRows.find((r) => r.season === priorSeason && r.name === name);
+    const cur = qbrRows.filter((r) => r.season === target.season && r.name === name).sort((x, y) => x.week - y.week);
+    if (!base && !cur.length) return null;
+    const rank = base ? qbrPrior.indexOf(base) + 1 : 0;
+    const parts = [base ? `${priorSeason}: ${base.qbrTotal.toFixed(1)}${rank ? ` (${rank}º de ${qbrPrior.length})` : ""}` : `${priorSeason}: sin QBR`];
+    if (cur.length) parts.push(`${target.season}: ${cur.map((r) => `S${r.week} ${r.qbrTotal.toFixed(1)}`).join(", ")}`);
+    return parts.join(" · ");
+  };
+  const qbrH = qbrText(target.homeQbName), qbrA = qbrText(target.awayQbName);
+  add({
+    id: "qb-qbr", section: "3", category: "QB y ofensiva", label: "QBR de ESPN (0–100)", home: qbrH ?? "—", away: qbrA ?? "—",
+    source: `${SRC.qbr} · qbr_total, qb_plays`, status: qbrH && qbrA ? "disponible" : qbrH || qbrA ? "parcial" : "faltante",
+    note: `Temporada ${priorSeason} completa (rango entre QBs con 200+ jugadas) y, de ${target.season}, solo los partidos ya jugados: el QBR de la temporada ${target.season} completa incluiría partidos futuros.`,
+    impact: qbrH && qbrA ? undefined : "Ninguno: EPA/jugada y CPOE cubren lo mismo (sección 3.4).",
+  });
   add({ id: "o-epa", section: "3", category: "QB y ofensiva", label: "EPA/jugada ofensiva (rango liga)", ...both(M.offEpa, epaFmt, true), source: `${SRC.pbp} · epa (pass/run)`, status: "derivado" });
   add({ id: "o-pr", section: "3", category: "QB y ofensiva", label: "EPA pase · EPA carrera", home: `${epaFmt(M.passEpa.get(home) ?? NaN)} · ${epaFmt(M.runEpa.get(home) ?? NaN)}`, away: `${epaFmt(M.passEpa.get(away) ?? NaN)} · ${epaFmt(M.runEpa.get(away) ?? NaN)}`, source: `${SRC.pbp} · epa, play_type`, status: "derivado" });
   add({ id: "o-sr", section: "3", category: "QB y ofensiva", label: "Success rate", ...both(M.success, (v) => pctS(v), true), source: `${SRC.pbp} · success`, status: "derivado" });
@@ -469,11 +503,14 @@ export async function buildPregameAnalysis(gameId: string) {
   add({ id: "d-mt", section: "4", category: "Defensa", label: "Tackles fallados por partido", ...both(M.missedTacklesPg, (v) => f1(v, 1), false), source: `${SRC.pfr} · def_missed_tackles`, status: "derivado" });
 
   // Disponibilidad: reporte de lesiones (solo lo publicado antes del partido) y depth chart.
-  const [injAll, depthNow, depthPrior] = await Promise.all([
+  const [injAll, depthNow, depthPrior, inactives] = await Promise.all([
     prisma.injuryReport.findMany({ where: { season: target.season, week: target.week, teamAbbr: { in: [home, away] } } }),
     prisma.depthChartEntry.findMany({ where: { season: target.season, week: target.week, teamAbbr: { in: [home, away] }, depthTeam: 1 } }),
     prisma.depthChartEntry.findMany({ where: { OR: [{ season: priorSeason }, { season: target.season, week: { lt: target.week } }], teamAbbr: { in: [home, away] }, depthTeam: 1 } }),
+    prisma.rosterStatus.findMany({ where: { season: target.season, week: target.week, teamAbbr: { in: [home, away] }, status: "INA" } }),
   ]);
+  const inactiveKeys = new Set(inactives.map((i) => `${i.teamAbbr}_${i.gsisId}`));
+  const haveInactives = inactives.length > 0;
   const injPre = injAll.filter((i) => i.dateModified && i.dateModified < cutoff);
   const injLate = injAll.filter((i) => !i.dateModified || i.dateModified >= cutoff);
   // ¿El jugador está "en la base"? Semanas como titular, ponderadas por temporada, sobre el total ponderado de semanas.
@@ -489,8 +526,12 @@ export async function buildPregameAnalysis(gameId: string) {
   const allBaseWeeks = new Set(depthPrior.map((d) => `${d.season}_${d.week}`));
   const priorWeeksCount = [...allBaseWeeks].reduce((s, sw) => s + weekW(sw), 0) || 1;
   const currentStarters = new Set(depthNow.map((d) => `${d.teamAbbr}_${d.gsisId}`));
-  const injuryDetail = injPre
-    .filter((i) => i.reportStatus === "Out" || i.reportStatus === "Doubtful")
+  const reported = new Set(injPre.map((i) => `${i.teamAbbr}_${i.gsisId}`));
+  const injuryDetail = [
+    ...injPre.filter((i) => i.reportStatus === "Out" || i.reportStatus === "Doubtful" || inactiveKeys.has(`${i.teamAbbr}_${i.gsisId}`)),
+    // Inactivos oficiales que no venían en el reporte de lesiones (decisión del equipo, no lesión).
+    ...inactives.filter((i) => !reported.has(`${i.teamAbbr}_${i.gsisId}`)).map((i) => ({ teamAbbr: i.teamAbbr, gsisId: i.gsisId, fullName: i.fullName, position: i.position, reportStatus: "Inactivo", primaryInjury: null, dateModified: null })),
+  ]
     .map((i) => {
       const key = `${i.teamAbbr}_${i.gsisId}`;
       const starterWeeks = [...(priorStarterWeeks.get(key) ?? [])];
@@ -500,13 +541,16 @@ export async function buildPregameAnalysis(gameId: string) {
         team: i.teamAbbr, name: i.fullName, position: i.position, status: i.reportStatus, injury: i.primaryInjury,
         date: i.dateModified?.toISOString().slice(0, 10) ?? null,
         starterNow: currentStarters.has(key),
+        inactive: inactiveKeys.has(key),
+        // Baja confirmada: inactivo oficial; sin lista de inactivos, se usa el "Out" del reporte.
+        confirmedOut: haveInactives ? inactiveKeys.has(key) : i.reportStatus === "Out",
         inBase: baseShare >= 0.5,
         baseWeeks,
       };
     });
   const injFmt = (t: string) => {
-    const list = injuryDetail.filter((i) => i.team === t);
-    return list.length ? list.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Sin bajas (Out/Doubtful)";
+    const list = injuryDetail.filter((i) => i.team === t && i.status !== "Inactivo");
+    return list.length ? list.map((i) => `${i.name} (${i.position}, ${i.status}${i.inactive && i.status !== "Inactivo" ? " → inactivo" : ""})`).join("; ") : "Sin bajas (Out/Doubtful)";
   };
   add({
     id: "inj", section: "4", category: "Disponibilidad de jugadores", label: "Reporte oficial de lesiones: Out / Doubtful",
@@ -515,12 +559,23 @@ export async function buildPregameAnalysis(gameId: string) {
     note: injLate.length ? `${injLate.length} registro(s) excluido(s) por tener fecha posterior al inicio del partido (${injLate.map((i) => `${i.fullName}, ${i.dateModified?.toISOString().slice(0, 10)}`).join("; ")}): usarlos sería fuga de datos.` : undefined,
     impact: injPre.length ? undefined : "Bloquea Verde en total y spread (sección 9.3).",
   });
+  const inaFmt = (t: string) => {
+    const list = inactives.filter((i) => i.teamAbbr === t);
+    const starters = list.filter((i) => currentStarters.has(`${t}_${i.gsisId}`));
+    return list.length ? `${list.length} inactivos${starters.length ? ` · titulares: ${starters.map((i) => i.fullName).join(", ")}` : " · ningún titular"}` : "—";
+  };
   add({
-    id: "depth", section: "4", category: "Disponibilidad de jugadores", label: "Alineación (titulares del depth chart)",
+    id: "inactive", section: "4", category: "Disponibilidad de jugadores", label: "Inactivos oficiales del partido",
+    home: inaFmt(home), away: inaFmt(away), source: `${SRC.roster} · status = INA`,
+    status: haveInactives ? "disponible" : "faltante",
+    note: "Lista que cada equipo entrega 90 minutos antes de la patada inicial: confirma quién NO juega. Reemplaza al Doubtful/Questionable del reporte de lesiones.",
+    impact: haveInactives ? undefined : "Sin inactivos, las bajas salen solo del reporte de lesiones (Out) y ningún pick puede ser Verde (8.3.12).",
+  });
+  add({
+    id: "depth", section: "4", category: "Disponibilidad de jugadores", label: "Titulares (depth chart de la semana)",
     home: `${depthNow.filter((d) => d.teamAbbr === home).length} titulares listados`, away: `${depthNow.filter((d) => d.teamAbbr === away).length} titulares listados`,
     source: `${SRC.depth} · depth_team = 1`, status: depthNow.length ? "parcial" : "faltante",
-    note: "Es la alineación proyectada de la semana, no la confirmada 90 minutos antes del partido.",
-    impact: "Sin alineación confirmada ningún pick puede ser Verde (sección 8.3, regla 12).",
+    note: "Los titulares son los que publica el equipo en la semana; quién no juega lo confirman los inactivos oficiales. La alineación exacta de la primera jugada solo existe después de la patada inicial.",
   });
 
   // ============================================================ SECCIÓN 5 — ratings y proyección
@@ -555,8 +610,9 @@ export async function buildPregameAnalysis(gameId: string) {
   const qbGood = (q: typeof qbH) => Boolean(q && anyaRank(q) <= 10 && q.int / q.att < lgInt);
   const windMph = target.wind;
   const tempF = target.temp;
-  const offStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && ["QB", "WR", "TE", "RB", "T", "G", "C"].includes(i.position ?? ""));
-  const defStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && !["QB", "WR", "TE", "RB", "T", "G", "C", "K", "P", "LS"].includes(i.position ?? ""));
+  const OFF_POS = ["QB", "WR", "TE", "RB", "FB", "T", "G", "C", "OL"];
+  const offStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && OFF_POS.includes(i.position ?? ""));
+  const defStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && !OFF_POS.includes(i.position ?? "") && !["K", "P", "LS"].includes(i.position ?? ""));
   const newToBase = injuryDetail.filter((i) => !i.inBase);
   type Adj = { condition: string; data: string; met: boolean | null; inBase: boolean; factor: number; appliesTo: "total" | "home" | "away"; applied: boolean; reason: string };
   const adjustments: Adj[] = [];
@@ -572,7 +628,7 @@ export async function buildPregameAnalysis(gameId: string) {
   for (const t of [home, away]) {
     const offOut = offStarterOut(t);
     const defOut = defStarterOut(t);
-    pushAdj({ condition: `Baja de titular ofensivo de ${t} que sí jugó en la base`, data: offOut.length ? offOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: offOut.length > 0, inBase: false, factor: 0.92, appliesTo: t === home ? "home" : "away", reason: "Información nueva del reporte de lesiones." });
+    pushAdj({ condition: `Baja de titular ofensivo de ${t} que sí jugó en la base`, data: offOut.length ? offOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: offOut.length > 0, inBase: false, factor: 0.92, appliesTo: t === home ? "home" : "away", reason: haveInactives ? "Información nueva: baja confirmada por la lista oficial de inactivos." : "Información nueva del reporte de lesiones (Out)." });
     pushAdj({ condition: `Baja de titular defensivo de ${t} que sí jugó en la base`, data: defOut.length ? defOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: defOut.length > 0, inBase: false, factor: 1.08, appliesTo: t === home ? "away" : "home", reason: "Sube los puntos esperados del rival." });
   }
   let mulHome = 1, mulAway = 1;
@@ -621,11 +677,11 @@ export async function buildPregameAnalysis(gameId: string) {
   // Elo (5.7.7)
   const elo = new Map<string, number>();
   const getElo = (t: string) => elo.get(t) ?? 1500;
-  let regressed = false;
-  for (const g of prior) {
-    if (g.season === target.season && !regressed) {
+  let eloSeason = firstSeason;
+  for (const g of history) {
+    if (g.season !== eloSeason) {
       for (const [t, v] of elo) elo.set(t, v - (v - 1505) / 3);
-      regressed = true;
+      eloSeason = g.season;
     }
     const diff = getElo(g.homeTeamAbbr) + (g.location === "Neutral" ? 0 : ELO_HOME) - getElo(g.awayTeamAbbr);
     const exp = 1 / (1 + 10 ** (-diff / 400));
@@ -636,11 +692,12 @@ export async function buildPregameAnalysis(gameId: string) {
     elo.set(g.homeTeamAbbr, getElo(g.homeTeamAbbr) + delta);
     elo.set(g.awayTeamAbbr, getElo(g.awayTeamAbbr) - delta);
   }
-  if (!regressed) for (const [t, v] of elo) elo.set(t, v - (v - 1505) / 3);
+  if (eloSeason !== target.season) for (const [t, v] of elo) elo.set(t, v - (v - 1505) / 3);
+  const eloSeasons = target.season - firstSeason;
   const eH = getElo(home), eA = getElo(away);
   const pElo = 1 / (1 + 10 ** (-(eH + (neutral ? 0 : ELO_HOME) - eA) / 400));
-  formula({ id: "elo", section: "5", name: "Elo (5.7.7)", expression: "E = 1 / (1 + 10^(−(R_local + 48 − R_visita)/400)); K = 20 × multiplicador de margen; regresión de 1/3 hacia 1505 entre temporadas", substituted: `R_${home} = ${Math.round(eH)}, R_${away} = ${Math.round(eA)} (arrancan en 1500 en la semana 1 de ${priorSeason}: no hay temporadas previas cargadas)`, result: pctS(pElo) });
-  add({ id: "elo-start", section: "5", category: "Modelo", label: "Punto de partida del Elo", value: `1500 en ${priorSeason}`, source: SRC.model, status: "parcial", note: `Sin temporadas anteriores a ${priorSeason}, el Elo solo acumula un año de historia.` });
+  formula({ id: "elo", section: "5", name: "Elo (5.7.7)", expression: "E = 1 / (1 + 10^(−(R_local + 48 − R_visita)/400)); K = 20 × multiplicador de margen; regresión de 1/3 hacia 1505 entre temporadas", substituted: `R_${home} = ${Math.round(eH)}, R_${away} = ${Math.round(eA)} (arrancan en 1500 en la semana 1 de ${firstSeason}; ${history.length} partidos y ${eloSeasons} temporadas de historia)`, result: pctS(pElo) });
+  add({ id: "elo-start", section: "5", category: "Modelo", label: "Punto de partida del Elo", value: `1500 en ${firstSeason} · ${eloSeasons} temporadas`, source: `${SRC.games} · ${firstSeason}–${target.season}`, status: eloSeasons >= 3 ? "derivado" : "parcial", note: eloSeasons >= 3 ? `Con ${eloSeasons} temporadas y la regresión de 1/3 en cada cambio de año, el valor inicial de 1500 ya casi no pesa.` : `Con solo ${eloSeasons} temporada(s) el Elo depende mucho del valor inicial.` });
 
   const methods = [
     { key: "log5", label: "Log5 (Pitagórico regresado + local)", p: pLog5 },
@@ -733,7 +790,8 @@ export async function buildPregameAnalysis(gameId: string) {
     { section: "3", label: "QB: passer rating, ANY/A, EPA, CPOE", ok: Boolean(qbH && qbA), ids: ["qb-name"], blocks: "Bloquea Verde en moneyline y 1H" },
     { section: "4", label: "Defensa: EPA permitido, presión, reporte de lesiones", ok: injPre.length > 0, ids: ["d-epa", "d-press", "inj"], blocks: "Bloquea Verde en total y spread" },
     { section: "5", label: "Ajustes multiplicativos con dato real", ok: adjustments.every((a) => a.met !== null), ids: [], blocks: "Bloquea Verde en total" },
-    { section: "6", label: "Alineación confirmada, clima completo", ok: false, ids: ["depth", "rain"], blocks: "Bloquea Verde en total" },
+    { section: "4–6", label: "Alineación confirmada (inactivos oficiales)", ok: haveInactives, ids: ["inactive", "depth"], blocks: "Ningún pick puede ser Verde (8.3.12)" },
+    { section: "6", label: "Clima completo (lluvia)", ok: false, ids: ["rain"], blocks: "Bloquea Verde en total" },
     { section: "7", label: "Momios de al menos 2 casas", ok: false, ids: ["books"], blocks: "Sin verificación de precio" },
   ];
   const campoFaltante = gateFields.some((g) => !g.ok);
@@ -782,7 +840,9 @@ export async function buildPregameAnalysis(gameId: string) {
     { phase: "Fase 0 · Ingesta con gate", step: "Play-by-play con EPA, CPOE y 3er down", status: "hecho" },
     { phase: "Fase 0 · Ingesta con gate", step: "Reporte de lesiones (filtrado por fecha)", status: injPre.length ? "hecho" : "falta" },
     { phase: "Fase 0 · Ingesta con gate", step: "Presión defensiva (PFR)", status: "hecho" },
-    { phase: "Fase 0 · Ingesta con gate", step: "Alineación confirmada, lluvia, 2+ casas de apuestas", status: "falta" },
+    { phase: "Fase 0 · Ingesta con gate", step: "Historial 2018+ (H2H y Elo), QBR de ESPN, inactivos oficiales", status: haveInactives ? "hecho" : "parcial" },
+    { phase: "Fase 0 · Ingesta con gate", step: "Lluvia pronosticada (Open-Meteo)", status: "falta" },
+    { phase: "Fase 0 · Ingesta con gate", step: "Momios de 2+ casas y movimiento de línea", status: "falta" },
     { phase: "Fase 1 · Ajuste estadístico", step: "Shrinkage de ratings y Cmp%; Pitagórico vs récord", status: "hecho" },
     { phase: "Fase 2 · Triangulación", step: "Log5, Elo, simulación y divergencia", status: "hecho" },
     { phase: "Fase 3 · Puntos y total", step: "λ base + ajustes 5.3 sin doble conteo; 1Q/1H; tabla por línea", status: "hecho" },
@@ -801,6 +861,39 @@ export async function buildPregameAnalysis(gameId: string) {
     byCategory[it.category][it.status]++;
   }
 
+  // Plan para los datos faltantes: qué se completó con una fuente real y qué sigue pendiente (y por qué).
+  type GapKind = "resuelto" | "red" | "clave" | "sin_fuente";
+  const itemStatus = (id: string) => items.find((it) => it.id === id)?.status ?? "faltante";
+  const gapPlan: { id: string; label: string; section: string; before: DataStatus; now: DataStatus; kind: GapKind; source: string; detail: string }[] = [
+    { id: "h2h", label: "Historial directo (5 partidos)", section: "2", before: h2hInBase >= 5 ? "derivado" : "parcial", now: itemStatus("h2h"), kind: h2h.length >= 5 ? "resuelto" : "sin_fuente",
+      source: `${SRC.games} · temporadas ${firstSeason}–${priorSeason - 1} (npm run data:extract -- --season=AAAA --games-only)`,
+      detail: `Con ${priorSeason}–${target.season} solo había ${h2hInBase} enfrentamiento(s); con el calendario de temporadas anteriores hay ${h2h.length}.` },
+    { id: "elo-start", label: "Historia del Elo", section: "5", before: "parcial", now: itemStatus("elo-start"), kind: "resuelto",
+      source: `${SRC.games} · ${history.length} partidos desde ${firstSeason}`,
+      detail: `El Elo ya no arranca en 1500 en ${priorSeason}: acumula ${eloSeasons} temporadas de resultados reales.` },
+    { id: "qb-qbr", label: "QBR de ESPN", section: "3", before: "faltante", now: itemStatus("qb-qbr"), kind: qbrH && qbrA ? "resuelto" : "sin_fuente",
+      source: `${SRC.qbr}`,
+      detail: `nflverse publica el QBR real de ESPN por partido y por temporada. Se usa ${priorSeason} completo y, de ${target.season}, solo los partidos anteriores.` },
+    { id: "inactive", label: "Alineación confirmada", section: "4–6", before: "parcial", now: itemStatus("inactive"), kind: haveInactives ? "resuelto" : "sin_fuente",
+      source: `${SRC.roster} · status = INA`,
+      detail: haveInactives ? `${inactives.length} inactivos oficiales para este partido. Las bajas de los ajustes 5.3 ahora salen de esta lista, no del Doubtful del reporte.` : "No hay lista de inactivos publicada para esta semana." },
+    { id: "depth", label: "Titulares exactos de la primera jugada", section: "4", before: "parcial", now: itemStatus("depth"), kind: "sin_fuente",
+      source: "nflverse · snap_counts_{temporada}.csv (posterior al partido)",
+      detail: "Solo se conocen al empezar el partido. Los snap counts los tienen, pero usarlos antes del partido sería fuga de datos; quién no juega ya lo confirman los inactivos." },
+    { id: "rain", label: "Lluvia pronosticada", section: "6", before: "faltante", now: itemStatus("rain"), kind: "red",
+      source: "Open-Meteo · historical-forecast-api.open-meteo.com (gratis, sin clave)",
+      detail: "Guarda el pronóstico que existía antes de cada partido, hora por hora, para la ubicación del estadio. El dominio está bloqueado por la red de este entorno: se puede permitir en la configuración o cargar desde tu computadora." },
+    { id: "books", label: "Momios de 2 o más casas", section: "7", before: "parcial", now: itemStatus("books"), kind: "clave",
+      source: "The Odds API · /v4/historical/sports/americanfootball_nfl/odds",
+      detail: "Da los momios de varias casas en una fecha y hora dadas. El histórico es de un plan de pago y necesita una clave (API key)." },
+    { id: "mv", label: "Movimiento de línea (apertura → cierre)", section: "7", before: "faltante", now: itemStatus("mv"), kind: "clave",
+      source: "The Odds API · snapshots históricos",
+      detail: "Pidiendo la misma línea en varias fechas antes del partido se reconstruye el movimiento real. Misma clave que el punto anterior." },
+    { id: "alt", label: "Líneas de 1Q, 1H, team totals y props", section: "7", before: "faltante", now: itemStatus("alt"), kind: "clave",
+      source: "The Odds API · mercados adicionales (period markets)",
+      detail: "Los mercados por cuarto y mitad están en el mismo servicio, con la misma clave." },
+  ];
+
   // Conclusiones por sección, calculadas con los datos (se muestran como "nube" en cada sección).
   const rkN = (m: Map<string, number>, t: string, higher: boolean) => `${rankOf(m, t, higher)}º`;
   const betterOff = better(M.offEpa, true);
@@ -818,7 +911,7 @@ export async function buildPregameAnalysis(gameId: string) {
     "2": [
       `En ${priorSeason}: ${home} ${H.reg.wins}–${H.reg.losses} y ${away} ${A.reg.wins}–${A.reg.losses}. Según el Pitagórico, ${home} ${H.actual - H.pyth >= 0 ? "ganó un poco más" : "ganó un poco menos"} de lo que merecía y ${away} ${A.actual - A.pyth >= 0 ? "un poco más" : "un poco menos"}.`,
       ...(currentSeasonGames ? [`En ${target.season} antes de este partido: ${home} ${curRec(home)} y ${away} ${curRec(away)} (récord · PF/PA).`] : []),
-      `Solo hay ${h2h.length} de 5 enfrentamientos directos en los datos cargados: el historial pesa poco.`,
+      h2h.length >= 5 ? `Últimos 5 enfrentamientos (${h2h[0].date.slice(0, 4)}–${h2h[h2h.length - 1].date.slice(0, 4)}): ${home} ${h2h.filter((x) => x.win).length}–${h2h.filter((x) => !x.win).length}. Es contexto, no argumento principal.` : `Solo hay ${h2h.length} de 5 enfrentamientos directos en los datos cargados: el historial pesa poco.`,
     ],
     "3": [
       `${betterOff} tuvo la ofensiva más eficiente (EPA/jugada ${rkN(M.offEpa, home, true)} ${home} vs ${rkN(M.offEpa, away, true)} ${away}).`,
@@ -827,7 +920,7 @@ export async function buildPregameAnalysis(gameId: string) {
     ],
     "4": [
       `${betterDef} tuvo la mejor defensa por jugada (${rkN(M.defEpa, home, false)} ${home} vs ${rkN(M.defEpa, away, false)} ${away}); ${better(M.pressureRate, true)} presiona más al QB (${rkN(M.pressureRate, home, true)} vs ${rkN(M.pressureRate, away, true)}).`,
-      injuryDetail.length ? `Bajas previas: ${injuryDetail.map((i) => `${i.name} (${i.team})`).join(", ")}. ${injuryDetail.some((i) => i.inBase) ? "Alguna afecta a la base." : `Ninguna era titular en la base, así que no mueven la proyección.`}` : "Sin bajas importantes reportadas antes del partido.",
+      injuryDetail.length ? `Bajas${haveInactives ? " confirmadas por los inactivos oficiales" : " del reporte"}: ${injuryDetail.filter((i) => i.confirmedOut).map((i) => `${i.name} (${i.team})`).join(", ") || "ninguna"}. ${injuryDetail.some((i) => i.inBase && i.confirmedOut) ? `Titulares de la base fuera: ${injuryDetail.filter((i) => i.inBase && i.confirmedOut).map((i) => i.name).join(", ")}.` : "Ninguna era titular en la base, así que no mueven la proyección."}` : "Sin bajas importantes reportadas antes del partido.",
     ],
     "5": [
       `Proyección ${away} ${f1(muAway)} – ${home} ${f1(muHome)} (total ${f1(muTotal)}). Los tres métodos dan entre ${pctS(Math.min(...methods.map((m) => m.p)))} y ${pctS(Math.max(...methods.map((m) => m.p)))} a ${home}: confianza ${confidence}.`,
@@ -899,7 +992,7 @@ export async function buildPregameAnalysis(gameId: string) {
     },
     data: { priorSeasonGames, currentSeasonGames, cutoff: cutoff.toISOString().slice(0, 10), plays: plays.length, drives: drives.length, pressureRows: pressureRows.length, injuryRows: injPre.length, depthRows: depthNow.length },
     league: { mean: r3(leagueMean, 2), hfa: r3(hfa, 2), hfaObserved: r3(hfaObserved, 2), sigmaMargin: r3(sigmaMargin, 2), sigmaTotal: r3(sigmaTotal, 2) },
-    items, formulas, takeaways, baseLabel,
+    items, formulas, takeaways, baseLabel, gapPlan,
     ratings: Object.fromEntries([[home, H, qbH], [away, A, qbA]].map(([t, P, q]) => {
       const team = t as string, prof = P as typeof H, qb = q as typeof qbH;
       return [team, {

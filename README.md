@@ -58,8 +58,24 @@ npm run data:extract -- --season=2023
 npm run data:extract-pbp -- --season=2023
 npm run data:extract -- --season=2024   # deja los rosters en su estado actual
 npm run data:extract-context -- --season=2023   # presión defensiva (PFR) de la base
-npm run data:extract-context -- --season=2024   # reporte de lesiones y depth chart de la semana
+npm run data:extract-context -- --season=2024   # lesiones, depth chart, QBR de ESPN e inactivos oficiales
+for y in 2018 2019 2020 2021 2022; do npm run data:extract -- --season=$y --games-only; done   # historial para H2H y Elo
 ```
+
+### Datos faltantes: solo se completan con fuentes reales
+
+Cada análisis trae un plan (`gapPlan`) que dice, para cada dato faltante, con qué fuente real se
+completó o por qué sigue pendiente:
+
+| Dato | Fuente real | Estado |
+| --- | --- | --- |
+| Historial directo (5 partidos) | `schedules/games.csv` desde 2018 (`--games-only`) | Resuelto |
+| Historia del Elo | Mismo calendario: 6 temporadas con regresión de 1/3 por año | Resuelto |
+| QBR | ESPN vía nflverse `espn_data/qbr_*_level.csv` (temporada anterior + semanas ya jugadas) | Resuelto |
+| Alineación confirmada | Inactivos oficiales: `weekly_rosters/roster_weekly_{año}.csv`, `status = INA` | Resuelto |
+| Lluvia pronosticada | Open-Meteo `historical-forecast-api.open-meteo.com` (gratis) | Pendiente: dominio bloqueado en el entorno en la nube |
+| 2+ casas, movimiento de línea, 1Q/1H | The Odds API histórico | Pendiente: requiere clave de pago |
+| Titulares de la primera jugada | Solo existen al empezar el partido (snap counts = fuga) | Sin fuente previa |
 
 Cada dato del análisis lleva su categoría, su fuente (archivo y columna de nflverse), su
 estado (disponible, derivado, parcial, faltante, no aplica) y qué bloquea si falta; cada
@@ -86,8 +102,9 @@ los datos o el modelo se ve volviendo a exportar y publicar.
 | `npm run db:push` | Sincroniza `prisma/schema.prisma` con la base de datos |
 | `npm run db:studio` | Abre Prisma Studio para inspeccionar los datos |
 | `npm run data:extract -- --season=YYYY` | Descarga equipos, rosters, calendario y stats semanales |
+| `npm run data:extract -- --season=YYYY --games-only` | Solo calendario y resultados (historial para H2H y Elo) |
 | `npm run data:extract-pbp -- --season=YYYY` | Descarga play-by-play (posesiones y jugadas) |
-| `npm run data:extract-context -- --season=YYYY` | Reporte de lesiones, depth charts y presión defensiva (PFR) |
+| `npm run data:extract-context -- --season=YYYY` | Lesiones, depth charts, presión (PFR), QBR de ESPN e inactivos oficiales |
 | `npm run snapshot:export -- --season=YYYY` | Genera la versión estática publicable en `snapshot/dist/` |
 
 ## Modelo de datos (`prisma/schema.prisma`)
