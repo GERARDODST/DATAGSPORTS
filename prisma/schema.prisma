@@ -180,6 +180,13 @@ model Play {
   isFumbleLost         Boolean  @default(false)
   isSack               Boolean  @default(false)
   isSuccess            Boolean?
+  isDropback           Boolean?
+  isPassAttempt        Boolean?
+  isRushAttempt        Boolean?
+  isQbHit              Boolean?
+  thirdDownConverted   Boolean?
+  thirdDownFailed      Boolean?
+  cpoe                 Float?
   passerPlayerId       String?
   rusherPlayerId       String?
   receiverPlayerId     String?
@@ -189,4 +196,59 @@ model Play {
   @@index([season, possessionTeamAbbr])
   @@index([playType])
   @@map("plays")
+}
+
+// Reporte oficial de lesiones de la semana (nflverse injuries_{season}.csv).
+model InjuryReport {
+  id             String    @id
+  season         Int
+  week           Int
+  gameType       String?
+  teamAbbr       String
+  gsisId         String?
+  fullName       String
+  position       String?
+  reportStatus   String?
+  practiceStatus String?
+  primaryInjury  String?
+  dateModified   DateTime?
+
+  @@index([season, week, teamAbbr])
+  @@map("injury_reports")
+}
+
+// Depth chart semanal: la alineación proyectada antes del partido (nflverse depth_charts_{season}.csv).
+model DepthChartEntry {
+  id            String  @id
+  season        Int
+  week          Int
+  gameType      String?
+  teamAbbr      String
+  gsisId        String?
+  fullName      String
+  position      String?
+  depthPosition String?
+  depthTeam     Int?
+  formation     String?
+
+  @@index([season, week, teamAbbr])
+  @@map("depth_chart_entries")
+}
+
+// Presión defensiva por equipo y partido, sumando los jugadores (PFR advstats_week_def_{season}.csv).
+model TeamGamePressure {
+  id            String @id
+  gameId        String
+  season        Int
+  week          Int
+  teamAbbr      String
+  pressures     Int
+  hurries       Int
+  qbHits        Int
+  sacks         Float
+  blitzes       Int
+  missedTackles Int    @default(0)
+
+  @@index([season, teamAbbr])
+  @@map("team_game_pressure")
 }

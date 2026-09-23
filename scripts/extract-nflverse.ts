@@ -216,7 +216,7 @@ async function loadWeeklyStats(
     // Si el jugador no vino en el snapshot de roster (ej. corte/trade),
     // lo damos de alta con los datos mínimos disponibles en las stats.
     if (!knownPlayers.has(row.player_id)) {
-      const teamAbbr = row.recent_team && knownTeams.has(row.recent_team) ? row.recent_team : null;
+      const teamAbbr = (row.team ?? row.recent_team) && knownTeams.has((row.team ?? row.recent_team)) ? (row.team ?? row.recent_team) : null;
       await prisma.player.upsert({
         where: { gsisId: row.player_id },
         update: {},
@@ -232,8 +232,8 @@ async function loadWeeklyStats(
     }
 
     const gameId =
-      row.recent_team && row.opponent_team
-        ? gameLookup.get(gameKey(season, row.week, row.recent_team, row.opponent_team)) ?? null
+      (row.team ?? row.recent_team) && row.opponent_team
+        ? gameLookup.get(gameKey(season, row.week, (row.team ?? row.recent_team), row.opponent_team)) ?? null
         : null;
     const seasonType = row.season_type || "REG";
 
@@ -248,13 +248,13 @@ async function loadWeeklyStats(
       },
       update: {
         gameId,
-        teamAbbr: row.recent_team || null,
+        teamAbbr: (row.team ?? row.recent_team) || null,
         opponentAbbr: row.opponent_team || null,
         completions: toInt(row.completions),
         attempts: toInt(row.attempts),
         passingYards: toInt(row.passing_yards),
         passingTds: toInt(row.passing_tds),
-        interceptions: toInt(row.interceptions),
+        interceptions: toInt(row.passing_interceptions ?? row.interceptions),
         carries: toInt(row.carries),
         rushingYards: toInt(row.rushing_yards),
         rushingTds: toInt(row.rushing_tds),
@@ -271,13 +271,13 @@ async function loadWeeklyStats(
         season,
         week: toInt(row.week) ?? 0,
         seasonType,
-        teamAbbr: row.recent_team || null,
+        teamAbbr: (row.team ?? row.recent_team) || null,
         opponentAbbr: row.opponent_team || null,
         completions: toInt(row.completions),
         attempts: toInt(row.attempts),
         passingYards: toInt(row.passing_yards),
         passingTds: toInt(row.passing_tds),
-        interceptions: toInt(row.interceptions),
+        interceptions: toInt(row.passing_interceptions ?? row.interceptions),
         carries: toInt(row.carries),
         rushingYards: toInt(row.rushing_yards),
         rushingTds: toInt(row.rushing_tds),

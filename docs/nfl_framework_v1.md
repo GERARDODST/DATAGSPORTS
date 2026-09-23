@@ -362,6 +362,16 @@ Nunca subir el total por un solo factor.
 | Ritmo de juego alto (plays/game por encima del promedio liga) | λ × 1.05 | Sube total | Más posesiones = más oportunidades de anotar |
 | Frío extremo (< 0°C) | λ × 0.93 | Baja total | Afecta el agarre del balón y el juego aéreo |
 
+**Regla de implementación: no contar doble.** Los ajustes de esta tabla se aplican sobre un
+λ base que ya se construye con los puntos a favor y en contra de cada equipo. Esos puntos ya
+contienen la calidad de la defensa, la presión y el nivel del QB, así que las filas "ambos QBs
+buenos", "rival con alto pressure rate", "ambas defensas top-10" y "ritmo alto" se **evalúan y
+se muestran**, pero no se multiplican otra vez. Solo se aplican las que traen información que
+la base no tiene: clima y estadio del día, y bajas del reporte de lesiones de jugadores que sí
+fueron titulares en la temporada que alimenta la base. Una baja de un novato o de un fichaje
+nuevo no cambia la proyección, porque ese jugador no está en los datos de la base; queda
+registrada como información que el modelo todavía no sabe usar (`src/lib/framework-analysis.ts`).
+
 ### 5.4 Modelo de simulación (reemplaza el modelo Poisson directo de MLB)
 
 Hay dos niveles de granularidad para simular un partido. El framework usa el nivel 1 como
@@ -992,7 +1002,9 @@ secciones 3, 4, 5 y 5.7.3 (EPA/play, success rate) y para la simulación Nivel 2
 | Dato requerido | Fuente recomendada | Qué obtener exactamente |
 | --- | --- | --- |
 | Play-by-play con EPA, success rate | nflverse (`pbp`) | EPA/play, success rate, down/distancia/yardlínea |
-| Injury report oficial semanal | ESPN API / Pro Football Reference | Estado (Out/Doubtful/Questionable), posición, jugador |
+| Injury report oficial semanal | nflverse `injuries/injuries_{temporada}.csv` (implementado) | Estado, práctica, lesión y fecha de publicación (se excluye lo publicado después del partido) |
+| Alineación proyectada | nflverse `depth_charts/depth_charts_{temporada}.csv` (implementado) | Titulares por posición; es proyectada, no confirmada |
+| Presión al QB por partido | nflverse (PFR) `pfr_advstats/advstats_week_def_{temporada}.csv` (implementado) | Presiones, hurries, QB hits, sacks, tackles fallados |
 | Passer rating, QBR avanzado | Pro Football Reference / ESPN | Passer rating, ANY/A, QBR |
 | Grades avanzados (pass rush, coverage) | PFF (Pro Football Focus, de pago) | Grades por jugador y por jugada |
 | Momios de múltiples casas | The Odds API / SportsGameOdds | Línea y momio por casa, por mercado |

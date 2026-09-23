@@ -106,6 +106,13 @@ async function main() {
     isFumbleLost: boolean;
     isSack: boolean;
     isSuccess: boolean | null;
+    isDropback: boolean | null;
+    isPassAttempt: boolean | null;
+    isRushAttempt: boolean | null;
+    isQbHit: boolean | null;
+    thirdDownConverted: boolean | null;
+    thirdDownFailed: boolean | null;
+    cpoe: number | null;
     passerPlayerId: string | null;
     rusherPlayerId: string | null;
     receiverPlayerId: string | null;
@@ -168,6 +175,13 @@ async function main() {
       isFumbleLost: toBool(row.fumble_lost),
       isSack: toBool(row.sack),
       isSuccess: row.success === "" ? null : toBool(row.success),
+      isDropback: row.qb_dropback === "" ? null : toBool(row.qb_dropback),
+      isPassAttempt: row.pass_attempt === "" ? null : toBool(row.pass_attempt),
+      isRushAttempt: row.rush_attempt === "" ? null : toBool(row.rush_attempt),
+      isQbHit: row.qb_hit === "" ? null : toBool(row.qb_hit),
+      thirdDownConverted: row.third_down_converted === "" ? null : toBool(row.third_down_converted),
+      thirdDownFailed: row.third_down_failed === "" ? null : toBool(row.third_down_failed),
+      cpoe: toFloat(row.cpoe),
       passerPlayerId: row.passer_player_id || null,
       rusherPlayerId: row.rusher_player_id || null,
       receiverPlayerId: row.receiver_player_id || null,

@@ -12,6 +12,7 @@
     "db:studio": "prisma studio",
     "data:extract": "tsx scripts/extract-nflverse.ts",
     "data:extract-pbp": "tsx scripts/extract-pbp.ts",
+    "data:extract-context": "tsx scripts/extract-context.ts",
     "snapshot:export": "tsx scripts/export-snapshot.ts"
   },
   "dependencies": {

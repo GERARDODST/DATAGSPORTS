@@ -16,7 +16,7 @@ import path from "node:path";
 import { prisma } from "../src/lib/prisma";
 import { buildFieldPositionEpModel, ownEpaForPlay } from "../src/lib/expected-points";
 import { buildMarkovModel, pearson } from "../src/lib/markov-model";
-import { buildPregameAnalysis, type PregameAnalysis } from "../src/lib/pregame-model";
+import { buildPregameAnalysis, type PregameAnalysis } from "../src/lib/framework-analysis";
 
 // Equipo que seguimos partido a partido y cuántos de sus partidos ya tienen análisis previo.
 const FOCUS_TEAM = "KC";

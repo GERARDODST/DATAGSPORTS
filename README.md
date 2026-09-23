@@ -40,7 +40,7 @@ probabilidad de victoria jugada por jugada y el detalle de cada posesión.
 
 ## Modelo previo al partido (equipo en seguimiento: Chiefs)
 
-`src/lib/pregame-model.ts` construye el análisis de un partido usando **solo partidos jugados
+`src/lib/framework-analysis.ts` construye el análisis de un partido usando **solo partidos jugados
 antes de su fecha** y siguiendo el algoritmo maestro del framework: gate de completitud,
 ratings con regresión a la media (la temporada anterior pesa la mitad), triangulación
 Log5 / Elo / simulación, marcador proyectado, valor contra los momios de cierre, auditoría y,
@@ -53,7 +53,14 @@ Para la semana 1 se necesitan los datos de la temporada anterior:
 npm run data:extract -- --season=2023
 npm run data:extract-pbp -- --season=2023
 npm run data:extract -- --season=2024   # deja los rosters en su estado actual
+npm run data:extract-context -- --season=2023   # presión defensiva (PFR) de la base
+npm run data:extract-context -- --season=2024   # reporte de lesiones y depth chart de la semana
 ```
+
+Cada dato del análisis lleva su categoría, su fuente (archivo y columna de nflverse), su
+estado (disponible, derivado, parcial, faltante, no aplica) y qué bloquea si falta; cada
+cálculo lleva su fórmula con los números sustituidos. El reporte de lesiones se filtra por
+fecha de publicación: un registro posterior al inicio del partido se excluye (fuga de datos).
 
 El equipo y cuántos de sus partidos se analizan se configuran en `scripts/export-snapshot.ts`
 (`FOCUS_TEAM`, `FOCUS_GAMES_ANALYZED`).
@@ -76,6 +83,7 @@ los datos o el modelo se ve volviendo a exportar y publicar.
 | `npm run db:studio` | Abre Prisma Studio para inspeccionar los datos |
 | `npm run data:extract -- --season=YYYY` | Descarga equipos, rosters, calendario y stats semanales |
 | `npm run data:extract-pbp -- --season=YYYY` | Descarga play-by-play (posesiones y jugadas) |
+| `npm run data:extract-context -- --season=YYYY` | Reporte de lesiones, depth charts y presión defensiva (PFR) |
 | `npm run snapshot:export -- --season=YYYY` | Genera la versión estática publicable en `snapshot/dist/` |
 
 ## Modelo de datos (`prisma/schema.prisma`)

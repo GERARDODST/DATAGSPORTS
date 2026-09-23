@@ -159,6 +159,7 @@
   .chip b { color: var(--ink); font-weight: 600; }
 
   .two-col { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; align-items: start; }
+  .two-col > * { min-width: 0; }
   @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
 
   .table-scroll { overflow-x: auto; }
@@ -268,6 +269,32 @@
   .schedule td .pill { margin-left: 0; }
   tr.focus-row td { background: var(--accent-soft); }
   .result-banner { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: baseline; }
+  .pill.derived { color: var(--s1); background: color-mix(in oklab, var(--s1) 14%, transparent); }
+  table.items td { font-size: 13px; }
+  table.items td.src, td.src { font-size: 11px; color: var(--muted); font-family: var(--mono); min-width: 190px; max-width: 280px; }
+  .cell-note { font-size: 11px; color: var(--muted); margin-top: 3px; max-width: 46ch; }
+  .impact { color: var(--neg); font-style: normal; }
+  table.compact td, table.compact th { padding: 6px 8px; font-size: 12px; }
+  table.matrix { max-width: 640px; }
+  .formulas { border-top: 1px solid var(--border); padding-top: 10px; }
+  .formulas summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  .formula { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; margin-top: 8px; background: var(--surface-2); border-radius: 8px; font-size: 12px; }
+  .formula .fname { font-weight: 600; }
+  .formula code { background: transparent; padding: 0; white-space: normal; }
+  .formula .subst { color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere; }
+  .formula .fres { font-family: var(--mono); font-weight: 600; color: var(--accent-ink); }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toc a { font-size: 12px; text-decoration: none; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; font-family: var(--mono); }
+  .toc a:hover { color: var(--ink); border-color: var(--ink); }
+  .filterbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+  .fbtn { font: inherit; font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .fbtn[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--surface-2); }
+  .fw-section, #inventario, #resultado { scroll-margin-top: 72px; }
+  #view[data-filter="disponible"] tr[data-status]:not([data-status="disponible"]),
+  #view[data-filter="derivado"] tr[data-status]:not([data-status="derivado"]),
+  #view[data-filter="parcial"] tr[data-status]:not([data-status="parcial"]),
+  #view[data-filter="faltante"] tr[data-status]:not([data-status="faltante"]),
+  #view[data-filter="no_aplica"] tr[data-status]:not([data-status="no_aplica"]) { display: none; }
   .topnav { display: flex; gap: 4px; margin-right: auto; margin-left: 12px; }
   .topnav a { font-size: 13px; color: var(--muted); text-decoration: none; padding: 4px 8px; border-radius: 6px; }
   .topnav a[aria-current="page"] { color: var(--ink); background: var(--surface-2); }
@@ -1494,163 +1521,285 @@ function marketPickLabel(m) {
   return `${m.pick} ${m.line}`;
 }
 
+const STATUS_META = {
+  disponible: { label: "Disponible", icon: "●", cls: "ok", help: "Viene directo de una columna de la fuente." },
+  derivado: { label: "Derivado", icon: "◆", cls: "derived", help: "Se calcula a partir de datos disponibles con una fórmula." },
+  parcial: { label: "Parcial", icon: "▲", cls: "warn", help: "Existe pero incompleto o proyectado (no confirmado)." },
+  faltante: { label: "Faltante", icon: "✗", cls: "no", help: "No está en las fuentes cargadas." },
+  no_aplica: { label: "No aplica", icon: "–", cls: "muted", help: "No corresponde a este partido." },
+};
+const CHECK_META = {
+  pasa: ["ok", "✓ Pasa"],
+  alerta: ["warn", "▲ Alerta"],
+  no_evaluable: ["no", "? No evaluable"],
+  no_aplica: ["muted", "– No aplica"],
+};
+const FW_SECTIONS = [
+  ["1", "Liga, conferencia y contexto competitivo", "Sección 1"],
+  ["2", "Localía, visita, récords recientes e historial directo", "Sección 2"],
+  ["3", "Quarterbacks y unidad ofensiva", "Sección 3"],
+  ["4", "Defensa, lesiones y disponibilidad", "Sección 4"],
+  ["5", "Patrones, probabilidades y modelo matemático", "Sección 5"],
+  ["6", "Over/Under y desarrollo por cuartos", "Sección 6"],
+  ["7", "Cuotas, probabilidad implícita y valor", "Sección 7"],
+  ["8", "Auditoría de contradicciones y decisión corregida", "Sección 8"],
+  ["9", "Fuentes de datos y regla de completitud", "Sección 9"],
+  ["10", "Algoritmo maestro", "Sección 10"],
+];
+let pregameFilter = "todos";
+
+function statusPill(status) {
+  const m = STATUS_META[status] ?? STATUS_META.faltante;
+  return `<span class="pill ${m.cls}" title="${esc(m.help)}">${m.icon} ${m.label}</span>`;
+}
+function checkPill(status) {
+  const [cls, label] = CHECK_META[status] ?? CHECK_META.no_evaluable;
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+function itemsTable(a, section) {
+  const rows = a.items.filter((it) => it.section === section);
+  if (!rows.length) return "";
+  return `
+    <div class="table-scroll">
+      <table class="items">
+        <thead><tr><th>Dato</th><th>${esc(a.home)}</th><th>${esc(a.away)}</th><th>Fuente</th><th>Estado</th></tr></thead>
+        <tbody>
+          ${rows.map((it) => `
+            <tr data-status="${esc(it.status)}">
+              <td>${esc(it.label)}${it.note ? `<div class="cell-note">${esc(it.note)}</div>` : ""}${it.impact ? `<div class="cell-note impact">Si falta: ${esc(it.impact)}</div>` : ""}</td>
+              ${it.value !== undefined ? `<td colspan="2" class="num">${esc(it.value)}</td>` : `<td class="num">${esc(it.home ?? "—")}</td><td class="num">${esc(it.away ?? "—")}</td>`}
+              <td class="src">${esc(it.source)}</td>
+              <td>${statusPill(it.status)}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+function formulasBlock(a, section) {
+  const list = a.formulas.filter((f) => f.section === section);
+  if (!list.length) return "";
+  return `
+    <details class="formulas" open>
+      <summary>Fórmulas de esta sección (${list.length})</summary>
+      ${list.map((f) => `
+        <div class="formula">
+          <div class="fname">${esc(f.name)}</div>
+          <code>${esc(f.expression)}</code>
+          <div class="subst">con los datos: ${esc(f.substituted)}</div>
+          <div class="fres">= ${esc(f.result)}</div>
+        </div>`).join("")}
+    </details>`;
+}
+function gamesList(list, team) {
+  if (!list.length) return `<p class="note">Sin partidos en los datos cargados.</p>`;
+  return `<div class="table-scroll"><table class="compact"><tbody>${list.map((g) => `<tr><td class="muted">${esc(fmtDate(g.date))}</td><td>${g.isHome ? "vs" : "@"} ${esc(g.opp)}${g.type !== "REG" ? ` <span class="muted">(${esc(POST_LABELS[g.type] ?? g.type)})</span>` : ""}</td><td class="num ${g.win ? "pos" : "negv"}">${g.win ? "G" : "P"} ${g.pf}–${g.pa}</td><td class="r num muted">${g.total} pts</td></tr>`).join("")}</tbody></table></div>`;
+}
+function sectionPanel(id, inner) {
+  const [, title, ref] = FW_SECTIONS.find((x) => x[0] === id);
+  return `<section class="panel step fw-section" id="fw-${id}"><span class="step-num">${esc(ref)}</span><h2>${esc(title)}</h2>${inner}</section>`;
+}
+
+function inventoryPanel(a) {
+  const statuses = ["disponible", "derivado", "parcial", "faltante", "no_aplica"];
+  const cats = Object.keys(a.inventory.byCategory);
+  const gaps = a.items.filter((it) => it.status === "faltante" || it.status === "parcial");
+  return `
+    <section class="panel step" id="inventario">
+      <span class="step-num">Inventario de datos</span>
+      <h2>Qué datos alimentan este análisis y cuáles faltan</h2>
+      <p class="lede">${a.inventory.total} datos revisados en las secciones del framework. Cada uno lleva su fuente exacta (archivo y columna) y un estado. Los "derivados" se calculan con fórmulas que se muestran en su sección.</p>
+      <div class="stats">
+        ${statuses.filter((st) => a.inventory.byStatus[st]).map((st) => `<div class="stat"><span class="num">${a.inventory.byStatus[st]}</span><span>${statusPill(st)}</span></div>`).join("")}
+      </div>
+      <div class="table-scroll">
+        <table class="matrix">
+          <thead><tr><th>Categoría</th>${statuses.map((st) => `<th class="r">${STATUS_META[st].label}</th>`).join("")}</tr></thead>
+          <tbody>${cats.map((c) => `<tr><td>${esc(c)}</td>${statuses.map((st) => { const n = a.inventory.byCategory[c][st]; return `<td class="r num ${n ? "" : "muted"}">${n || "·"}</td>`; }).join("")}</tr>`).join("")}</tbody>
+        </table>
+      </div>
+      <h3>Lo que falta o está incompleto, y qué bloquea</h3>
+      <ul class="checklist">
+        ${gaps.map((it) => `<li>${statusPill(it.status)}<span><strong>${esc(it.label)}</strong> <span class="muted">(sección ${esc(it.section)})</span>. ${esc(it.note ?? "")} ${it.impact ? `<em class="impact">Si falta: ${esc(it.impact)}</em>` : ""}</span></li>`).join("")}
+      </ul>
+      <div class="filterbar" role="group" aria-label="Filtrar datos por estado">
+        <span class="muted">Mostrar en las secciones:</span>
+        ${["todos", ...statuses].map((st) => `<button type="button" class="fbtn" data-filter="${st}" aria-pressed="${pregameFilter === st}">${st === "todos" ? "Todos" : STATUS_META[st].label}</button>`).join("")}
+      </div>
+    </section>`;
+}
+
 function renderPregame(gameId) {
   renderToken++;
   const a = PRE[gameId];
-  const g = gamesById.get(gameId);
-  const H = a.teams[a.home], A = a.teams[a.away];
   const colors = teamColors(a.home, a.away);
   const c = a.context;
   const marketHome = marketImpliedHome(a);
   const pg = a.postgame;
-  const missing = a.completeness.filter((x) => !x.ok).length;
-  const recordTxt = (rec) => `${rec.wins}–${rec.losses}${rec.ties ? `–${rec.ties}` : ""}`;
-  const lastTxt = (t) => {
-    const l = t.lastGame;
-    if (!l) return "—";
-    const res = l.pointsFor > l.pointsAgainst ? "Ganó" : l.pointsFor < l.pointsAgainst ? "Perdió" : "Empató";
-    const where = l.location === "Neutral" ? "sede neutral" : l.isHome ? "en casa" : "de visita";
-    return `${res} ${l.pointsFor}–${l.pointsAgainst} vs ${esc(l.opponent)} (${esc(gameTypeLabel(l.type, l.week))}, ${where}, ${esc(fmtDate(l.date))})`;
-  };
-  const vs = (label, h, w) => `<div class="k">${label}</div><div>${h}</div><div>${w}</div>`;
   const favTeam = c.spread >= 0 ? a.home : a.away;
+  const qbTable = (team) => {
+    const q = a.qbs[team];
+    if (!q) return `<p class="note">Sin datos del QB de ${esc(team)}.</p>`;
+    return `<h3>${esc(q.name)} · últimos 5 partidos antes de este</h3>
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Temp · sem</th><th>Rival</th><th class="r">Cmp/Att</th><th class="r">Yds</th><th class="r">TD</th><th class="r">INT</th></tr></thead>
+      <tbody>${q.last5.map((g) => `<tr><td class="muted">${g.season} · S${g.week}</td><td>${esc(g.opp ?? "—")}</td><td class="r num">${g.cmp}/${g.att}</td><td class="r num">${g.yds}</td><td class="r num">${g.td}</td><td class="r num">${g.int}</td></tr>`).join("")}</tbody></table></div>`;
+  };
+  const decision = a.markets.map((m) => {
+    const contra = a.checks.filter((x) => x.status === "alerta").length;
+    const level = contra >= 3 ? "Alta" : contra >= 1 ? "Media" : "Baja";
+    const d = m.light === "Verde" ? "Pick" : m.light === "Amarillo" ? "Lean" : "No bet";
+    return `<tr><td>${esc(m.market)}</td><td>${esc(marketPickLabel(m))}</td><td>${m.model ? "Sí" : "No"}</td><td>${m.script ? "Sí" : "No"}</td><td>${m.price ? "Sí" : "No"}</td><td>${level}</td><td>${lightPill(m.light)}</td><td><strong>${d}</strong></td></tr>`;
+  }).join("");
+  const sources = {};
+  a.items.forEach((it) => { const key = it.source.split(" · ").slice(0, 2).join(" · "); sources[key] = (sources[key] ?? 0) + 1; });
 
   view.innerHTML = `
     <section class="scoreboard">
       <div class="crumbs"><a href="#chiefs">← ${esc(CORE.teams[FOCUS.team]?.name ?? "Equipo")}</a></div>
       <div class="sb-meta">${esc(weekLabel(a.week))} · ${esc(fmtDate(a.date))} · ${esc(c.stadium ?? "")}</div>
       <h1>${esc(CORE.teams[a.away]?.name ?? a.away)} @ ${esc(CORE.teams[a.home]?.name ?? a.home)}</h1>
-      <p class="lede">Análisis previo al partido, construido <strong>solo con partidos jugados antes del ${esc(fmtDate(a.data.cutoff))}</strong>: ${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1} y ${a.data.currentSeasonGames} de ${a.season}. Cada fase sigue el algoritmo maestro del framework (sección 10). El resultado real va al final.</p>
+      <p class="lede">Análisis previo al partido siguiendo el framework sección por sección, construido <strong>solo con información publicada antes del ${esc(fmtDate(a.data.cutoff))}</strong>: ${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}, ${a.data.currentSeasonGames} de ${a.season}, ${numFmt.format(a.data.plays)} jugadas, ${a.data.injuryRows} registros del reporte de lesiones y ${a.data.depthRows} del depth chart. El resultado real va al final.</p>
+      <nav class="toc" aria-label="Secciones del análisis">
+        <a href="#inventario">Inventario</a>${FW_SECTIONS.map(([id]) => `<a href="#fw-${id}">${id}</a>`).join("")}${pg ? `<a href="#resultado">Resultado</a>` : ""}
+      </nav>
     </section>
 
-    <section class="panel step">
-      <span class="step-num">Fase 0 · Datos y gate de completitud</span>
-      <h2>¿Qué sabíamos antes del partido?</h2>
-      <ul class="checklist">
-        ${a.completeness.map((x) => `<li>${x.ok ? '<span class="pill ok">✓ Disponible</span>' : '<span class="pill no">✗ Falta</span>'}<span>${esc(x.field)}</span></li>`).join("")}
-      </ul>
-      <p class="note">${missing ? `Faltan ${missing} campos obligatorios, así que ningún pick de este partido puede ser Verde: el máximo es Amarillo (sección 9.3).` : "Todos los campos obligatorios están presentes."}</p>
-    </section>
+    ${inventoryPanel(a)}
 
-    <section class="panel step">
-      <span class="step-num">Contexto · secciones 1 y 2</span>
-      <h2>Los dos equipos al llegar al partido</h2>
-      <div class="table-scroll">
-        <div class="versus" style="min-width:560px">
-          <div class="h"></div><div class="h"><i class="dot" style="background:${esc(colors.home)}"></i> ${esc(a.home)} (local)</div><div class="h"><i class="dot" style="background:${esc(colors.away)}"></i> ${esc(a.away)} (visitante)</div>
-          ${vs(`Récord ${a.season - 1} (temporada regular)`, recordTxt(H.regular), recordTxt(A.regular))}
-          ${vs(`${a.home} en casa / ${a.away} de visita`, recordTxt(H.home), recordTxt(A.away))}
-          ${vs(`Playoffs ${a.season - 1}`, H.postseason.games ? recordTxt(H.postseason) : "No jugó", A.postseason.games ? recordTxt(A.postseason) : "No jugó")}
-          ${vs("Último partido", lastTxt(H), lastTxt(A))}
-          ${vs("QB titular", esc(c.homeQb ?? "—"), esc(c.awayQb ?? "—"))}
-          ${vs("Días de descanso", c.homeRest ?? "—", c.awayRest ?? "—")}
-        </div>
+    ${sectionPanel("1", `${itemsTable(a, "1")}<p class="note">Un partido divisional no implica automáticamente más puntos (sección 1); este no lo es.</p>`)}
+
+    ${sectionPanel("2", `
+      ${itemsTable(a, "2")}
+      <div class="two-col">
+        <div><h3>Últimos 5 de ${esc(a.home)} en casa</h3>${gamesList(a.homeLast5)}</div>
+        <div><h3>Últimos 5 de ${esc(a.away)} de visita</h3>${gamesList(a.awayLast5)}</div>
       </div>
-      <div class="chips" style="margin-top:12px">
-        <span class="chip">${c.divGame ? "Partido divisional" : "No es divisional"}</span>
-        <span class="chip">${c.location === "Neutral" ? "Sede neutral" : `Local: ${esc(a.home)}`}</span>
-        <span class="chip">${c.roof === "outdoors" && c.temp !== null ? `Aire libre · ${c.temp}°F (${toC(c.temp)}°C) · viento ${c.wind ?? "—"} mph` : esc(c.roof ?? "")}</span>
-        ${a.h2h.map((h) => `<span class="chip">Último cara a cara: ${esc(h.away)} ${h.as}–${h.hs} ${esc(h.home)} (${esc(gameTypeLabel(h.type, 0))})</span>`).join("")}
-      </div>
-    </section>
+      <h3>Enfrentamientos directos disponibles</h3>${gamesList(a.h2h)}
+      <p class="note">El historial directo es apoyo, no argumento suficiente (2.5).</p>
+      ${formulasBlock(a, "2")}`)}
 
-    <section class="panel step">
-      <span class="step-num">Fase 1 · Ajuste estadístico</span>
-      <h2>Ratings con regresión a la media</h2>
-      <p class="lede">Con pocos datos nuevos, lo que pasó el año anterior se toma con cautela: cada partido de ${a.season - 1} vale medio partido y el resultado se regresa hacia el promedio de liga (${a.league.mean.toFixed(1)} puntos por equipo). Para ${a.home} eso significa un ajuste de ${Math.round(H.regressionShare * 100)}%, cerca del tercio que usan los modelos públicos entre temporadas.</p>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th></th><th class="r">${esc(a.home)}</th><th class="r">${esc(a.away)}</th></tr></thead>
-          <tbody>
-            <tr><td>Puntos a favor por partido (crudo → regresado)</td><td class="r num">${H.rawOff.toFixed(1)} → <strong>${H.off.toFixed(1)}</strong></td><td class="r num">${A.rawOff.toFixed(1)} → <strong>${A.off.toFixed(1)}</strong></td></tr>
-            <tr><td>Puntos en contra por partido (crudo → regresado)</td><td class="r num">${H.rawDef.toFixed(1)} → <strong>${H.def.toFixed(1)}</strong></td><td class="r num">${A.rawDef.toFixed(1)} → <strong>${A.def.toFixed(1)}</strong></td></tr>
-            <tr><td>Win% real vs Pitagórico (n = 2.37)</td><td class="r num">${pct(H.actualPct, 0)} vs ${pct(H.pythagorean, 0)}</td><td class="r num">${pct(A.actualPct, 0)} vs ${pct(A.pythagorean, 0)}</td></tr>
-            <tr><td>"Suerte" (real − Pitagórico)</td><td class="r num">${signed(H.luck * 100, 1)} pp</td><td class="r num">${signed(A.luck * 100, 1)} pp</td></tr>
-            <tr><td>EPA por jugada ofensiva (pase / carrera)</td><td class="r num">${signed(H.epa.offEpa, 3)} (${signed(H.epa.passEpa, 2)} / ${signed(H.epa.runEpa, 2)})</td><td class="r num">${signed(A.epa.offEpa, 3)} (${signed(A.epa.passEpa, 2)} / ${signed(A.epa.runEpa, 2)})</td></tr>
-            <tr><td>EPA por jugada permitido (defensa: más negativo = mejor)</td><td class="r num">${signed(H.epa.defEpa, 3)}</td><td class="r num">${signed(A.epa.defEpa, 3)}</td></tr>
-            <tr><td>Elo al inicio del partido</td><td class="r num">${H.elo}</td><td class="r num">${A.elo}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">Ventaja de local observada en ${a.season - 1}: ${signed(a.league.hfaObserved, 2)} puntos. Desviación del margen final: ${a.league.sigmaMargin.toFixed(1)} puntos (el framework citaba ~13.5 como referencia; con datos reales usamos el valor medido).</p>
-    </section>
+    ${sectionPanel("3", `
+      ${itemsTable(a, "3")}
+      <div class="two-col">${qbTable(a.home)}${qbTable(a.away)}</div>
+      <p class="note">Rangos entre los 32 equipos (1º = mejor). Los últimos 5 partidos se muestran como contexto: el framework no les da más peso que a la temporada (3.3).</p>
+      ${formulasBlock(a, "3")}`)}
 
-    <section class="panel step">
-      <span class="step-num">Fase 2 · Triangulación</span>
-      <h2>¿Quién gana? Tres métodos independientes</h2>
-      <p class="lede">Probabilidad de que gane ${esc(a.home)}. Divergencia entre métodos: ${(a.divergence * 100).toFixed(1)} puntos → confianza <strong>${esc(a.confidence)}</strong> (alta si coinciden en ±5, baja si se separan más de 10).</p>
-      <div class="chart-wrap">${probabilityChart(a, marketHome)}</div>
-      <p class="note">${a.methods.map((m) => `${esc(m.label)}: ${pct(m.p)}`).join(" · ")}.</p>
-    </section>
+    ${sectionPanel("4", `
+      ${itemsTable(a, "4")}
+      <h3>Reporte de lesiones: bajas (Out / Doubtful) publicadas antes del partido</h3>
+      <div class="table-scroll"><table class="compact">
+        <thead><tr><th>Jugador</th><th>Equipo</th><th>Pos</th><th>Estado</th><th>Lesión</th><th>Publicado</th><th>¿Titular esta semana?</th><th>¿Titular en ${a.season - 1}?</th></tr></thead>
+        <tbody>${a.injuries.map((i) => `<tr><td>${esc(i.name)}</td><td>${esc(i.team)}</td><td>${esc(i.position ?? "—")}</td><td>${esc(i.status)}</td><td class="muted">${esc(i.injury ?? "—")}</td><td class="muted">${esc(fmtDate(i.date))}</td><td>${i.starterNow ? "Sí" : "No"}</td><td>${i.inBase ? "Sí" : `No (${i.baseWeeks} semanas)`}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">Sin bajas reportadas.</td></tr>`}</tbody>
+      </table></div>
+      ${pg && pg.injuredLate.length ? `<p class="note">Excluido del modelo por fuga de datos (publicado después del inicio): ${esc(pg.injuredLate.join("; "))}.</p>` : ""}`)}
 
-    <section class="panel step">
-      <span class="step-num">Fase 3 · Modelo de puntos</span>
-      <h2>Marcador proyectado</h2>
+    ${sectionPanel("5", `
+      ${itemsTable(a, "5")}
+      <h3>Ajustes de la tabla 5.3: todos evaluados, aplicados solo si traen información nueva</h3>
+      <div class="table-scroll"><table class="compact">
+        <thead><tr><th>Condición</th><th>Dato evaluado</th><th>¿Se cumple?</th><th>¿Ya está en la base?</th><th class="r">Factor</th><th>¿Se aplica?</th></tr></thead>
+        <tbody>${a.adjustments.map((x) => `<tr><td>${esc(x.condition)}</td><td class="muted">${esc(x.data)}</td><td>${x.met === null ? '<span class="pill no">? Sin dato</span>' : x.met ? "Sí" : "No"}</td><td>${x.inBase ? `<span title="${esc(x.reason)}">Sí</span>` : "No"}</td><td class="r num">×${x.factor.toFixed(2)}</td><td>${x.applied ? '<span class="pill ok">✓ Aplicado</span>' : `<span class="pill muted" title="${esc(x.reason)}">No</span>`}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="note">Por qué no aplicar los que "ya están en la base": λ se construye con los puntos a favor y en contra de cada equipo, que ya reflejan su defensa, su presión y el nivel de su QB. Multiplicar otra vez por ×0.88 o ×0.90 contaría la misma información dos veces.</p>
       <div class="big-proj">
         <span class="eyebrow">${esc(a.away)}</span><span class="num">${a.projection.away.toFixed(1)}</span><span class="dash">—</span><span class="num">${a.projection.home.toFixed(1)}</span><span class="eyebrow">${esc(a.home)}</span>
       </div>
-      <p class="lede">Total proyectado ${a.projection.total.toFixed(1)} puntos (línea del mercado: ${c.total ?? "—"}). Margen proyectado ${signed(a.projection.margin, 1)} para ${esc(a.home)} (el mercado lo tenía como favorito por ${Math.abs(c.spread)} para ${esc(favTeam)}). Abajo, ${numFmt.format(a.simulations)} partidos simulados a partir de ese marcador.</p>
-      <div class="legend">
-        <span><i class="dot" style="background:var(--s1)"></i>Gana ${esc(a.home)}</span>
-        <span><i class="dot" style="background:var(--s2)"></i>Gana ${esc(a.away)}</span>
-      </div>
+      <p class="lede">λ base ${esc(a.away)} ${a.base.away.toFixed(1)} y ${esc(a.home)} ${a.base.home.toFixed(1)} → total ${a.projection.total.toFixed(1)} (línea ${c.total ?? "—"}), margen ${signed(a.projection.margin, 1)} para ${esc(a.home)} (el mercado: ${esc(favTeam)} por ${Math.abs(c.spread)}).</p>
+      <h3>Triangulación: probabilidad de que gane ${esc(a.home)}</h3>
+      <div class="chart-wrap">${probabilityChart(a, marketHome)}</div>
+      <p class="note">Divergencia entre métodos ${(a.divergence * 100).toFixed(1)} pp → confianza ${esc(a.confidence)} (alta ≤ 5, media ≤ 10, baja > 10).</p>
+      <h3>50,000 partidos simulados</h3>
+      <div class="legend"><span><i class="dot" style="background:var(--s1)"></i>Gana ${esc(a.home)}</span><span><i class="dot" style="background:var(--s2)"></i>Gana ${esc(a.away)}</span></div>
       <div class="chart-wrap">${marginChart(a)}</div>
       <p class="readout" id="margin-readout">Pasa el cursor (o toca) sobre la distribución para ver la probabilidad de cada margen.</p>
-      <p class="note">Limitación conocida: la simulación usa una distribución continua, así que no captura que en la NFL los márgenes se amontonan en 3 y 7 (goles de campo y touchdowns). Con un spread de 3 eso importa: un "push" es mucho más probable de lo que este modelo cree.</p>
-    </section>
+      <p class="note">Limitación: la distribución es continua y no captura que los márgenes se amontonan en 3 y 7; con un spread de 3 el "push" es más probable de lo que el modelo cree.</p>
+      ${formulasBlock(a, "5")}`)}
 
-    <section class="panel step">
-      <span class="step-num">Fase 4 · Valor de mercado</span>
-      <h2>Modelo contra los momios de cierre</h2>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Mercado</th><th>Pick del modelo</th><th class="r">Momio</th><th class="r">P. implícita</th><th class="r">P. modelo</th><th class="r">Edge</th><th class="r">Momio justo</th><th class="r">Stake (¼ Kelly)</th><th>Semáforo</th></tr></thead>
-          <tbody>
-            ${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td><strong>${esc(marketPickLabel(m))}</strong></td><td class="r num">${fmtOdds(m.odds)}</td><td class="r num">${pct(m.pImplied)}</td><td class="r num">${pct(m.pModel)}</td><td class="r num ${m.edge > 0 ? "pos" : "negv"}">${signed(m.edge * 100, 1)} pp</td><td class="r num">${fmtOdds(m.fairOdds)}</td><td class="r num">${m.kellyQuarter ? pct(m.kellyQuarter) : "—"}</td><td>${lightPill(m.light)}</td></tr>`).join("")}
-          </tbody>
-        </table>
+    ${sectionPanel("6", `
+      ${itemsTable(a, "6")}
+      <div class="metrics">
+        <div><span class="num">${a.projection.q1.away.toFixed(1)}–${a.projection.q1.home.toFixed(1)}</span><span>1er cuarto (${esc(a.away)}–${esc(a.home)})</span></div>
+        <div><span class="num">${a.projection.h1.away.toFixed(1)}–${a.projection.h1.home.toFixed(1)}</span><span>1ra mitad</span></div>
+        <div><span class="num">${a.projection.away.toFixed(1)}–${a.projection.home.toFixed(1)}</span><span>Final</span></div>
       </div>
-      <p class="note">P. implícita sin el margen de la casa. En cada mercado se muestra el lado con mayor edge. Amarillo = edge de al menos 3 puntos, limitado por la falta de reporte de lesiones.</p>
-    </section>
+      <h3>Tabla de decisiones por línea (6.10)</h3>
+      <div class="table-scroll"><table class="compact">
+        <thead><tr><th>Línea de total</th><th class="r">P(Over)</th><th class="r">P(Under)</th><th>Lectura</th></tr></thead>
+        <tbody>${a.lineTable.map((l) => `<tr${l.line === c.total ? ' class="focus-row"' : ""}><td class="num">${l.line}${l.line === c.total ? " (mercado)" : ""}</td><td class="r num">${pct(l.pOver)}</td><td class="r num">${pct(l.pUnder)}</td><td>${esc(l.read)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      ${formulasBlock(a, "6")}`)}
 
-    <section class="panel step">
-      <span class="step-num">Fase 5 · Auditoría</span>
-      <h2>Filtros de contradicción</h2>
-      <ul class="checklist">
-        ${a.audit.map((x) => `<li>${x.ok ? '<span class="pill ok">✓ Pasa</span>' : '<span class="pill warn">▲ Alerta</span>'}<span><strong>${esc(x.rule)}.</strong> ${esc(x.detail)}</span></li>`).join("")}
-      </ul>
-    </section>
+    ${sectionPanel("7", `
+      ${itemsTable(a, "7")}
+      <div class="table-scroll"><table>
+        <thead><tr><th>Mercado</th><th>Pick</th><th class="r">Momio</th><th class="r">P. implícita</th><th class="r">P. modelo</th><th class="r">Edge</th><th class="r">Momio justo</th><th class="r">¼ Kelly</th><th>Semáforo</th></tr></thead>
+        <tbody>${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td><strong>${esc(marketPickLabel(m))}</strong></td><td class="r num">${fmtOdds(m.odds)}</td><td class="r num">${pct(m.pImplied)}</td><td class="r num">${pct(m.pModel)}</td><td class="r num ${m.edge > 0 ? "pos" : "negv"}">${signed(m.edge * 100, 1)} pp</td><td class="r num">${fmtOdds(m.fairOdds)}</td><td class="r num">${m.kellyQuarter ? pct(m.kellyQuarter) : "—"}</td><td>${lightPill(m.light)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      ${formulasBlock(a, "7")}`)}
+
+    ${sectionPanel("8", `
+      <p class="lede">Los 17 filtros de la sección 8.3, evaluados con los datos disponibles. "No evaluable" significa que falta el dato para revisarlo.</p>
+      <ul class="checklist">${a.checks.map((x) => `<li>${checkPill(x.status)}<span><strong>${esc(x.id)} ${esc(x.rule)}.</strong> ${esc(x.detail)}</span></li>`).join("")}</ul>
+      <h3>Dependencia de supuestos (8.2)</h3>
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Pick</th><th>Supuesto principal</th><th>Si falla</th><th>Riesgo</th></tr></thead>
+        <tbody>${a.dependencies.map((d) => `<tr><td>${esc(d.pick)}</td><td>${esc(d.assumption)}</td><td>${esc(d.ifFails)}</td><td>${esc(d.risk)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Sin picks.</td></tr>`}</tbody></table></div>
+      <h3>Decisión corregida (8.4): Modelo + Guion + Cuota + baja contradicción</h3>
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Mercado</th><th>Pick</th><th>Modelo</th><th>Guion</th><th>Cuota</th><th>Contradicción</th><th>Semáforo</th><th>Decisión</th></tr></thead><tbody>${decision}</tbody></table></div>
+      <p class="note">Modelo = edge de al menos 3 pp. Guion = el pick va en la misma dirección que la proyección. Cuota = el momio ofrecido es mejor que el momio justo. Contradicción = número de alertas de la auditoría.</p>`)}
+
+    ${sectionPanel("9", `
+      <h3>Regla de completitud (9.3)</h3>
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Sección</th><th>Campos obligatorios</th><th>Estado</th><th>Si falta →</th></tr></thead>
+        <tbody>${a.gate.map((g) => `<tr><td>${esc(g.section)}</td><td>${esc(g.label)}</td><td>${g.ok ? '<span class="pill ok">✓ Completo</span>' : '<span class="pill no">✗ Incompleto</span>'}</td><td class="muted">${esc(g.blocks ?? "—")}</td></tr>`).join("")}</tbody></table></div>
+      <p class="note">campo_faltante = ${a.campoFaltante ? "verdadero → ningún pick puede ser Verde (máximo Amarillo)" : "falso"}.</p>
+      <h3>Fuentes usadas en este análisis</h3>
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Fuente</th><th class="r">Datos</th></tr></thead>
+        <tbody>${Object.entries(sources).sort((x, y) => y[1] - x[1]).map(([k, n]) => `<tr><td class="src">${esc(k)}</td><td class="r num">${n}</td></tr>`).join("")}</tbody></table></div>`)}
+
+    ${sectionPanel("10", `
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Fase</th><th>Paso</th><th>Estado</th></tr></thead>
+        <tbody>${a.algorithm.map((s) => `<tr><td class="muted">${esc(s.phase)}</td><td>${esc(s.step)}</td><td>${s.status === "hecho" ? '<span class="pill ok">✓ Hecho</span>' : s.status === "parcial" ? '<span class="pill warn">▲ Parcial</span>' : '<span class="pill no">✗ Falta</span>'}</td></tr>`).join("")}</tbody></table></div>`)}
 
     ${pg ? `
-    <section class="panel step" style="border-color:var(--accent)">
+    <section class="panel step" id="resultado" style="border-color:var(--accent)">
       <span class="step-num">Después del partido</span>
       <h2>Resultado real contra el modelo</h2>
       <div class="result-banner">
         <div class="big-proj"><span class="eyebrow">${esc(a.away)}</span><span class="num">${pg.awayScore}</span><span class="dash">—</span><span class="num">${pg.homeScore}</span><span class="eyebrow">${esc(a.home)}</span></div>
-        <a href="#g-${esc(gameId)}" class="go" style="color:var(--accent-ink);font-weight:600">Ver el partido jugada por jugada →</a>
+        <a href="#g-${esc(gameId)}" style="color:var(--accent-ink);font-weight:600">Ver el partido jugada por jugada →</a>
       </div>
       <div class="metrics">
         <div><span class="num ${pg.winnerCorrect ? "pos" : "negv"}">${pg.winnerCorrect ? "Sí" : "No"}</span><span>¿acertó al ganador? (P = ${pct(a.pHome)} para ${esc(a.home)})</span></div>
         <div><span class="num">${signed(pg.marginError, 1)}</span><span>error en el margen (proyectado − real)</span></div>
-        <div><span class="num">${signed(pg.totalError, 1)}</span><span>error en el total (proyectado − real)</span></div>
+        <div><span class="num">${signed(pg.totalError, 1)}</span><span>error en el total</span></div>
         <div><span class="num">${pg.brierModel.toFixed(3)}</span><span>Brier del modelo (menor = mejor)</span></div>
         ${pg.brierMarket !== null ? `<div><span class="num">${pg.brierMarket.toFixed(3)}</span><span>Brier del mercado</span></div>` : ""}
       </div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Mercado</th><th>Pick</th><th>Semáforo</th><th>Resultado</th></tr></thead>
-          <tbody>${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td>${esc(marketPickLabel(m))}</td><td>${lightPill(m.light)}</td><td>${outcomePill(m)}</td></tr>`).join("")}</tbody>
-        </table>
-      </div>
-      <h3>Qué falló y qué aprende el modelo</h3>
+      <div class="table-scroll"><table class="compact"><thead><tr><th>Mercado</th><th>Pick</th><th>Semáforo</th><th>Resultado</th></tr></thead>
+        <tbody>${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td>${esc(marketPickLabel(m))}</td><td>${lightPill(m.light)}</td><td>${outcomePill(m)}</td></tr>`).join("")}</tbody></table></div>
+      <h3>Diagnóstico con los datos</h3>
       <ul class="plain">
-        <li>El modelo proyectó un partido de ${a.projection.total.toFixed(1)} puntos y hubo ${pg.homeScore + pg.awayScore}; la línea del mercado (${c.total}) estuvo más cerca. Los ratings de ${a.season - 1} ven dos defensas élite y no saben nada del receso: altas y bajas de jugadores o cambios de reglas, que el mercado sí incorpora.</li>
-        <li>EPA por jugada ofensiva en este partido: ${esc(a.home)} ${signed(pg.epaInGame[a.home], 3)} (vs ${signed(H.epa.offEpa, 3)} en ${a.season - 1}) y ${esc(a.away)} ${signed(pg.epaInGame[a.away], 3)} (vs ${signed(A.epa.offEpa, 3)}).</li>
-        <li>El modelo ${pg.brierModel > (pg.brierMarket ?? 1) ? "fue menos preciso que el mercado" : "fue más preciso que el mercado"} en la probabilidad de victoria (Brier ${pg.brierModel.toFixed(3)} contra ${pg.brierMarket?.toFixed(3) ?? "—"}). Un partido no alcanza para juzgar: la comparación se acumulará semana a semana.</li>
-        <li>Para el siguiente partido este juego entra con peso 1 (el doble que uno de ${a.season - 1}) y la regresión a la media baja: el modelo empieza a moverse con datos de ${a.season}.</li>
+        <li>Total: proyectado ${a.projection.total.toFixed(1)}, real ${pg.homeScore + pg.awayScore}, línea ${c.total}. El mercado estuvo más cerca.</li>
+        <li>EPA ofensivo en el partido: ${esc(a.home)} ${signed(pg.epaInGame[a.home], 3)} y ${esc(a.away)} ${signed(pg.epaInGame[a.away], 3)}. Las dos ofensivas jugaron muy por encima de su nivel de ${a.season - 1}; la base no tenía cómo anticiparlo.</li>
+        <li>Lo que el inventario marca como faltante o sin usar coincide con el error: fichajes y novatos (no están en la base), movimiento de línea y más de una casa de apuestas (el mercado sí los tiene).</li>
+        <li>Las reglas del framework se aplicaron igual que antes del partido: nada se ajustó después de conocer el resultado.</li>
       </ul>
     </section>` : ""}`;
+
   attachMarginHover(a);
+  view.dataset.filter = pregameFilter;
+  view.querySelectorAll(".fbtn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pregameFilter = btn.dataset.filter;
+      view.dataset.filter = pregameFilter;
+      view.querySelectorAll(".fbtn").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+    });
+  });
+  view.querySelectorAll(".toc a").forEach((link) => {
+    link.addEventListener("click", (evt) => {
+      evt.preventDefault();
+      document.querySelector(link.getAttribute("href"))?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    });
+  });
 }
 
 /* ---------- Navegación ---------- */
