@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Team {
+  abbr           String   @id
+  name           String
+  nickname       String?
+  conference     String?
+  division       String?
+  primaryColor   String?
+  secondaryColor String?
+  logoUrl        String?
+
+  players   Player[]
+  homeGames Game[]   @relation("HomeTeam")
+  awayGames Game[]   @relation("AwayTeam")
+
+  @@map("teams")
+}
+
+model Player {
+  gsisId      String    @id
+  fullName    String
+  position    String?
+  teamAbbr    String?
+  team        Team?     @relation(fields: [teamAbbr], references: [abbr])
+  birthDate   DateTime?
+  heightIn    Int?
+  weightLb    Int?
+  college     String?
+  jerseyNumber Int?
+  status      String?
+  headshotUrl String?
+
+  weekStats PlayerWeekStat[]
+
+  @@index([teamAbbr])
+  @@map("players")
+}
+
+model Game {
+  gameId       String    @id
+  season       Int
+  week         Int
+  gameType     String?
+  gameDate     DateTime?
+  homeTeamAbbr String
+  awayTeamAbbr String
+  homeTeam     Team      @relation("HomeTeam", fields: [homeTeamAbbr], references: [abbr])
+  awayTeam     Team      @relation("AwayTeam", fields: [awayTeamAbbr], references: [abbr])
+  homeScore    Int?
+  awayScore    Int?
+  stadium      String?
+  roof         String?
+  surface      String?
+  spreadLine   Float?
+  totalLine    Float?
+
+  weekStats PlayerWeekStat[]
+
+  @@index([season, week])
+  @@index([homeTeamAbbr])
+  @@index([awayTeamAbbr])
+  @@map("games")
+}
+
+model PlayerWeekStat {
+  id               String  @id @default(cuid())
+  playerId         String
+  player           Player  @relation(fields: [playerId], references: [gsisId])
+  gameId           String?
+  game             Game?   @relation(fields: [gameId], references: [gameId])
+  season           Int
+  week             Int
+  seasonType       String?
+  teamAbbr         String?
+  opponentAbbr     String?
+
+  completions      Int?
+  attempts         Int?
+  passingYards     Int?
+  passingTds       Int?
+  interceptions    Int?
+
+  carries          Int?
+  rushingYards     Int?
+  rushingTds       Int?
+
+  receptions       Int?
+  targets          Int?
+  receivingYards   Int?
+  receivingTds     Int?
+
+  fantasyPoints    Float?
+  fantasyPointsPpr Float?
+
+  @@unique([playerId, season, week, seasonType])
+  @@index([season, week])
+  @@map("player_week_stats")
+}
