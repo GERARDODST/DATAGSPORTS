@@ -1,0 +1,919 @@
+<title>DATAGSPORTS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #eef2f5;
+    --surface: #ffffff;
+    --surface-2: #e5ebf0;
+    --ink: #0f1720;
+    --muted: #566575;
+    --border: #d4dce3;
+    --grid: #e3e9ee;
+    --bar: #c3cdd6;
+    --accent: #1f9d5c;
+    --accent-ink: #0b7a42;
+    --accent-soft: rgba(31, 157, 92, 0.12);
+    --neg: #c2413b;
+    --neg-soft: rgba(194, 65, 59, 0.12);
+    --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0b0f14;
+      --surface: #121822;
+      --surface-2: #1a2230;
+      --ink: #eef2f6;
+      --muted: #8e9bab;
+      --border: #26303f;
+      --grid: #1d2633;
+      --bar: #2c3748;
+      --accent: #3ddc84;
+      --accent-ink: #3ddc84;
+      --accent-soft: rgba(61, 220, 132, 0.12);
+      --neg: #f07a72;
+      --neg-soft: rgba(240, 122, 114, 0.14);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0b0f14;
+    --surface: #121822;
+    --surface-2: #1a2230;
+    --ink: #eef2f6;
+    --muted: #8e9bab;
+    --border: #26303f;
+    --grid: #1d2633;
+    --bar: #2c3748;
+    --accent: #3ddc84;
+    --accent-ink: #3ddc84;
+    --accent-soft: rgba(61, 220, 132, 0.12);
+    --neg: #f07a72;
+    --neg-soft: rgba(240, 122, 114, 0.14);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding-inline: max(16px, 3vw); }
+
+  .topbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    background: color-mix(in oklab, var(--ground) 90%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }
+  .wordmark { font-weight: 700; letter-spacing: -0.02em; font-size: 18px; text-decoration: none; }
+  .wordmark b { color: var(--accent-ink); font-weight: 700; }
+  .season-chip { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 520px) { .season-chip .asof { display: none; } }
+
+  main { padding-block: 28px 48px; display: flex; flex-direction: column; gap: 36px; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  h1 { font-size: 26px; letter-spacing: -0.02em; line-height: 1.2; }
+  h2 { font-size: 18px; letter-spacing: -0.01em; }
+  h3 { font-size: 15px; }
+  p { margin: 0; }
+  .lede { color: var(--muted); max-width: 68ch; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .section-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+
+  /* Inicio */
+  .intro { display: flex; flex-direction: column; gap: 14px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .stat { display: flex; flex-direction: column; }
+  .stat .num { font-size: 20px; font-weight: 600; }
+  .stat span:last-child { font-size: 12px; color: var(--muted); }
+
+  .callout {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+    text-decoration: none; background: var(--accent-soft); border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .callout:hover { border-color: var(--accent); }
+  .callout .eyebrow { color: var(--accent-ink); }
+  .callout strong { display: block; font-size: 15px; margin-top: 2px; }
+  .callout .go { font-weight: 600; color: var(--accent-ink); white-space: nowrap; }
+
+  .weeks { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; scrollbar-width: thin; }
+  .weeks button {
+    font: inherit; font-size: 12px; font-weight: 500; color: var(--muted); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; cursor: pointer; white-space: nowrap;
+  }
+  .weeks button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--surface-2); }
+  .weeks button:hover { color: var(--ink); }
+
+  .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .game {
+    display: flex; flex-direction: column; gap: 8px; text-decoration: none; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  }
+  .game:hover { border-color: var(--muted); }
+  .game-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); }
+  .team-row { display: grid; grid-template-columns: 10px 38px 1fr auto; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  .team-row .abbr { font-weight: 600; font-size: 13px; }
+  .team-row .name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-row .num { font-size: 17px; color: var(--muted); }
+  .team-row.win .num { color: var(--ink); font-weight: 600; }
+  .team-row.loss .abbr { color: var(--muted); font-weight: 500; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11px; color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 8px; }
+  .chip b { color: var(--ink); font-weight: 600; }
+
+  .two-col { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.r, th.r { text-align: right; }
+  td.muted { color: var(--muted); }
+  td.desc { color: var(--muted); min-width: 240px; max-width: 360px; }
+
+  .bars { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: minmax(120px, 170px) 1fr 52px; align-items: center; gap: 10px; font-size: 13px; }
+  .bar-row .label { color: var(--muted); }
+  .track { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px; background: var(--bar); }
+  .fill.score { background: var(--accent); }
+  .fill.neg { background: var(--neg); }
+  .bar-row .num { text-align: right; font-size: 12px; }
+
+  /* Partido */
+  .crumbs a { font-size: 13px; color: var(--muted); text-decoration: none; }
+  .crumbs a:hover { color: var(--ink); }
+  .scoreboard { display: flex; flex-direction: column; gap: 14px; }
+  .sb-meta { font-size: 12px; color: var(--muted); }
+  .sb-teams { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .sb-team { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .sb-team.home { flex-direction: row-reverse; text-align: right; }
+  .sb-team .abbr { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .sb-team .name { font-size: 12px; color: var(--muted); }
+  .sb-team .num { font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  .sb-team.loss .num { color: var(--muted); }
+  .sb-team .dot { width: 14px; height: 14px; }
+  .sb-final { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  @media (max-width: 520px) {
+    .sb-team .num { font-size: 30px; }
+    .sb-team .abbr { font-size: 18px; }
+    .sb-final { order: 3; width: 100%; text-align: center; }
+  }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tabs a { text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted); padding: 10px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .tabs a:hover { color: var(--ink); }
+  .stack { display: flex; flex-direction: column; gap: 20px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .chart { width: 100%; height: auto; display: block; touch-action: pan-y; }
+  .chart text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  .chart .grid { stroke: var(--grid); stroke-width: 1; }
+  .chart .mid { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
+  .chart .line { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .cross { stroke: var(--ink); stroke-width: 1; opacity: 0.35; }
+  .chart .bar { fill: var(--bar); }
+  .chart .bar.hl { fill: var(--accent); }
+  .chart .bar.hover { opacity: 0.75; }
+  .chart .count { fill: var(--ink); font-weight: 500; }
+  .readout { font-size: 12px; color: var(--muted); margin-top: 8px; min-height: 3em; }
+  .readout strong { color: var(--ink); font-weight: 600; }
+  .note { font-size: 12px; color: var(--muted); max-width: 72ch; }
+  .swing { font-size: 12px; color: var(--muted); border-left: 2px solid var(--accent); padding-left: 10px; }
+  .swing strong { color: var(--ink); }
+
+  .step { display: flex; flex-direction: column; gap: 10px; }
+  .step-num { font-family: var(--mono); font-size: 12px; color: var(--accent-ink); font-weight: 600; }
+  .metrics { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .metrics div { display: flex; flex-direction: column; }
+  .metrics .num { font-size: 18px; font-weight: 600; }
+  .metrics span:last-child { font-size: 12px; color: var(--muted); }
+  .pos { color: var(--accent-ink); }
+  .negv { color: var(--neg); }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+  .status { color: var(--muted); padding: 24px 0; }
+  footer { border-top: 1px solid var(--border); }
+  footer .wrap { padding-block: 18px 28px; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .game, .callout, .weeks button, .tabs a { transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease; }
+  }
+</style>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="wordmark" href="#inicio">DATAG<b>SPORTS</b></a>
+    <span class="season-chip" id="season-chip"></span>
+  </div>
+</header>
+<main class="wrap" id="view" aria-live="polite"></main>
+<footer>
+  <div class="wrap">
+    <span>Datos abiertos de nflverse-data. Foto de la base de datos de DATAGSPORTS — se actualiza cada vez que se vuelve a publicar.</span>
+    <span>Herramienta de análisis estadístico: no garantiza resultados.</span>
+  </div>
+</footer>
+
+<script>
+const CORE = /*__CORE_DATA__*/null;
+
+const view = document.getElementById("view");
+const numFmt = new Intl.NumberFormat("es-MX");
+const dateFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const weekCache = new Map();
+const gamesById = new Map(CORE.games.map((g) => [g.id, g]));
+const weeks = [...new Set(CORE.games.map((g) => g.week))].sort((a, b) => a - b);
+const featuredGame = CORE.games.filter((g) => g.hs !== null).at(-1);
+
+const POST_LABELS = { WC: "Comodín", DIV: "Divisional", CON: "Campeonato", SB: "Super Bowl" };
+const DRIVE_LABELS = {
+  "Touchdown": ["Touchdown", "score"],
+  "Field goal": ["Gol de campo", "score"],
+  "Missed field goal": ["Gol de campo fallado", ""],
+  "Punt": ["Despeje (punt)", ""],
+  "Turnover": ["Pérdida de balón", "neg"],
+  "Turnover on downs": ["Pérdida en 4to down", "neg"],
+  "Safety": ["Safety", "neg"],
+  "Opp touchdown": ["Touchdown del rival", "neg"],
+  "End of half": ["Fin de mitad", ""],
+};
+const PLAY_TYPE_LABELS = { pass: "Pase", run: "Carrera", punt: "Despeje (punt)", field_goal: "Gol de campo" };
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function fmtDate(iso) {
+  return iso ? dateFmt.format(new Date(iso + "T12:00:00Z")) : "";
+}
+function signed(v, digits = 2) {
+  if (v === null || v === undefined) return "—";
+  return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(digits);
+}
+function weekType(week) {
+  return CORE.games.find((g) => g.week === week)?.type ?? "REG";
+}
+function weekLabel(week, short = false) {
+  const type = weekType(week);
+  if (type !== "REG") return POST_LABELS[type] ?? type;
+  return short ? `S${week}` : `Semana ${week}`;
+}
+function fieldLabel(yl) {
+  if (yl === 50) return "Medio campo";
+  return yl < 50 ? `Rival ${yl}` : `Propia ${100 - yl}`;
+}
+function bucketRange(bucket) {
+  const lo = bucket * 5 + 1;
+  const hi = lo + 4;
+  const field = hi <= 50 ? `Rival ${lo}–${hi}` : `Propia ${100 - hi}–${100 - lo}`;
+  return { lo, hi, field };
+}
+function bucketFor(yl) {
+  const clamped = Math.min(99, Math.max(1, yl));
+  return Math.min(19, Math.floor((clamped - 1) / 5));
+}
+
+/* Colores de equipo legibles sobre la superficie del tema actual */
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function luminance([r, g, b]) {
+  const f = (c) => {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function contrast(a, b) {
+  const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function rgbToHex(rgb) {
+  return "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+}
+function teamColors(homeAbbr, awayAbbr) {
+  const surface = hexToRgb(cssVar("--surface") || "#ffffff");
+  const fallback = cssVar("--muted") || "#8e9bab";
+  // Si el color del equipo no contrasta con la superficie, se aclara (tema
+  // oscuro) u oscurece (tema claro) el mismo tono en vez de cambiar de color.
+  const target = luminance(surface) < 0.5 ? [255, 255, 255] : [0, 0, 0];
+  const legible = (hex) => {
+    const base = hexToRgb(hex);
+    for (let t = 0; t <= 0.6001; t += 0.1) {
+      const rgb = base.map((v, i) => v + (target[i] - v) * t);
+      if (contrast(rgb, surface) >= 3) return rgb;
+    }
+    return null;
+  };
+  const pick = (abbr, avoid) => {
+    const t = CORE.teams[abbr] ?? {};
+    for (const c of [t.c1, t.c2]) {
+      if (!c || !/^#[0-9a-f]{3,6}$/i.test(c)) continue;
+      const rgb = legible(c);
+      if (!rgb) continue;
+      if (avoid) {
+        const a = hexToRgb(avoid);
+        if (Math.hypot(rgb[0] - a[0], rgb[1] - a[1], rgb[2] - a[2]) < 90) continue;
+      }
+      return rgbToHex(rgb);
+    }
+    return fallback;
+  };
+  const home = pick(homeAbbr);
+  const away = pick(awayAbbr, home);
+  return { home, away };
+}
+
+function spreadInfo(g) {
+  if (g.spread === null || g.spread === undefined) return null;
+  const fav = g.spread > 0 ? g.home : g.spread < 0 ? g.away : null;
+  const line = fav ? `${fav} −${Math.abs(g.spread)}` : "Pick'em";
+  let cover = null;
+  if (g.hs !== null && g.as !== null) {
+    const margin = g.hs - g.as;
+    cover = margin > g.spread ? `cubrió ${g.home}` : margin < g.spread ? `cubrió ${g.away}` : "push";
+  }
+  return { line, cover };
+}
+function totalInfo(g) {
+  if (g.total === null || g.total === undefined) return null;
+  let result = null;
+  if (g.hs !== null && g.as !== null) {
+    const pts = g.hs + g.as;
+    result = pts > g.total ? `Over (${pts})` : pts < g.total ? `Under (${pts})` : `push (${pts})`;
+  }
+  return { line: `O/U ${g.total}`, result };
+}
+
+async function loadWeek(week) {
+  if (weekCache.has(week)) return weekCache.get(week);
+  const res = await fetch(`data/week-${String(week).padStart(2, "0")}.json`);
+  if (!res.ok) throw new Error(String(res.status));
+  const data = await res.json();
+  weekCache.set(week, data);
+  return data;
+}
+
+let selectedWeek = featuredGame ? featuredGame.week : weeks.at(-1);
+try {
+  const stored = Number(localStorage.getItem("dg-week"));
+  if (weeks.includes(stored)) selectedWeek = stored;
+} catch (e) {}
+
+/* ---------- Inicio ---------- */
+function gameCard(g) {
+  const colors = teamColors(g.home, g.away);
+  const played = g.hs !== null && g.as !== null;
+  const homeWon = played && g.hs > g.as;
+  const awayWon = played && g.as > g.hs;
+  const sp = spreadInfo(g);
+  const tot = totalInfo(g);
+  const row = (abbr, score, color, won, lost) => `
+    <div class="team-row ${won ? "win" : ""} ${lost ? "loss" : ""}">
+      <span class="dot" style="background:${esc(color)}"></span>
+      <span class="abbr">${esc(abbr)}</span>
+      <span class="name">${esc(CORE.teams[abbr]?.name ?? abbr)}</span>
+      <span class="num">${score ?? "–"}</span>
+    </div>`;
+  return `
+    <a class="game" href="#g-${esc(g.id)}">
+      <div class="game-meta"><span>${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span><span>${played ? "Ver jugadas →" : "Programado"}</span></div>
+      ${row(g.away, g.as, colors.away, awayWon, homeWon)}
+      ${row(g.home, g.hs, colors.home, homeWon, awayWon)}
+      <div class="chips">
+        ${sp ? `<span class="chip">${esc(sp.line)}${sp.cover ? ` · <b>${esc(sp.cover)}</b>` : ""}</span>` : ""}
+        ${tot ? `<span class="chip">${esc(tot.line)}${tot.result ? ` · <b>${esc(tot.result)}</b>` : ""}</span>` : ""}
+      </div>
+    </a>`;
+}
+
+function barRows(items, total) {
+  const max = Math.max(1, ...items.map((i) => i.n));
+  return items
+    .map((i) => {
+      const [label, kind] = DRIVE_LABELS[i.result] ?? [i.result, ""];
+      const pct = total ? ((i.n / total) * 100).toFixed(0) : 0;
+      return `
+        <div class="bar-row">
+          <span class="label">${esc(label)}</span>
+          <div class="track"><div class="fill ${kind}" style="width:${((i.n / max) * 100).toFixed(1)}%"></div></div>
+          <span class="num" title="${i.n} posesiones">${pct}%</span>
+        </div>`;
+    })
+    .join("");
+}
+
+function renderHome() {
+  const c = CORE.counts;
+  const featuredTeams = featuredGame ? `${featuredGame.away} @ ${featuredGame.home}` : "";
+  const totalDrives = CORE.driveResults.reduce((s, d) => s + d.n, 0);
+  view.innerHTML = `
+    <section class="intro">
+      <p class="eyebrow">Pronósticos NFL · análisis matemático y estadístico</p>
+      <h1>Temporada ${CORE.season}, jugada por jugada</h1>
+      <p class="lede">Resultados, probabilidad de victoria y el modelo de Puntos Esperados construido desde cero con los datos reales de cada posesión.</p>
+      <div class="stats">
+        <div class="stat"><span class="num">${numFmt.format(c.games)}</span><span>partidos</span></div>
+        <div class="stat"><span class="num">${numFmt.format(c.drives)}</span><span>posesiones</span></div>
+        <div class="stat"><span class="num">${numFmt.format(c.plays)}</span><span>jugadas</span></div>
+        <div class="stat"><span class="num">${numFmt.format(c.players)}</span><span>jugadores</span></div>
+      </div>
+    </section>
+
+    ${featuredGame ? `
+    <a class="callout" href="#m-${esc(featuredGame.id)}">
+      <div>
+        <span class="eyebrow">Construcción del modelo</span>
+        <strong>Cómo se calculan los Puntos Esperados, usando ${esc(featuredTeams)} (${esc(weekLabel(featuredGame.week))}) como caso de estudio</strong>
+      </div>
+      <span class="go">Ver construcción →</span>
+    </a>` : ""}
+
+    <section>
+      <div class="section-head">
+        <h2>Partidos</h2>
+        <p class="lede">Elige una semana. Cada partido abre su curva de probabilidad de victoria y sus posesiones.</p>
+      </div>
+      <div class="weeks" role="group" aria-label="Semana">
+        ${weeks.map((w) => `<button type="button" id="week-${w}" data-week="${w}" aria-pressed="${w === selectedWeek}">${esc(weekLabel(w, true))}</button>`).join("")}
+      </div>
+      <div class="games" id="games"></div>
+    </section>
+
+    <section class="two-col">
+      <div class="panel">
+        <div class="section-head">
+          <h2>Líderes de la temporada</h2>
+          <p class="lede">Fantasy points (PPR) acumulados.</p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>#</th><th>Jugador</th><th>Pos</th><th>Equipo</th><th class="r">Pts</th></tr></thead>
+            <tbody>
+              ${CORE.leaders.map((l, i) => `
+                <tr><td class="muted num">${i + 1}</td><td>${esc(l.name)}</td><td class="muted">${esc(l.pos ?? "–")}</td><td class="muted">${esc(l.team ?? "–")}</td><td class="r num">${l.pts ?? "–"}</td></tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel stack">
+        <div>
+          <div class="section-head">
+            <h2>Cómo terminan las posesiones</h2>
+            <p class="lede">Los estados absorbentes de la cadena de Markov: ${numFmt.format(totalDrives)} posesiones de ${CORE.season}.</p>
+          </div>
+          <div class="bars">${barRows(CORE.driveResults, totalDrives)}</div>
+        </div>
+        <div>
+          <h3 style="margin-bottom:8px">EPA promedio por tipo de jugada</h3>
+          <table>
+            <thead><tr><th>Tipo</th><th class="r">Jugadas</th><th class="r">EPA</th></tr></thead>
+            <tbody>
+              ${CORE.playTypeEpa.map((p) => `<tr><td>${esc(PLAY_TYPE_LABELS[p.type] ?? p.type)}</td><td class="r num muted">${numFmt.format(p.n)}</td><td class="r num ${p.epa >= 0 ? "pos" : "negv"}">${signed(p.epa, 3)}</td></tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>`;
+
+  renderGamesGrid();
+  view.querySelectorAll(".weeks button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedWeek = Number(btn.dataset.week);
+      try { localStorage.setItem("dg-week", String(selectedWeek)); } catch (e) {}
+      view.querySelectorAll(".weeks button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      renderGamesGrid();
+    });
+  });
+  const strip = view.querySelector(".weeks");
+  const active = view.querySelector(`#week-${selectedWeek}`);
+  if (strip && active) strip.scrollLeft = active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2;
+}
+
+function renderGamesGrid() {
+  const grid = document.getElementById("games");
+  if (!grid) return;
+  grid.innerHTML = CORE.games.filter((g) => g.week === selectedWeek).map(gameCard).join("");
+}
+
+/* ---------- Partido ---------- */
+function scoreboard(g, colors) {
+  const played = g.hs !== null && g.as !== null;
+  const sp = spreadInfo(g);
+  const tot = totalInfo(g);
+  const side = (abbr, score, color, cls, lost) => `
+    <div class="sb-team ${cls} ${lost ? "loss" : ""}">
+      <span class="dot" style="background:${esc(color)}"></span>
+      <div><div class="abbr">${esc(abbr)}</div><div class="name">${esc(CORE.teams[abbr]?.name ?? abbr)}</div></div>
+      <span class="num">${score ?? "–"}</span>
+    </div>`;
+  return `
+    <section class="scoreboard">
+      <div class="crumbs"><a href="#inicio">← Todos los partidos</a></div>
+      <div class="sb-meta">${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}${g.stadium ? ` · ${esc(g.stadium)}` : ""}</div>
+      <div class="sb-teams">
+        ${side(g.away, g.as, colors.away, "away", played && g.as < g.hs)}
+        <span class="sb-final">${played ? "Final" : "Programado"}</span>
+        ${side(g.home, g.hs, colors.home, "home", played && g.hs < g.as)}
+      </div>
+      <div class="chips">
+        ${sp ? `<span class="chip">Línea: ${esc(sp.line)}${sp.cover ? ` · <b>${esc(sp.cover)}</b>` : ""}</span>` : ""}
+        ${tot ? `<span class="chip">${esc(tot.line)}${tot.result ? ` · <b>${esc(tot.result)}</b>` : ""}</span>` : ""}
+      </div>
+    </section>`;
+}
+
+function clockLabel(row) {
+  const [elapsed, quarter] = row;
+  const q = quarter ?? Math.min(4, Math.floor(elapsed / 900) + 1);
+  const left = Math.max(0, q <= 4 ? q * 900 - elapsed : 3600 + 600 * (q - 4) - elapsed);
+  const mm = Math.floor(left / 60);
+  const ss = String(Math.round(left % 60)).padStart(2, "0");
+  return `${q >= 5 ? "TE" : "Q" + q} · ${mm}:${ss}`;
+}
+
+function wpChart(g, rows, colors) {
+  const W = 720, H = 250, L = 64, R = 12, T = 14, B = 26;
+  const PW = W - L - R, PH = H - T - B;
+  const maxE = Math.max(3600, ...rows.map((r) => r[0]));
+  const x = (e) => L + (e / maxE) * PW;
+  const y = (p) => T + (1 - p) * PH;
+  const pts = rows.map((r) => [x(r[0]), y(r[2])]);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts.at(-1)[0].toFixed(1)} ${y(0.5)} L${pts[0][0].toFixed(1)} ${y(0.5)} Z`;
+  const quarterLines = [900, 1800, 2700, 3600].filter((s) => s < maxE);
+  const periods = [[0, "Q1"], [900, "Q2"], [1800, "Q3"], [2700, "Q4"]];
+  if (maxE > 3600) periods.push([3600, "TE"]);
+
+  let swingIdx = -1, swing = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const d = rows[i][2] - rows[i - 1][2];
+    if (Math.abs(d) > Math.abs(swing)) { swing = d; swingIdx = i; }
+  }
+  const last = pts.at(-1);
+
+  const svg = `
+    <svg class="chart" id="wp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Probabilidad de victoria de ${esc(g.home)} durante el partido: empieza en ${Math.round(rows[0][2] * 100)}% y termina en ${Math.round(rows.at(-1)[2] * 100)}%">
+      <defs>
+        <clipPath id="wp-above"><rect x="${L}" y="${T}" width="${PW}" height="${PH / 2}"/></clipPath>
+        <clipPath id="wp-below"><rect x="${L}" y="${T + PH / 2}" width="${PW}" height="${PH / 2}"/></clipPath>
+      </defs>
+      <line class="grid" x1="${L}" y1="${y(1)}" x2="${W - R}" y2="${y(1)}"/>
+      <line class="grid" x1="${L}" y1="${y(0)}" x2="${W - R}" y2="${y(0)}"/>
+      ${quarterLines.map((s) => `<line class="grid" x1="${x(s)}" y1="${T}" x2="${x(s)}" y2="${T + PH}"/>`).join("")}
+      <path d="${area}" fill="${esc(colors.home)}" fill-opacity="0.28" clip-path="url(#wp-above)"/>
+      <path d="${area}" fill="${esc(colors.away)}" fill-opacity="0.28" clip-path="url(#wp-below)"/>
+      <line class="mid" x1="${L}" y1="${y(0.5)}" x2="${W - R}" y2="${y(0.5)}"/>
+      <path class="line" d="${line}"/>
+      ${swingIdx > 0 ? `<circle cx="${pts[swingIdx][0].toFixed(1)}" cy="${pts[swingIdx][1].toFixed(1)}" r="6" fill="none" stroke="var(--accent)" stroke-width="2"/>` : ""}
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="var(--ink)" stroke="var(--surface)" stroke-width="2"/>
+      <text x="${L - 8}" y="${y(1) + 4}" text-anchor="end">${esc(g.home)} 100%</text>
+      <text x="${L - 8}" y="${y(0.5) + 4}" text-anchor="end">50%</text>
+      <text x="${L - 8}" y="${y(0) + 4}" text-anchor="end">${esc(g.away)} 100%</text>
+      ${periods.map(([s, label]) => `<text x="${x(s) + 4}" y="${H - 8}">${label}</text>`).join("")}
+      <line class="cross" id="wp-cross" x1="0" y1="${T}" x2="0" y2="${T + PH}" visibility="hidden"/>
+      <circle id="wp-dot" r="4.5" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+      <rect id="wp-hit" x="${L}" y="${T}" width="${PW}" height="${PH}" fill="transparent"/>
+    </svg>`;
+
+  const swingText = swingIdx > 0
+    ? `<p class="swing"><strong>Jugada de mayor impacto</strong> (${esc(clockLabel(rows[swingIdx]))}): la probabilidad de ${esc(swing > 0 ? g.home : g.away)} subió ${Math.round(Math.abs(swing) * 100)} puntos. ${esc(rows[swingIdx][3] ?? "")}</p>`
+    : "";
+  return { svg, swingText, geometry: { L, PW, maxE, x, y } };
+}
+
+function attachWpHover(g, rows, geometry) {
+  const svg = document.getElementById("wp-chart");
+  const hit = document.getElementById("wp-hit");
+  const cross = document.getElementById("wp-cross");
+  const dot = document.getElementById("wp-dot");
+  const readout = document.getElementById("wp-readout");
+  if (!svg || !hit) return;
+  const defaultText = readout.innerHTML;
+  const show = (evt) => {
+    const box = svg.getBoundingClientRect();
+    const svgX = ((evt.clientX - box.left) / box.width) * 720;
+    const e = ((svgX - geometry.L) / geometry.PW) * geometry.maxE;
+    let lo = 0, hi = rows.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (rows[mid][0] < e) lo = mid + 1; else hi = mid;
+    }
+    const i = lo > 0 && Math.abs(rows[lo - 1][0] - e) < Math.abs(rows[lo][0] - e) ? lo - 1 : lo;
+    const r = rows[i];
+    const px = geometry.x(r[0]), py = geometry.y(r[2]);
+    cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("visibility", "visible");
+    const leader = r[2] >= 0.5 ? g.home : g.away;
+    const pct = Math.round((r[2] >= 0.5 ? r[2] : 1 - r[2]) * 100);
+    readout.innerHTML = `<strong>${esc(clockLabel(r))} · ${esc(leader)} ${pct}% de ganar</strong><br>${esc(r[3] ?? "")}`;
+  };
+  const hide = () => {
+    cross.setAttribute("visibility", "hidden");
+    dot.setAttribute("visibility", "hidden");
+    readout.innerHTML = defaultText;
+  };
+  hit.addEventListener("pointermove", show);
+  hit.addEventListener("pointerdown", show);
+  hit.addEventListener("pointerleave", hide);
+}
+
+function renderPartidoTab(g, data, colors) {
+  const body = document.getElementById("tab-body");
+  const rows = data.wp;
+  const drives = data.drives;
+  const counts = new Map();
+  drives.forEach((d) => counts.set(d[6] ?? "Desconocido", (counts.get(d[6] ?? "Desconocido") ?? 0) + 1));
+  const driveItems = [...counts.entries()].map(([result, n]) => ({ result, n })).sort((a, b) => b.n - a.n);
+
+  let chartHtml = `<p class="status">Este partido no tiene suficientes jugadas para graficar.</p>`;
+  let swingText = "";
+  let chart = null;
+  if (rows.length > 1) {
+    chart = wpChart(g, rows, colors);
+    chartHtml = chart.svg;
+    swingText = chart.swingText;
+  }
+
+  body.innerHTML = `
+    <div class="stack">
+      <section class="panel">
+        <div class="section-head">
+          <h2>Probabilidad de victoria</h2>
+          <p class="lede">Cada punto es una jugada real. Es la función de valor del modelo de estados (down, distancia, yardas, tiempo) que publica nflverse.</p>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:${esc(colors.home)}"></i>${esc(g.home)} (local) arriba del 50%</span>
+          <span><i class="dot" style="background:${esc(colors.away)}"></i>${esc(g.away)} (visitante) abajo del 50%</span>
+        </div>
+        ${chartHtml}
+        <p class="readout" id="wp-readout">Pasa el cursor (o toca) sobre la curva para ver cada jugada. El círculo marca la jugada de mayor impacto.</p>
+        ${swingText}
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>Posesiones</h2>
+          <p class="lede">${drives.length} posesiones. Cada una termina en un estado absorbente: anotación, pérdida de balón, despeje o fin de periodo.</p>
+        </div>
+        <div class="bars" style="margin-bottom:18px">${barRows(driveItems, drives.length)}</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>#</th><th>Equipo</th><th>Q</th><th>Inicio</th><th>Fin</th><th class="r">Jugadas</th><th>Resultado</th></tr></thead>
+            <tbody>
+              ${drives.map((d) => {
+                const [label, kind] = DRIVE_LABELS[d[6]] ?? [d[6] ?? "–", ""];
+                const cls = kind === "score" ? "pos" : kind === "neg" ? "negv" : "muted";
+                return `<tr><td class="muted num">${d[0]}</td><td>${esc(d[1] ?? "–")}</td><td class="muted num">${d[2] ?? "–"}</td><td class="muted" style="white-space:nowrap">${esc(d[3] ?? "–")}</td><td class="muted" style="white-space:nowrap">${esc(d[4] ?? "–")}</td><td class="r num">${d[5] ?? "–"}</td><td class="${cls}" style="white-space:nowrap">${esc(label)}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>`;
+  if (chart) attachWpHover(g, rows, chart.geometry);
+}
+
+function epChart(highlightCounts) {
+  const W = 720, H = 260, L = 34, R = 12, T = 24, B = 44;
+  const PW = W - L - R, PH = H - T - B;
+  const maxV = 7;
+  const xOf = (yl) => L + ((100 - yl) / 100) * PW;
+  const yOf = (v) => T + (1 - v / maxV) * PH;
+  const bars = CORE.epModel.map((b) => {
+    if (b.ep === null) return "";
+    const x0 = xOf(b.bucket * 5 + 5) + 1;
+    const x1 = xOf(b.bucket * 5) - 1;
+    const hl = highlightCounts.get(b.bucket) ?? 0;
+    const top = yOf(Math.max(0, b.ep));
+    const base = yOf(0);
+    const cx = (x0 + x1) / 2;
+    return `
+      <rect class="bar ${hl ? "hl" : ""}" data-bucket="${b.bucket}" x="${x0.toFixed(1)}" y="${top.toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${(base - top).toFixed(1)}" rx="3"/>
+      ${hl ? `<text class="count" x="${cx.toFixed(1)}" y="${(top - 6).toFixed(1)}" text-anchor="middle">×${hl}</text>` : ""}
+      <rect class="ep-hit" data-bucket="${b.bucket}" x="${(x0 - 1).toFixed(1)}" y="${T}" width="${(x1 - x0 + 2).toFixed(1)}" height="${PH}" fill="transparent"/>`;
+  }).join("");
+  const ticks = [0, 1, 2, 3, 4, 5, 6, 7].map((v) => `
+    <line class="grid" x1="${L}" y1="${yOf(v)}" x2="${W - R}" y2="${yOf(v)}"/>
+    <text x="${L - 8}" y="${yOf(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const fieldTicks = [[100, "Tu gol", "start"], [75, "Propia 25", "middle"], [50, "50", "middle"], [25, "Rival 25", "middle"], [0, "Gol rival", "end"]]
+    .map(([yl, label, anchor]) => `<text x="${xOf(yl)}" y="${H - 22}" text-anchor="${anchor}">${label}</text>`).join("");
+  return `
+    <svg class="chart" id="ep-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Puntos esperados en 1er down según la posición en el campo">
+      ${ticks}
+      ${bars}
+      ${fieldTicks}
+      <text x="${L + PW / 2}" y="${H - 4}" text-anchor="middle">posición del balón en 1er down → dirección de ataque</text>
+    </svg>`;
+}
+
+function attachEpHover(highlightCounts) {
+  const readout = document.getElementById("ep-readout");
+  const defaultText = readout.innerHTML;
+  const svg = document.getElementById("ep-chart");
+  svg.querySelectorAll(".ep-hit").forEach((hit) => {
+    const bucket = Number(hit.dataset.bucket);
+    const bar = svg.querySelector(`.bar[data-bucket="${bucket}"]`);
+    const b = CORE.epModel[bucket];
+    const show = () => {
+      svg.querySelectorAll(".bar.hover").forEach((el) => el.classList.remove("hover"));
+      bar?.classList.add("hover");
+      const range = bucketRange(bucket);
+      const inGame = highlightCounts.get(bucket) ?? 0;
+      readout.innerHTML = `<strong>${esc(range.field)} · EP ${b.ep.toFixed(2)} puntos</strong><br>${numFmt.format(b.n)} jugadas de 1er down en ${CORE.season} a ${range.lo}–${range.hi} yardas de la zona de anotación rival${inGame ? ` · ${inGame} en este partido` : ""}.`;
+    };
+    hit.addEventListener("pointerenter", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", () => {
+      bar?.classList.remove("hover");
+      readout.innerHTML = defaultText;
+    });
+  });
+}
+
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 3) return null;
+  const mx = xs.reduce((s, v) => s + v, 0) / n;
+  const my = ys.reduce((s, v) => s + v, 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - mx, dy = ys[i] - my;
+    sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+  }
+  return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
+}
+
+function renderModeloTab(g, data) {
+  const body = document.getElementById("tab-body");
+  const rows = data.firstDown;
+  const highlightCounts = new Map();
+  rows.forEach((r) => {
+    if (r[2] === null) return;
+    const b = bucketFor(r[2]);
+    highlightCounts.set(b, (highlightCounts.get(b) ?? 0) + 1);
+  });
+  const paired = rows.filter((r) => r[6] !== null && r[7] !== null);
+  const r = pearson(paired.map((p) => p[6]), paired.map((p) => p[7]));
+  const mae = paired.length ? paired.reduce((s, p) => s + Math.abs(p[6] - p[7]), 0) / paired.length : null;
+  const sameSign = paired.length ? paired.filter((p) => Math.sign(p[6]) === Math.sign(p[7])).length / paired.length : null;
+  const season = CORE.epCompare;
+  const totalFirstDowns = CORE.epModel.reduce((s, b) => s + b.n, 0);
+  const epNear = CORE.epModel[0]?.ep, epFar = CORE.epModel[19]?.ep;
+
+  body.innerHTML = `
+    <div class="stack">
+      <section class="panel step">
+        <span class="step-num">Paso 1 de 4</span>
+        <h2>Qué estamos construyendo</h2>
+        <p class="lede">El framework define los Puntos Esperados (EP) como la función de valor de una cadena de Markov sobre el estado <code>(down, distancia, yardas, tiempo)</code>. Aquí construimos la versión más simple posible, con datos reales: todas las jugadas de <strong>1er down</strong> de la temporada ${CORE.season}, agrupadas por posición del balón, promediando cuántos puntos anotó el equipo con el balón antes de que terminara esa posesión.</p>
+        <p class="note">Valores por resultado de la posesión: touchdown 6.94 (7 menos los puntos extra fallados), gol de campo 3, safety −2, touchdown del rival −6.94, cualquier otro final 0.</p>
+      </section>
+
+      <section class="panel step">
+        <span class="step-num">Paso 2 de 4</span>
+        <h2>El modelo, calculado sobre toda la temporada</h2>
+        <p class="lede">${numFmt.format(totalFirstDowns)} jugadas de 1er down en 20 tramos de 5 yardas. Las barras verdes son tramos donde <strong>${esc(g.away)} @ ${esc(g.home)}</strong> tuvo jugadas de 1er down (×n = cuántas).</p>
+        ${epChart(highlightCounts)}
+        <p class="readout" id="ep-readout">Pasa el cursor (o toca) sobre una barra para ver su tramo, su EP y cuántas jugadas lo sostienen.</p>
+        <p class="note">La curva tiene la forma esperada: ${epNear?.toFixed(1)} puntos a 1–5 yardas del gol rival y ${epFar?.toFixed(1)} pegado a tu propia zona. No baja de cero porque esta versión no le da valor al rival cuando pierdes el balón; el modelo de nflverse sí.</p>
+      </section>
+
+      <section class="panel step">
+        <span class="step-num">Paso 3 de 4</span>
+        <h2>Nuestro EPA contra el de nflverse</h2>
+        <p class="lede">Para cada 1er down del partido: <code>EPA propio = EP(después) − EP(antes)</code> leído de la curva, junto al <code>epa</code> profesional de la misma jugada.</p>
+        <div class="metrics">
+          <div><span class="num">${paired.length}</span><span>jugadas comparadas</span></div>
+          <div><span class="num">${r === null ? "—" : r.toFixed(2)}</span><span>correlación (r) en este partido</span></div>
+          <div><span class="num">${mae === null ? "—" : mae.toFixed(2)}</span><span>diferencia media (puntos)</span></div>
+          <div><span class="num">${sameSign === null ? "—" : Math.round(sameSign * 100) + "%"}</span><span>mismo signo</span></div>
+          ${season && season.r !== null ? `<div><span class="num">${season.r.toFixed(2)}</span><span>correlación en toda ${CORE.season} (${numFmt.format(season.n)} jugadas)</span></div>` : ""}
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Q</th><th>Equipo</th><th>Posición</th><th>Jugada</th><th class="r">EP antes</th><th class="r">EP después</th><th class="r">EPA propio</th><th class="r">EPA nflverse</th></tr></thead>
+            <tbody>
+              ${rows.map((p) => `
+                <tr>
+                  <td class="muted num">${p[0] ?? "–"}</td>
+                  <td>${esc(p[1] ?? "–")}</td>
+                  <td class="muted num" style="white-space:nowrap">${p[2] !== null ? esc(fieldLabel(p[2])) : "–"}</td>
+                  <td class="desc">${esc(p[3] ?? "")}</td>
+                  <td class="r num muted">${p[4] === null ? "–" : p[4].toFixed(2)}</td>
+                  <td class="r num muted">${p[5] === null ? "–" : p[5].toFixed(2)}</td>
+                  <td class="r num ${p[6] > 0 ? "pos" : p[6] < 0 ? "negv" : ""}">${signed(p[6])}</td>
+                  <td class="r num ${p[7] > 0 ? "pos" : p[7] < 0 ? "negv" : ""}">${signed(p[7])}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel step">
+        <span class="step-num">Paso 4 de 4</span>
+        <h2>Qué le falta para ser el modelo real</h2>
+        <ul class="plain">
+          <li>Solo usa 1er down: no distingue 2do, 3ro ni 4to down, ni la distancia por conseguir. Por eso una ganancia corta vale 0 aquí y negativo en nflverse.</li>
+          <li>No usa el tiempo restante: una jugada en el último minuto vale distinto que en el primer cuarto.</li>
+          <li>No le asigna valor al rival cuando se pierde el balón (la metodología "next score").</li>
+          <li>Tramos de 5 yardas: con más temporadas se puede afinar a 1 yarda.</li>
+        </ul>
+        <p class="note">Siguiente paso del framework (sección 5.4.1): la matriz de transición <code>P(s'|s)</code> con los 4 downs, y con ella simular posesiones completas jugada por jugada.</p>
+      </section>
+    </div>`;
+  attachEpHover(highlightCounts);
+}
+
+let renderToken = 0;
+async function renderGame(g, tab) {
+  const token = ++renderToken;
+  const colors = teamColors(g.home, g.away);
+  view.innerHTML = `
+    ${scoreboard(g, colors)}
+    <nav class="tabs" aria-label="Vistas del partido">
+      <a href="#g-${esc(g.id)}" ${tab === "partido" ? 'aria-current="page"' : ""}>Partido</a>
+      <a href="#m-${esc(g.id)}" ${tab === "modelo" ? 'aria-current="page"' : ""}>Construcción del modelo EP</a>
+    </nav>
+    <div id="tab-body"><p class="status">Cargando jugadas de ${esc(weekLabel(g.week))}…</p></div>`;
+  if (g.hs === null) {
+    document.getElementById("tab-body").innerHTML = `<p class="status">Este partido todavía no se juega: no hay jugadas para mostrar.</p>`;
+    return;
+  }
+  let data;
+  try {
+    data = (await loadWeek(g.week))[g.id];
+  } catch (err) {
+    if (token !== renderToken) return;
+    document.getElementById("tab-body").innerHTML = `<p class="status">No se pudieron cargar las jugadas de esta semana. Recarga la página para intentarlo de nuevo.</p>`;
+    return;
+  }
+  if (token !== renderToken) return;
+  if (!data) {
+    document.getElementById("tab-body").innerHTML = `<p class="status">No hay jugadas registradas para este partido.</p>`;
+    return;
+  }
+  if (tab === "modelo") renderModeloTab(g, data);
+  else renderPartidoTab(g, data, colors);
+}
+
+/* ---------- Navegación ---------- */
+let currentRoute = "";
+function route() {
+  const hash = location.hash.slice(1);
+  const match = /^(g|m)-(.+)$/.exec(hash);
+  const game = match ? gamesById.get(match[2]) : null;
+  if (game) {
+    renderGame(game, match[1] === "m" ? "modelo" : "partido");
+    document.title = `${game.away} @ ${game.home} · DATAGSPORTS`;
+  } else {
+    renderHome();
+    document.title = "DATAGSPORTS";
+  }
+}
+
+document.getElementById("season-chip").innerHTML = `Temporada ${CORE.season}<span class="asof"> · datos al ${esc(fmtDate(CORE.generatedAt.slice(0, 10)))}</span>`;
+window.addEventListener("hashchange", () => {
+  const next = location.hash;
+  const sameGame = currentRoute.slice(3) === next.slice(3) && /^#[gm]-/.test(currentRoute) && /^#[gm]-/.test(next);
+  currentRoute = next;
+  route();
+  if (!sameGame) window.scrollTo(0, 0);
+});
+currentRoute = location.hash;
+route();
+
+// Los colores de equipo se eligen según el tema: al cambiar de tema se vuelve a pintar.
+const rerender = () => route();
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", rerender);
+new MutationObserver(rerender).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

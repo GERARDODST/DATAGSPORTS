@@ -38,6 +38,14 @@ npm run dev             # http://localhost:3000
 Abre un partido jugado (ej. `/partidos/2024_22_KC_PHI`, el Super Bowl LIX) para ver la
 probabilidad de victoria jugada por jugada y el detalle de cada posesión.
 
+## Versión publicada (sin servidor)
+
+`npm run snapshot:export -- --season=2024` genera en `snapshot/dist/` una versión estática
+del sitio: `snapshot/viewer.html` con los datos generales embebidos, más un JSON de jugadas
+por semana que se carga bajo demanda. Es lo que se publica como página en claude.ai para
+poder abrir el sitio con un link sin desplegar la app ni la base de datos. Cada cambio en
+los datos o el modelo se ve volviendo a exportar y publicar.
+
 ## Scripts
 
 | Script | Qué hace |
@@ -48,6 +56,7 @@ probabilidad de victoria jugada por jugada y el detalle de cada posesión.
 | `npm run db:studio` | Abre Prisma Studio para inspeccionar los datos |
 | `npm run data:extract -- --season=YYYY` | Descarga equipos, rosters, calendario y stats semanales |
 | `npm run data:extract-pbp -- --season=YYYY` | Descarga play-by-play (posesiones y jugadas) |
+| `npm run snapshot:export -- --season=YYYY` | Genera la versión estática publicable en `snapshot/dist/` |
 
 ## Modelo de datos (`prisma/schema.prisma`)
 

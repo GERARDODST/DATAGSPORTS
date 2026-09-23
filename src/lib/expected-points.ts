@@ -85,3 +85,30 @@ export async function buildFieldPositionEpModel(season: number): Promise<EpBucke
 export function lookupExpectedPoints(model: EpBucket[], yardLine100: number): number | null {
   return model[bucketFor(yardLine100)]?.avgExpectedPoints ?? null;
 }
+
+export type FirstDownPlay = {
+  yardLine100: number;
+  yardsGained: number | null;
+  isTouchdown: boolean;
+  isInterception: boolean;
+  isFumbleLost: boolean;
+};
+
+/**
+ * EPA propio de una jugada de 1er down: EP(después) − EP(antes) sobre la
+ * curva del modelo. Touchdown vale su valor completo; una pérdida de balón
+ * se trata como 0 porque este modelo no le asigna valor al rival.
+ */
+export function ownEpaForPlay(model: EpBucket[], play: FirstDownPlay) {
+  const epBefore = lookupExpectedPoints(model, play.yardLine100);
+  let epAfter: number | null;
+  if (play.isTouchdown) {
+    epAfter = DRIVE_POINT_VALUES.Touchdown;
+  } else if (play.isInterception || play.isFumbleLost) {
+    epAfter = 0;
+  } else {
+    epAfter = lookupExpectedPoints(model, play.yardLine100 - (play.yardsGained ?? 0));
+  }
+  const epaHat = epBefore !== null && epAfter !== null ? epAfter - epBefore : null;
+  return { epBefore, epAfter, epaHat };
+}

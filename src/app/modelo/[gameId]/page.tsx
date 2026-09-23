@@ -5,7 +5,7 @@ import {
   buildFieldPositionEpModel,
   bucketFor,
   bucketLabel,
-  lookupExpectedPoints,
+  ownEpaForPlay,
 } from "@/lib/expected-points";
 import { EpByFieldPositionChart, type HighlightPoint } from "@/components/EpByFieldPositionChart";
 
@@ -37,24 +37,10 @@ async function getData(gameId: string) {
     },
   });
 
-  const rows = firstDownPlays.map((p) => {
-    const before = p.yardLine100 as number;
-    const epBefore = lookupExpectedPoints(model, before);
-    const turnedOver = p.isInterception || p.isFumbleLost;
-    let epAfter: number | null;
-    if (p.isTouchdown) {
-      epAfter = 6.94;
-    } else if (turnedOver) {
-      // Simplificación: no modelamos el valor para el rival tras una
-      // pérdida de balón, así que lo tratamos como el peor caso local (0).
-      epAfter = 0;
-    } else {
-      const after = Math.min(99, Math.max(1, before - (p.yardsGained ?? 0)));
-      epAfter = lookupExpectedPoints(model, after);
-    }
-    const epaHat = epBefore !== null && epAfter !== null ? epAfter - epBefore : null;
-    return { ...p, epBefore, epAfter, epaHat };
-  });
+  const rows = firstDownPlays.map((p) => ({
+    ...p,
+    ...ownEpaForPlay(model, { ...p, yardLine100: p.yardLine100 as number }),
+  }));
 
   const highlights: HighlightPoint[] = firstDownPlays
     .filter((p) => p.yardLine100 !== null)
