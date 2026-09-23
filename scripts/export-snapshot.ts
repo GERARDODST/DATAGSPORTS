@@ -15,6 +15,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../src/lib/prisma";
 import { buildFieldPositionEpModel, ownEpaForPlay } from "../src/lib/expected-points";
+import { buildMarkovModel, pearson } from "../src/lib/markov-model";
 
 const ROOT = path.resolve(__dirname, "..", "snapshot");
 const DIST = path.join(ROOT, "dist");
@@ -23,23 +24,6 @@ const TEMPLATE_MARKER = "/*__CORE_DATA__*/null";
 const round = (v: number | null | undefined, digits: number) =>
   v === null || v === undefined ? null : Number(v.toFixed(digits));
 
-function pearson(xs: number[], ys: number[]): number | null {
-  const n = xs.length;
-  if (n < 3) return null;
-  const mx = xs.reduce((s, v) => s + v, 0) / n;
-  const my = ys.reduce((s, v) => s + v, 0) / n;
-  let sxy = 0;
-  let sxx = 0;
-  let syy = 0;
-  for (let i = 0; i < n; i++) {
-    const dx = xs[i] - mx;
-    const dy = ys[i] - my;
-    sxy += dx * dy;
-    sxx += dx * dx;
-    syy += dy * dy;
-  }
-  return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
-}
 
 function parseArgs() {
   const seasonArg = process.argv.find((a) => a.startsWith("--season="));
@@ -134,7 +118,21 @@ async function main() {
       .map((p) => ({ type: p.playType, n: p._count._all, epa: round(p._avg.epa, 3) }))
       .sort((a, b) => (b.epa ?? 0) - (a.epa ?? 0)),
     epCompare: null as null | { n: number; r: number | null; mae: number },
+    markov: null as null | { n: number; r: number | null; mae: number; iterations: number },
   };
+
+  console.log("-> Resolviendo la cadena de Markov (iteración de valor)");
+  const markov = await buildMarkovModel(season);
+  core.markov = {
+    n: markov.epa.n,
+    r: round(markov.epa.r, 3),
+    mae: round(markov.epa.mae, 3) ?? 0,
+    iterations: markov.iterations.length,
+  };
+  console.log(
+    `   ${markov.iterations.length} iteraciones · EPA v2 vs nflverse en ${markov.epa.n} jugadas: r=${core.markov.r}`
+  );
+
   const ownEpas: number[] = [];
   const nflverseEpas: number[] = [];
 
@@ -152,6 +150,8 @@ async function main() {
           where: { gameId: g.gameId },
           orderBy: [{ gameSecondsRemaining: "desc" }, { id: "asc" }],
           select: {
+            id: true,
+            playType: true,
             quarter: true,
             down: true,
             gameSecondsRemaining: true,
@@ -215,7 +215,17 @@ async function main() {
         d.result,
       ]);
 
-      payload[g.gameId] = { wp, firstDown, drives: driveRows };
+      const v2Own: number[] = [];
+      const v2Ref: number[] = [];
+      for (const p of plays) {
+        const own = markov.ownEpaByPlay.get(p.id);
+        if (own === undefined || p.epa === null || p.playType === "no_play") continue;
+        v2Own.push(own);
+        v2Ref.push(p.epa);
+      }
+      const v2 = { n: v2Own.length, r: round(pearson(v2Own, v2Ref), 3) };
+
+      payload[g.gameId] = { wp, firstDown, drives: driveRows, v2 };
     }
     const json = JSON.stringify(payload);
     totalBytes += json.length;
@@ -231,6 +241,17 @@ async function main() {
   console.log(
     `\n   EPA propio vs nflverse en ${core.epCompare.n} jugadas de 1er down: r=${core.epCompare.r}, diferencia media=${core.epCompare.mae}`
   );
+
+  const lab = {
+    ep: markov.ep.map((v) => round(v, 3)),
+    n: markov.n,
+    iterations: markov.iterations.map((v) => round(v, 5)),
+    transitions: markov.transitions.map((t) => [t.yards, t.codes]),
+    driveStarts: markov.driveStarts,
+  };
+  const labJson = JSON.stringify(lab);
+  await writeFile(path.join(DIST, "data", "lab.json"), labJson);
+  console.log(`   lab.json: ${(labJson.length / 1024).toFixed(0)} KB (estados, iteraciones y transiciones)`);
 
   const template = await readFile(path.join(ROOT, "viewer.html"), "utf-8");
   if (!template.includes(TEMPLATE_MARKER)) {

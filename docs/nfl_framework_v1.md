@@ -450,6 +450,43 @@ nflverse sobre este mismo modelo de estados) y lista las posesiones del partido 
 estado absorbente — la forma más directa de *ver* la cadena de Markov en acción sobre un
 partido real, no solo describirla en la fórmula.
 
+#### 5.4.2 Modelo v2: la cadena resuelta por iteración de valor (implementado)
+
+`src/lib/markov-model.ts` construye y resuelve la cadena sobre los datos reales:
+
+- **Estado:** `s = (down 1–4, distancia {1–3, 4–6, 7–10, 11+}, zona de 10 yardas)` → 160
+  estados, sostenidos por ~41,500 jugadas de 2024.
+- **Valor terminal de una posesión:** puntos anotados (TD 6.94, FG 3, safety −2, TD del
+  rival −6.94) **más** el valor de la siguiente posesión con signo: `− EP(s_rival)` si el
+  balón pasa al rival (despeje, pérdida, gol de campo fallado, o tras anotar y patear). Así
+  entregar el balón en tu propia zona vale negativo, como en el modelo "next score".
+- **Iteración de valor:** como `EP` aparece en ambos lados, se parte de `EP = 0` y se repite
+  `EP(s) ← promedio[valor terminal]` hasta que ningún estado cambie más de 0.001. Con los
+  datos de 2024 converge en 63 iteraciones (cambio máximo: 6.15 → 0.0009, caída geométrica).
+- **Shrinkage jerárquico (5.7.4):** cada celda se regresa hacia el promedio de su
+  `(down, zona)`, y este hacia el de la zona, con `k = 25`; 25 de 160 estados tienen menos de
+  20 jugadas.
+
+**Resultados medidos:**
+
+| Modelo | Jugadas comparadas | Correlación con `epa` de nflverse | Diferencia media |
+| --- | --- | --- | --- |
+| v1 · solo 1er down, pérdidas valen 0 | 16,673 | 0.80 | 0.46 |
+| v2 · cadena completa, iteración de valor | 38,699 | **0.945** | 0.35 |
+
+Valores de EP obtenidos (1ro y 10): propia 25 ≈ 0.8, medio campo ≈ 2.2, rival 25 ≈ 3.3,
+rival 5 ≈ 4.3. En 4to y corto dentro de tu propia zona el EP es negativo (≈ −1.5).
+
+**Simulador Nivel 2:** muestrea, en cada estado, una jugada real ocurrida en ese mismo estado
+y avanza hasta un estado absorbente. Desde 1ro y 10 en la propia 25 da 2.03 puntos por
+posesión contra 1.78 reales (1,287 posesiones); desde la rival 35, 3.88 contra 3.23. La
+brecha tiene una causa identificada: sin reloj, el simulador nunca termina una posesión por
+fin de mitad (6.6% y 9.1% de las posesiones reales en esas zonas). **Siguiente mejora:**
+agregar el tiempo restante al estado (semi-Markov) y el marcador.
+
+La página publicada (vista "Laboratorio") muestra el mapa de calor de los 160 estados, la
+convergencia de la iteración, EP por down, la validación v1/v2 y el simulador interactivo.
+
 ### 5.5 Probabilidad por mercado
 
 | Mercado | Prob. estimada | Dato que apoya | Dato que contradice | Riesgo |
@@ -1043,8 +1080,10 @@ numérica en una apuesta mala.
 | Datos de equipos, jugadores, calendario, stats semanales (secciones 1-3, 9.1) | ✅ Implementado (`scripts/extract-nflverse.ts`) |
 | Play-by-play con EPA/play y win probability, estructura Drive/Play (secciones 3.4, 4, 5.4.1, 5.7.3) | ✅ Implementado (`scripts/extract-pbp.ts`) |
 | Visualización de probabilidad de victoria y posesiones por partido | ✅ Implementado (`/partidos/[gameId]`) |
-| Matriz de transición empírica `P(s'\|s)` sobre `plays` (sección 5.7.3) | ⏳ Pendiente — datos listos, falta el cálculo |
+| Cadena de Markov de 160 estados resuelta por iteración de valor (secciones 5.4.2, 5.7.3) | ✅ Implementado (`src/lib/markov-model.ts`) — r = 0.945 contra nflverse |
+| Estado con tiempo restante y marcador (semi-Markov) | ⏳ Pendiente |
 | Injury reports y clima (secciones 4.2, 6, 9.2) | ⏳ Pendiente |
-| Motor de simulación Monte Carlo Nivel 1 y Nivel 2 (sección 5.4) | ⏳ Pendiente — datos listos, falta el motor |
+| Simulador de posesiones Nivel 2 (sección 5.4.2) | ✅ Implementado — sobreestima ~0.25–0.65 pts por falta de reloj |
+| Simulación de partido completo (ambos equipos, marcador final) | ⏳ Pendiente |
 | Cuotas y cálculo de edge (sección 7) | ⏳ Pendiente |
 | Auditoría de contradicciones automatizada (sección 8) | ⏳ Pendiente |

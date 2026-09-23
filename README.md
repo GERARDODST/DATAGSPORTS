@@ -86,9 +86,9 @@ proyecto abierto y mantenido por la comunidad — sin necesidad de scraping ni c
 
 Implementar el motor de análisis descrito en `docs/nfl_framework_v1.md`:
 
-1. Calcular la matriz de transición empírica `P(s'|s)` sobre `plays` (sección 5.7.3) — los
-   datos ya están, falta el cálculo
+1. Agregar tiempo restante y marcador al estado de la cadena (semi-Markov, sección 5.4.2) — hoy
+   el simulador sobreestima por no tener reloj
 2. Sumar fuentes de injury reports, clima y momios (sección 9.2 del framework)
-3. Construir el motor de simulación Monte Carlo (sección 5.4, Nivel 1 y Nivel 2)
+3. Simular partidos completos (ambos equipos) para llegar a probabilidades por mercado
 4. Implementar la auditoría de contradicciones (sección 8) como reglas verificables sobre
    los picks generados
