@@ -40,6 +40,10 @@ type Item = {
   status: DataStatus;
   note?: string;
   impact?: string;
+  homeRank?: number;
+  awayRank?: number;
+  higherIsBetter?: boolean;
+  teams?: number;
 };
 type Formula = { id: string; section: string; name: string; expression: string; substituted: string; result: string };
 type Check = { id: string; rule: string; status: "pasa" | "alerta" | "no_evaluable" | "no_aplica"; detail: string };
@@ -253,9 +257,15 @@ export async function buildPregameAnalysis(gameId: string) {
   const leagueAvg = (m: Map<string, number>) => mean([...m.values()].filter(Number.isFinite));
   const rk = (m: Map<string, number>, t: string, higher: boolean) => `${rankOf(m, t, higher)}º`;
   const both = (m: Map<string, number>, fmt: (v: number) => string, higher: boolean) => ({
-    home: `${fmt(m.get(home) ?? NaN)} (${rk(m, home, higher)})`,
-    away: `${fmt(m.get(away) ?? NaN)} (${rk(m, away, higher)})`,
+    home: fmt(m.get(home) ?? NaN),
+    away: fmt(m.get(away) ?? NaN),
+    homeRank: rankOf(m, home, higher),
+    awayRank: rankOf(m, away, higher),
+    higherIsBetter: higher,
+    teams: [...m.values()].filter(Number.isFinite).length,
   });
+  // Qué equipo queda mejor en una métrica (para las conclusiones de cada sección).
+  const better = (m: Map<string, number>, higher: boolean) => (rankOf(m, home, higher) < rankOf(m, away, higher) ? home : away);
   const epaFmt = (v: number) => sgn(v, 3);
 
   // ============================================================ SECCIÓN 1
@@ -384,8 +394,7 @@ export async function buildPregameAnalysis(gameId: string) {
   qbRows("EPA por jugada del QB", (q) => (q.epa === null ? "—" : sgn(q.epa, 3)), `${SRC.pbp} · epa (jugadas con passer_player_id)`, "derivado");
   qbRows("CPOE (% de pases completos sobre lo esperado)", (q) => (q.cpoe === null ? "—" : `${sgn(q.cpoe, 1)} pp`), `${SRC.pbp} · cpoe`, "disponible");
   add({ id: "qb-qbr", section: "3", category: "QB y ofensiva", label: "QBR (ESPN)", value: "—", source: SRC.none, status: "faltante", note: "Métrica propietaria de ESPN, no está en nflverse.", impact: "Ninguno: EPA/jugada y CPOE cubren lo mismo (sección 3.4)." });
-  const Hoff = both(M.offEpa, epaFmt, true);
-  add({ id: "o-epa", section: "3", category: "QB y ofensiva", label: "EPA/jugada ofensiva (rango liga)", ...Hoff, source: `${SRC.pbp} · epa (pass/run)`, status: "derivado" });
+  add({ id: "o-epa", section: "3", category: "QB y ofensiva", label: "EPA/jugada ofensiva (rango liga)", ...both(M.offEpa, epaFmt, true), source: `${SRC.pbp} · epa (pass/run)`, status: "derivado" });
   add({ id: "o-pr", section: "3", category: "QB y ofensiva", label: "EPA pase · EPA carrera", home: `${epaFmt(M.passEpa.get(home) ?? NaN)} · ${epaFmt(M.runEpa.get(home) ?? NaN)}`, away: `${epaFmt(M.passEpa.get(away) ?? NaN)} · ${epaFmt(M.runEpa.get(away) ?? NaN)}`, source: `${SRC.pbp} · epa, play_type`, status: "derivado" });
   add({ id: "o-sr", section: "3", category: "QB y ofensiva", label: "Success rate", ...both(M.success, (v) => pctS(v), true), source: `${SRC.pbp} · success`, status: "derivado" });
   add({ id: "o-exp", section: "3", category: "QB y ofensiva", label: "Jugadas explosivas (20+ yardas)", ...both(M.explosive, (v) => pctS(v), true), source: `${SRC.pbp} · yards_gained`, status: "derivado" });
@@ -736,6 +745,49 @@ export async function buildPregameAnalysis(gameId: string) {
     byCategory[it.category][it.status]++;
   }
 
+  // Conclusiones por sección, calculadas con los datos (se muestran como "nube" en cada sección).
+  const rkN = (m: Map<string, number>, t: string, higher: boolean) => `${rankOf(m, t, higher)}º`;
+  const betterOff = better(M.offEpa, true);
+  const betterDef = better(M.defEpa, false);
+  const appliedAdj = adjustments.filter((x) => x.applied).length;
+  const metAdj = adjustments.filter((x) => x.met).length;
+  const bestMarket = [...markets].sort((x, y) => y.edge - x.edge)[0];
+  const alerts = checks.filter((x) => x.status === "alerta").length;
+  const notEval = checks.filter((x) => x.status === "no_evaluable").length;
+  const doneSteps = algorithm.filter((x) => x.status === "hecho").length;
+  const takeaways: Record<string, string[]> = {
+    "1": [
+      `${target.divGame ? "Partido divisional" : "No es divisional"}, ${neutral ? "en sede neutral" : `${home} juega en casa`} y ${target.homeRest === target.awayRest ? `ambos con ${target.homeRest} días de descanso` : `descanso ${home} ${target.homeRest} vs ${away} ${target.awayRest} días`}: el contexto no da ventajas especiales.`,
+    ],
+    "2": [
+      `En ${priorSeason}: ${home} ${H.reg.wins}–${H.reg.losses} y ${away} ${A.reg.wins}–${A.reg.losses}. Según el Pitagórico, ${home} ${H.actual - H.pyth >= 0 ? "ganó un poco más" : "ganó un poco menos"} de lo que merecía y ${away} ${A.actual - A.pyth >= 0 ? "un poco más" : "un poco menos"}.`,
+      `Solo hay ${h2h.length} de 5 enfrentamientos directos en los datos cargados: el historial pesa poco.`,
+    ],
+    "3": [
+      `${betterOff} tuvo la ofensiva más eficiente (EPA/jugada ${rkN(M.offEpa, home, true)} ${home} vs ${rkN(M.offEpa, away, true)} ${away}).`,
+      qbH && qbA ? `${anyaRank(qbA) < anyaRank(qbH) ? qbA.name : qbH.name} tuvo mejor ANY/A (${anyaRank(qbH)}º ${qbH.name.split(" ").pop()} vs ${anyaRank(qbA)}º ${qbA.name.split(" ").pop()}).` : "Falta información de los QBs.",
+      `${better(M.sackRateTaken, false)} protege mejor a su QB (sack% ${rkN(M.sackRateTaken, home, false)} ${home} vs ${rkN(M.sackRateTaken, away, false)} ${away}).`,
+    ],
+    "4": [
+      `${betterDef} tuvo la mejor defensa por jugada (${rkN(M.defEpa, home, false)} ${home} vs ${rkN(M.defEpa, away, false)} ${away}); ${better(M.pressureRate, true)} presiona más al QB (${rkN(M.pressureRate, home, true)} vs ${rkN(M.pressureRate, away, true)}).`,
+      injuryDetail.length ? `Bajas previas: ${injuryDetail.map((i) => `${i.name} (${i.team})`).join(", ")}. ${injuryDetail.some((i) => i.inBase) ? "Alguna afecta a la base." : `Ninguna fue titular en ${priorSeason}, así que no mueven la proyección.`}` : "Sin bajas importantes reportadas antes del partido.",
+    ],
+    "5": [
+      `Proyección ${away} ${f1(muAway)} – ${home} ${f1(muHome)} (total ${f1(muTotal)}). Los tres métodos dan entre ${pctS(Math.min(...methods.map((m) => m.p)))} y ${pctS(Math.max(...methods.map((m) => m.p)))} a ${home}: confianza ${confidence}.`,
+      `${metAdj} de ${adjustments.length} condiciones de la tabla 5.3 se cumplen; ${appliedAdj} se aplicaron (el resto ya está en la base o no se cumple).`,
+    ],
+    "6": [
+      total !== null ? `Total proyectado ${f1(muTotal)} contra una línea de ${total}: ${muTotal < total ? "el modelo inclina Under" : "el modelo inclina Over"} en ${lineTable.filter((l) => (muTotal < total ? l.pUnder > 0.53 : l.pOver > 0.53)).length} de ${lineTable.length} líneas revisadas.` : "Sin línea de total.",
+      `Primera mitad proyectada ${away} ${f1(proj1H.away)} – ${home} ${f1(proj1H.home)}; no hay línea de 1H para valorarla.`,
+    ],
+    "7": [
+      bestMarket ? `Mayor edge: ${bestMarket.market} ${bestMarket.pick} ${bestMarket.line} (${sgn(bestMarket.edge * 100, 1)} pp). ${markets.filter((m) => m.light === "Amarillo").length} de ${markets.length} mercados en Amarillo, ninguno Verde por datos faltantes.` : "Sin mercados.",
+    ],
+    "8": [`${alerts} alertas, ${notEval} filtros no evaluables y ${checks.length - alerts - notEval} que pasan o no aplican, de ${checks.length}.`],
+    "9": [campoFaltante ? `Faltan campos obligatorios (${gateFields.filter((g) => !g.ok).map((g) => g.label.toLowerCase()).join("; ")}): máximo Amarillo.` : "Todos los campos obligatorios presentes."],
+    "10": [`${doneSteps} de ${algorithm.length} pasos del algoritmo maestro completos.`],
+  };
+
   // Después del partido
   const gameEpa = async (abbr: string) =>
     (await prisma.play.aggregate({ where: { gameId, possessionTeamAbbr: abbr, playType: { in: ["pass", "run"] } }, _avg: { epa: true } }))._avg.epa;
@@ -763,7 +815,7 @@ export async function buildPregameAnalysis(gameId: string) {
     },
     data: { priorSeasonGames, currentSeasonGames, cutoff: cutoff.toISOString().slice(0, 10), plays: plays.length, drives: drives.length, pressureRows: pressureRows.length, injuryRows: injPre.length, depthRows: depthNow.length },
     league: { mean: r3(leagueMean, 2), hfa: r3(hfa, 2), hfaObserved: r3(hfaObserved, 2), sigmaMargin: r3(sigmaMargin, 2), sigmaTotal: r3(sigmaTotal, 2) },
-    items, formulas,
+    items, formulas, takeaways,
     inventory: { byStatus, byCategory, total: items.length },
     gate: gateFields.map((g) => ({ section: g.section, label: g.label, ok: g.ok, blocks: g.blocks ?? null })),
     campoFaltante,
