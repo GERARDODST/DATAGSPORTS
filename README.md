@@ -55,11 +55,21 @@ npm run dev             # http://localhost:3000
 La fuente de datos es [nflverse-data](https://github.com/nflverse/nflverse-data), un
 proyecto abierto y mantenido por la comunidad — sin necesidad de scraping ni claves de API.
 
+## Framework de análisis
+
+- `docs/mlb_framework_v2.pdf` — framework original de picks matemáticos (MLB)
+- `docs/nfl_framework_v1.md` — **adaptación a NFL** del framework anterior: mismas 10
+  secciones y misma matemática de banca/probabilidad (Log5, Elo, shrinkage, Kelly, Monte
+  Carlo), con los conceptos de béisbol reemplazados por sus equivalentes reales en NFL
+  (abridor/bullpen/entradas → QB+ofensiva/defensa/cuartos), incluyendo por qué el modelo de
+  puntos no puede ser un Poisson simple como en MLB (sección 5.3-5.4 del documento)
+
 ## Próximos pasos
 
-El documento `mlb_framework_v2.pdf` (framework de análisis matemático de picks, adaptado de
-MLB) es la base para la siguiente etapa: construir el motor de análisis de partidos de NFL
-(ventaja ofensiva/defensiva, modelo de puntos esperados, probabilidad por mercado, cuotas y
-auditoría de contradicciones), reemplazando los conceptos específicos de MLB (abridores,
-bullpen, entradas) por sus equivalentes en NFL (unidades ofensiva/defensiva, quarterback,
-línea de golpeo, cuartos/mitades).
+Implementar el motor de análisis descrito en `docs/nfl_framework_v1.md`:
+
+1. Extender la extracción de datos con play-by-play (EPA/play) — falta en el pipeline actual
+2. Sumar fuentes de injury reports, clima y momios (sección 9.2 del framework)
+3. Construir el modelo de simulación Monte Carlo de posesiones (sección 5.4)
+4. Implementar la auditoría de contradicciones (sección 8) como reglas verificables sobre
+   los picks generados
