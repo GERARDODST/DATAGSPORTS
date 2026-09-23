@@ -1,10 +1,11 @@
 /** Reporte del torneo con los parámetros guardados. Uso: npm run models:report */
 import "dotenv/config";
-import { loadModelData } from "../src/lib/models/backtest";
+import { loadGameContext, loadModelData } from "../src/lib/models/backtest";
 import { readParams, runFinal, labSummary } from "../src/lib/models/lab";
 import { prisma } from "../src/lib/prisma";
 async function main() {
-  const d = await loadModelData(2018);
+  const base = await loadModelData(2018);
+  const d = { ...base, ctx: await loadGameContext(base.games) };
   const pf = await readParams();
   const run = runFinal(d, pf);
   const s = labSummary(run, pf);
@@ -16,5 +17,7 @@ async function main() {
   }
   console.log("\ncalibración final 2023-24:", JSON.stringify(s.calibration.final));
   console.log("QB:", JSON.stringify(s.qbStats), "k0", run.k0);
+  console.log("Bajas y clima (MCO 2019-2024):");
+  for (const e of [...(s.context?.margin ?? []), ...(s.context?.total ?? [])]) console.log(`   ${e.name.padEnd(28)} ${String(e.beta).padStart(6)} ± ${e.se} (z ${e.z}, n ${e.n}) · framework: ${e.framework}`);
 }
 main().finally(() => prisma.$disconnect());

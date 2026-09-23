@@ -12,10 +12,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { type MGame, type Model, type TeamGameEpa, clampP, logit, logLoss, outcome } from "./core";
 import { FrameworkModel, EloModel, KalmanModel, RidgeModel, EpaModel, type EloParams } from "./models";
-import { addEnsemble, addQbLayer, mixtureProb, runWalkForward, score, withMarket, type QbInfo, type Records, type WeightSnapshot } from "./backtest";
+import { addContextLayer, addEnsemble, addQbLayer, mixtureProb, olsWithSe, contextFeatures, runWalkForward, score, withMarket, MARGIN_FEATURES, TOTAL_FEATURES, type ContextInfo, type GameContext, type QbInfo, type Records, type WeightSnapshot } from "./backtest";
 import { optimize, type TraceEntry } from "./optimize";
 
-export type LabData = { games: MGame[]; epaByGame: Map<string, TeamGameEpa[]>; teams: string[] };
+export type LabData = { games: MGame[]; epaByGame: Map<string, TeamGameEpa[]>; teams: string[]; ctx: Map<string, GameContext> };
 type Spec = {
   key: string;
   label: string;
@@ -78,7 +78,8 @@ export type ParamsFile = {
     models: Record<string, { best: Record<string, number>; start: Record<string, number>; initialLoss: number; bestLoss: number; evaluations: number; seconds: number; trace: TraceEntry[] }>;
   }[];
   ensemble: { eta: number; gamma: number; grid: { eta: number; gamma: number; loss: number }[] };
-  qb: { k0: number | null; window: number; grid: { k0: number | null; window: number; loss: number }[] };
+  qb: { k0: number | null; window: number; seasonFirst: boolean; grid: { k0: number | null; window: number; seasonFirst: boolean; loss: number }[] };
+  context: { k0: number | null; grid: { k0: number | null; loss: number; lossMargin: number; lossTotal: number }[] };
 };
 
 /** Optimiza cada modelo en un split (walk-forward con datos hasta el final del entrenamiento). */
@@ -130,15 +131,32 @@ export function tuneEnsemble(d: LabData, params: Record<string, Record<string, n
   const rec: Records = base.map((r) => ({ g: r.g, preds: { ...r.preds } }));
   addEnsemble(rec, MODEL_KEYS, { eta: best.eta, gamma: best.gamma, startSeason: 2019 });
   const vs = rec.filter((r) => r.g.season === validSeason);
-  const qbGrid: { k0: number | null; window: number; loss: number }[] = [{ k0: null, window: 0, loss: vs.reduce((s, r) => s + logLoss(r.preds.ensemble.p, outcome(r.g)), 0) / vs.length }];
-  for (const window of [8, 12, 17, 24]) {
-    for (const k0 of [15, 30, 60, 120, 250, 500]) {
-      addQbLayer(rec, "ensemble", "final", k0, window);
-      qbGrid.push({ k0, window, loss: vs.reduce((s, r) => s + logLoss(r.preds.final.p, outcome(r.g)), 0) / vs.length });
+  const qbGrid: { k0: number | null; window: number; seasonFirst: boolean; loss: number }[] = [{ k0: null, window: 0, seasonFirst: false, loss: vs.reduce((s, r) => s + logLoss(r.preds.ensemble.p, outcome(r.g)), 0) / vs.length }];
+  for (const seasonFirst of [false, true]) {
+    for (const window of [8, 12, 17, 24]) {
+      for (const k0 of [15, 30, 60, 120, 250, 500]) {
+        addQbLayer(rec, "ensemble", "qb", k0, window, seasonFirst);
+        qbGrid.push({ k0, window, seasonFirst, loss: vs.reduce((s, r) => s + logLoss(r.preds.qb.p, outcome(r.g)), 0) / vs.length });
+      }
     }
   }
   const bestQb = qbGrid.reduce((a, b) => (b.loss < a.loss ? b : a));
-  return { eta: best.eta, gamma: best.gamma, grid, qb: { k0: bestQb.k0, window: bestQb.window, grid: qbGrid } };
+  // Capa de bajas y clima: previa k₀ elegida en la validación (null = sin capa). Se mide con la
+  // log-loss de victoria y, como información, con la pérdida normal del margen y del total.
+  addQbLayer(rec, "ensemble", "qb", bestQb.k0 ?? 1e9, bestQb.window || 8, bestQb.seasonFirst);
+  const ctxGrid = [null, 10, 30, 100, 300, 1000, 3000].map((k0) => {
+    const key = k0 === null ? "qb" : "final";
+    if (k0 !== null) addContextLayer(rec, "qb", "final", d.ctx, k0);
+    const nll = (x: number, m: number, sd: number) => 0.5 * Math.log(2 * Math.PI * sd * sd) + ((x - m) ** 2) / (2 * sd * sd);
+    return {
+      k0,
+      loss: vs.reduce((s, r) => s + logLoss(r.preds[key].p, outcome(r.g)), 0) / vs.length,
+      lossMargin: vs.reduce((s, r) => s + nll(r.g.hs - r.g.as, r.preds[key].margin as number, r.preds[key].sdMargin as number), 0) / vs.length,
+      lossTotal: vs.reduce((s, r) => s + nll(r.g.hs + r.g.as, r.preds[key].total as number, r.preds[key].sdTotal as number), 0) / vs.length,
+    };
+  });
+  const bestCtx = ctxGrid.reduce((a, b) => (b.loss < a.loss ? b : a));
+  return { eta: best.eta, gamma: best.gamma, grid, qb: { k0: bestQb.k0, window: bestQb.window, seasonFirst: bestQb.seasonFirst, grid: qbGrid }, context: { k0: bestCtx.k0, grid: ctxGrid } };
 }
 
 export async function readParams(): Promise<ParamsFile | null> {
@@ -156,14 +174,16 @@ export function runFinal(d: LabData, pf: ParamsFile | null) {
   const records = runWalkForward(d.games, buildModels(d, params));
   const weights = addEnsemble(records, MODEL_KEYS, { eta: pf?.ensemble.eta ?? 1, gamma: pf?.ensemble.gamma ?? 0.98, startSeason: 2019 });
   const k0 = pf?.qb?.k0 ?? null;
-  const qb = addQbLayer(records, "ensemble", "final", k0 ?? 1e9, pf?.qb?.window || 8);
+  const qb = addQbLayer(records, "ensemble", "qb", k0 ?? 1e9, pf?.qb?.window || 8, pf?.qb?.seasonFirst ?? false);
+  const ctxK0 = pf?.context?.k0 ?? null;
+  const context = addContextLayer(records, "qb", "final", d.ctx, ctxK0 ?? 1e12);
   withMarket(records);
-  return { records, weights, params, qb, k0, seconds: (Date.now() - t0) / 1000 };
+  return { records, weights, params, qb, k0, context, ctxK0, ctx: d.ctx, seconds: (Date.now() - t0) / 1000 };
 }
 
 export type FinalRun = ReturnType<typeof runFinal>;
 
-export const LABELS_EXTRA = { ensemble: "Ensamble (Hedge)", final: "Final: ensamble + ajuste por QB", market: "Mercado (momios de cierre)" };
+export const LABELS_EXTRA = { ensemble: "Ensamble (Hedge)", qb: "Ensamble + capa de QB", final: "Final: ensamble + QB + bajas y clima", market: "Mercado (momios de cierre)" };
 
 const PERIODS: { key: string; label: string; test: (g: MGame) => boolean }[] = [
   { key: "train", label: "Entrenamiento 2020–2022", test: (g) => g.season >= 2020 && g.season <= 2022 },
@@ -174,7 +194,7 @@ const r4 = (v: number | null | undefined, d = 4) => (v === null || v === undefin
 
 /** Resumen para la página del laboratorio. */
 export function labSummary(run: FinalRun, pf: ParamsFile | null) {
-  const keys = [...MODEL_KEYS, "ensemble", "final", "market"];
+  const keys = [...MODEL_KEYS, "ensemble", "qb", "final", "market"];
   const labels: Record<string, string> = { ...Object.fromEntries(SPECS.map((s) => [s.key, s.label])), ...LABELS_EXTRA };
   const leaderboard = PERIODS.map((p) => ({
     period: p.key, label: p.label,
@@ -205,8 +225,9 @@ export function labSummary(run: FinalRun, pf: ParamsFile | null) {
     labels,
     params: run.params,
     ensemble: pf ? { eta: pf.ensemble.eta, gamma: pf.ensemble.gamma, grid: pf.ensemble.grid.map((g) => ({ ...g, loss: r4(g.loss, 5) })) } : null,
-    qb: pf?.qb ? { k0: pf.qb.k0, window: pf.qb.window, grid: pf.qb.grid.map((g) => ({ ...g, loss: r4(g.loss, 5) })) } : null,
+    qb: pf?.qb ? { k0: pf.qb.k0, window: pf.qb.window, seasonFirst: pf.qb.seasonFirst, grid: pf.qb.grid.map((g) => ({ ...g, loss: r4(g.loss, 5) })) } : null,
     qbStats: qbStats(run),
+    context: contextEvidence(run, pf),
     experiments: experiments(run),
     optimization: pf?.splits.map((s) => ({
       split: s.split,
@@ -230,7 +251,7 @@ export function gameModels(run: FinalRun, gameId: string) {
   const before = run.records.filter((x) => x.g.date < r.g.date && x.g.season === season);
   const sample = before.length >= 16 ? before : run.records.filter((x) => x.g.season === season - 1);
   const sampleLabel = before.length >= 16 ? `${season} antes de este partido (${before.length} partidos)` : `temporada ${season - 1} completa (${sample.length} partidos): todavía no hay suficientes partidos de ${season}`;
-  const keys = [...MODEL_KEYS, "ensemble", "final", "market"];
+  const keys = [...MODEL_KEYS, "ensemble", "qb", "final", "market"];
   const table = keys.map((k) => {
     const rows = sample.filter((x) => x.preds[k]);
     const ll = rows.reduce((s, x) => s + logLoss(x.preds[k].p, outcome(x.g)), 0) / Math.max(1, rows.length);
@@ -239,18 +260,21 @@ export function gameModels(run: FinalRun, gameId: string) {
   });
   const qb = run.qb.get(gameId) ?? null;
   const shift = r.preds.final && r.preds.ensemble.margin !== null && r.preds.final.margin !== null ? r.preds.final.margin - r.preds.ensemble.margin : 0;
-  const lineProb = (line: number | null, kind: "margin" | "total") => (line === null ? null : r4(mixtureProb(r, line, kind, kind === "margin" ? shift : 0), 4));
+  const shiftQb = r.preds.qb && r.preds.ensemble.margin !== null && r.preds.qb.margin !== null ? r.preds.qb.margin - r.preds.ensemble.margin : 0;
+  const shiftTotal = r.preds.final?.total !== null && r.preds.ensemble.total !== null ? (r.preds.final.total as number) - r.preds.ensemble.total : 0;
+  const lineProb = (line: number | null, kind: "margin" | "total") => (line === null ? null : r4(mixtureProb(r, line, kind, kind === "margin" ? shift : shiftTotal), 4));
   return {
     preds: Object.fromEntries(keys.filter((k) => r.preds[k]).map((k) => [k, { p: r4(r.preds[k].p), margin: r4(r.preds[k].margin, 2), sdMargin: r4(r.preds[k].sdMargin, 2), total: r4(r.preds[k].total, 2), sdTotal: r4(r.preds[k].sdTotal, 2) }])),
     weights: mix ? { win: rnd(mix.win), margin: rnd(mix.margin), total: rnd(mix.total) } : null,
     table, sampleLabel,
     ensemble: {
-      pHome: r4(r.preds.final.p) as number, pHomeNoQb: r4(r.preds.ensemble.p) as number,
+      pHome: r4(r.preds.final.p) as number, pHomeNoQb: r4(r.preds.ensemble.p) as number, pHomeQb: r4(r.preds.qb.p) as number,
       margin: r4(r.preds.final.margin, 2) as number, sdMargin: r4(r.preds.final.sdMargin, 2) as number,
       total: r4(r.preds.final.total, 2) as number, sdTotal: r4(r.preds.final.sdTotal, 2) as number,
       pCover: lineProb(r.g.spread, "margin"), pOver: lineProb(r.g.total, "total"),
     },
-    qb: qb ? { ...qb, delta: r4(qb.delta, 2), shift: r4(shift, 2), homeQb: r.g.homeQb, awayQb: r.g.awayQb } : null,
+    qb: qb ? { ...qb, delta: r4(qb.delta, 2), shift: r4(shiftQb, 2), homeQb: r.g.homeQb, awayQb: r.g.awayQb } : null,
+    context: contextForGame(run, gameId),
     overLines: r.g.total === null ? [] : [-3, -1.5, 0, 1.5, 3].map((dl) => ({ line: (r.g.total as number) + dl, pOver: lineProb((r.g.total as number) + dl, "total") as number })),
   };
 }
@@ -306,6 +330,51 @@ export function experiments(run: FinalRun) {
     { key: "stack", label: "Stacking logístico de los 5 modelos", formula: "p' = σ(b₀ + Σ b_m·logit p_m)", coef: stack.map((v) => r4(v, 3) as number), valid: ll(2023, (r) => sig(feats(r).reduce((s, v, j) => s + v * stack[j], 0))), test: ll(2024, (r) => sig(feats(r).reduce((s, v, j) => s + v * stack[j], 0))) },
   ];
   return rows.map((r) => ({ ...r, decision: r.key === "final" ? "Se usa" : (r.valid as number) < (base.valid as number) ? "Mejora la validación" : "Descartado: empeora la validación" }));
+}
+
+function contextForGame(run: FinalRun, gameId: string) {
+  const c = run.ctx.get(gameId);
+  const info = run.context.get(gameId) as ContextInfo | undefined;
+  if (!c || !info) return null;
+  return {
+    home: c.home, away: c.away, wind: c.wind, dome: c.dome, cold: c.cold, n: info.n,
+    marginFeatures: MARGIN_FEATURES.map((name, j) => ({ name, x: info.xMargin[j], beta: r4(info.betaMargin[j], 3) as number })),
+    totalFeatures: TOTAL_FEATURES.map((name, j) => ({ name, x: info.xTotal[j], beta: r4(info.betaTotal[j], 3) as number })),
+    shiftMargin: r4(info.shiftMargin, 2) as number, shiftTotal: r4(info.shiftTotal, 2) as number,
+  };
+}
+
+/**
+ * Evidencia de la tabla 5.3 medida con datos: MCO de los residuos del modelo (ensamble + QB) sobre
+ * titulares fuera y clima en 2019–2024, con errores estándar. Junto a cada efecto, lo que asumía el
+ * factor fijo del framework, traducido a puntos con la liga promedio (≈ 22 puntos por equipo).
+ */
+function contextEvidence(run: FinalRun, pf: ParamsFile | null) {
+  const rows = run.records.filter((r) => r.g.season >= 2019 && run.ctx.has(r.g.id) && r.preds.qb?.margin !== null && r.preds.qb?.total !== null);
+  if (rows.length < 50) return null;
+  const F = rows.map((r) => contextFeatures(run.ctx.get(r.g.id) as GameContext));
+  const m = olsWithSe(F.map((f) => f.margin), rows.map((r) => r.g.hs - r.g.as - (r.preds.qb.margin as number)));
+  const t = olsWithSe(F.map((f) => f.total), rows.map((r) => r.g.hs + r.g.as - (r.preds.qb.total as number)));
+  const n = (j: number, kind: "margin" | "total") => F.filter((f) => (kind === "margin" ? f.margin[j] : f.total[j]) !== 0).length;
+  const framework: Record<string, string> = {
+    "margen · ol": "×0.92 a los puntos propios ≈ −1.8 pts por condición",
+    "margen · skill": "×0.92 a los puntos propios ≈ −1.8 pts por condición",
+    "margen · front": "×1.08 a los puntos del rival ≈ −1.8 pts por condición",
+    "margen · db": "×1.08 a los puntos del rival ≈ −1.8 pts por condición",
+    "total · bajas ofensivas": "×0.92 ≈ −1.8 pts",
+    "total · bajas defensivas": "×1.08 ≈ +1.8 pts",
+    "total · viento > 25 km/h": "×0.90 ≈ −4.4 pts",
+    "total · domo/techo cerrado": "×1.05 ≈ +2.2 pts",
+    "total · frío < 0 °C": "×0.93 ≈ −3.1 pts",
+  };
+  const fmt = (name: string, e: { beta: number; se: number }, j: number, kind: "margin" | "total") => ({ name, beta: r4(e.beta, 2), se: r4(e.se, 2), z: r4(e.beta / e.se, 2), n: n(j, kind), framework: framework[name] ?? "" });
+  return {
+    games: rows.length,
+    k0: pf?.context?.k0 ?? null,
+    grid: pf?.context?.grid.map((g) => ({ ...g, loss: r4(g.loss, 5), lossMargin: r4(g.lossMargin, 4), lossTotal: r4(g.lossTotal, 4) })) ?? [],
+    margin: MARGIN_FEATURES.map((name, j) => fmt(name, m[j], j, "margin")),
+    total: TOTAL_FEATURES.map((name, j) => fmt(name, t[j], j, "total")),
+  };
 }
 
 /** Residuos por tipo de partido según el QB: la evidencia que justifica la capa. */

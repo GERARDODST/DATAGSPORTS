@@ -523,18 +523,39 @@ resultados anteriores (prueba *walk-forward*) y los combina según su acierto pa
 - **Descartado en validación:** recalibración de Platt y stacking logístico (este último
   daba la mejor log-loss de 2024, pero empeoraba 2023 y asignaba pesos negativos: sobreajuste).
 
+- **Tabla 5.3 medida con datos (capa de bajas y clima):** regresión ridge en línea sobre los
+  residuos del modelo, `β̂ = (XᵀX + k₀I)⁻¹Xᵀr`, con los titulares habituales fuera por grupo
+  (depth chart de las 8 semanas previas + inactivos INA o reserva RES) y las condiciones de
+  clima de la tabla. Reemplaza a los factores fijos:
+
+| Condición | Factor del framework | Medido 2019–2024 (MCO) | Veredicto |
+| --- | --- | --- | --- |
+| Titular WR/TE/RB fuera | ×0.92 ≈ −1.8 pts | −0.83 ± 0.27 pts de margen por jugador | Real, pero menor |
+| Titular del front 7 fuera | ×1.08 al rival ≈ −1.8 pts | −0.89 ± 0.26 | Real, pero menor |
+| Titular de línea ofensiva fuera | ×0.92 | −0.59 ± 0.30 | Débil (z ≈ −1.9) |
+| Titular de secundaria fuera | ×1.08 al rival | −0.17 ± 0.30 | No significativo |
+| Viento > 25 km/h | ×0.90 ≈ −4.4 pts al total | −3.55 ± 1.47 | Confirmado |
+| Domo o techo cerrado | ×1.05 ≈ +2.2 pts | +2.63 ± 0.71 | Confirmado |
+| Frío < 0 °C | ×0.93 ≈ −3.1 pts | −0.45 ± 1.83 (57 partidos) | No se sostiene |
+
+- **Regla de QB probada y rechazada:** "habitual = el que más inició esta temporada" (arreglaría
+  fichajes titulares como Cousins en ATL 2024) empeora la validación: convierte en habitual al
+  suplente de un titular lesionado. Queda pendiente un modelo de valor por QB.
+
 **Resultado en la prueba 2024 (285 partidos, nada ajustado con ellos):**
 
 | | Log-loss | Acierto |
 | --- | --- | --- |
 | Framework original | 0.6235 | 67.4% |
-| Modelo final (ensamble + QB) | **0.6151** | **68.8%** |
+| Ensamble + capa de QB | 0.6151 | 68.8% |
+| Modelo final (+ bajas y clima medidos) | **0.6071** | **68.4%** |
 | Mercado (momios de cierre) | 0.5892 | 70.9% |
 
-El mercado sigue siendo mejor (z ≈ 2.3), y contra el spread ningún modelo se separa del 50%
-más allá de su error estándar. En el análisis de cada partido la probabilidad final es la del
-ensamble, más la capa de QB, más los ajustes de la tabla 5.3 con información nueva. La
-triangulación del framework queda como uno de los cinco modelos.
+El mercado va adelante, pero la diferencia ya no es significativa (z ≈ 1.6); contra el spread
+ningún modelo se separa del 50% más allá de su error estándar. En el análisis de cada partido
+la probabilidad final es la del modelo final; los factores fijos de la tabla 5.3 para bajas y
+clima ya no se aplican (los reemplaza la capa medida) y la triangulación del framework queda
+como uno de los cinco modelos.
 
 ### 5.5 Probabilidad por mercado
 

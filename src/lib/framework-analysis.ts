@@ -617,22 +617,41 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   const offStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && OFF_POS.includes(i.position ?? "") && !(models && i.position === "QB"));
   const defStarterOut = (t: string) => injuryDetail.filter((i) => i.team === t && i.inBase && i.confirmedOut && !OFF_POS.includes(i.position ?? "") && !["K", "P", "LS"].includes(i.position ?? ""));
   const newToBase = injuryDetail.filter((i) => !i.inBase);
-  type Adj = { condition: string; data: string; met: boolean | null; inBase: boolean; factor: number; appliesTo: "total" | "home" | "away"; applied: boolean; reason: string };
+  type Adj = { condition: string; data: string; met: boolean | null; inBase: boolean; factor: number; appliesTo: "total" | "home" | "away"; applied: boolean; reason: string; measure?: string; measured?: string; replaced?: boolean };
   const adjustments: Adj[] = [];
-  const pushAdj = (a: Omit<Adj, "applied">) => adjustments.push({ ...a, applied: Boolean(a.met) && !a.inBase });
+  // Con la capa de bajas y clima del torneo, los factores fijos de clima y bajas se reemplazan por los
+  // efectos medidos con datos (regresión en línea sobre los residuos, solo con partidos anteriores).
+  const ctxL = models?.context ?? null;
+  const measuredText = (key: string, team?: string) => {
+    if (!ctxL) return undefined;
+    const tf = (name: string) => ctxL.totalFeatures.find((f) => f.name === name);
+    const mf = (gr: string) => ctxL.marginFeatures.find((f) => f.name === `margen · ${gr}`);
+    if (key === "wind") return `Medido: ${sgn(tf("total · viento > 25 km/h")?.beta ?? 0, 2)} pts al total si se cumple (datos anteriores al partido).`;
+    if (key === "dome") return `Medido: ${sgn(tf("total · domo/techo cerrado")?.beta ?? 0, 2)} pts al total si se cumple.`;
+    if (key === "cold") return `Medido: ${sgn(tf("total · frío < 0 °C")?.beta ?? 0, 2)} pts al total si se cumple (efecto no significativo en 2019–2024).`;
+    const side = team === home ? ctxL.home : ctxL.away;
+    const groups = key === "off" ? ["ol", "skill"] : ["front", "db"];
+    const names = side.out.filter((o) => groups.includes(o.group));
+    const pts = groups.reduce((acc, gr) => acc + side.counts[gr as "ol"] * (mf(gr)?.beta ?? 0), 0);
+    return `Titulares habituales fuera (depth chart + INA/RES): ${names.length ? names.map((o) => `${o.name} (${o.group}, ${o.status})`).join("; ") : "ninguno"}. Medido: ${groups.map((gr) => `${gr} ${sgn(mf(gr)?.beta ?? 0, 2)}`).join(", ")} pts por titular → ${sgn(pts, 2)} pts al margen de ${team}.`;
+  };
+  const pushAdj = (a: Omit<Adj, "applied">) => {
+    const replaced = Boolean(ctxL && a.measure && !a.inBase);
+    adjustments.push({ ...a, applied: Boolean(a.met) && !a.inBase && !replaced, replaced: replaced && Boolean(a.met), measured: a.measure ? measuredText(a.measure, a.measure === "off" || a.measure === "def" ? a.condition.match(/de (\w+) que/)?.[1] : undefined) : undefined });
+  };
   pushAdj({ condition: "Ambos QBs con buen ANY/A y bajo INT%", data: `${qbH?.name ?? home}: ANY/A ${anyaRank(qbH)}º, INT% ${pctS(qbH ? qbH.int / qbH.att : NaN)} · ${qbA?.name ?? away}: ANY/A ${anyaRank(qbA)}º, INT% ${pctS(qbA ? qbA.int / qbA.att : NaN)} (liga ${pctS(lgInt)})`, met: qbH && qbA ? qbGood(qbH) && qbGood(qbA) : null, inBase: true, factor: 0.9, appliesTo: "total", reason: "La producción de ambos QBs ya está en los puntos a favor que forman la base." });
   pushAdj({ condition: `Rival con alto pressure rate (contra ${home})`, data: `${away}: ${pctS(M.pressureRate.get(away))} (${rk(M.pressureRate, away, true)})`, met: top10(M.pressureRate, away, true), inBase: true, factor: 0.9, appliesTo: "home", reason: "La presión de la defensa rival ya se refleja en sus puntos permitidos." });
   pushAdj({ condition: `Rival con alto pressure rate (contra ${away})`, data: `${home}: ${pctS(M.pressureRate.get(home))} (${rk(M.pressureRate, home, true)})`, met: top10(M.pressureRate, home, true), inBase: true, factor: 0.9, appliesTo: "away", reason: "Igual: ya está en los puntos permitidos." });
   pushAdj({ condition: "Ambas defensas top-10 en EPA/jugada permitido", data: `${home} ${rk(M.defEpa, home, false)}, ${away} ${rk(M.defEpa, away, false)}`, met: top10(M.defEpa, home, false) && top10(M.defEpa, away, false), inBase: true, factor: 0.88, appliesTo: "total", reason: "La calidad defensiva ya entra como def_local y def_visita en λ: aplicarlo otra vez contaría doble." });
-  pushAdj({ condition: "Viento fuerte (> 25 km/h ≈ 15.5 mph) o lluvia intensa", data: target.roof === "outdoors" ? `Viento ${windMph ?? "—"} mph; lluvia: sin dato` : `Estadio ${target.roof}`, met: target.roof === "outdoors" ? (windMph ?? 0) > 15.5 : false, inBase: false, factor: 0.9, appliesTo: "total", reason: "Condición del día del partido: información nueva." });
-  pushAdj({ condition: "Estadio con domo o techo cerrado", data: target.roof ?? "—", met: target.roof === "dome" || target.roof === "closed", inBase: false, factor: 1.05, appliesTo: "total", reason: "Condición del día del partido." });
-  pushAdj({ condition: "Frío extremo (< 0 °C ≈ 32 °F)", data: tempF !== null ? `${tempF} °F` : "Sin dato", met: tempF !== null ? tempF < 32 : null, inBase: false, factor: 0.93, appliesTo: "total", reason: "Condición del día del partido." });
+  pushAdj({ condition: "Viento fuerte (> 25 km/h ≈ 15.5 mph) o lluvia intensa", data: target.roof === "outdoors" ? `Viento ${windMph ?? "—"} mph; lluvia: sin dato` : `Estadio ${target.roof}`, met: target.roof === "outdoors" ? (windMph ?? 0) > 15.5 : false, inBase: false, factor: 0.9, appliesTo: "total", reason: "Condición del día del partido: información nueva.", measure: "wind" });
+  pushAdj({ condition: "Estadio con domo o techo cerrado", data: target.roof ?? "—", met: target.roof === "dome" || target.roof === "closed", inBase: false, factor: 1.05, appliesTo: "total", reason: "Condición del día del partido.", measure: "dome" });
+  pushAdj({ condition: "Frío extremo (< 0 °C ≈ 32 °F)", data: tempF !== null ? `${tempF} °F` : "Sin dato", met: tempF !== null ? tempF < 32 : null, inBase: false, factor: 0.93, appliesTo: "total", reason: "Condición del día del partido.", measure: "cold" });
   pushAdj({ condition: `Ritmo combinado alto (jugadas por partido sobre la media)`, data: `${home} ${f1(M.pace.get(home))}, ${away} ${f1(M.pace.get(away))}, liga ${f1(leagueAvg(M.pace))}`, met: (M.pace.get(home) ?? 0) + (M.pace.get(away) ?? 0) > 2 * leagueAvg(M.pace), inBase: true, factor: 1.05, appliesTo: "total", reason: "El ritmo de la base ya está en los puntos por partido." });
   for (const t of [home, away]) {
     const offOut = offStarterOut(t);
     const defOut = defStarterOut(t);
-    pushAdj({ condition: `Baja de titular ofensivo de ${t} que sí jugó en la base`, data: offOut.length ? offOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: offOut.length > 0, inBase: false, factor: 0.92, appliesTo: t === home ? "home" : "away", reason: haveInactives ? "Información nueva: baja confirmada por la lista oficial de inactivos." : "Información nueva del reporte de lesiones (Out)." });
-    pushAdj({ condition: `Baja de titular defensivo de ${t} que sí jugó en la base`, data: defOut.length ? defOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: defOut.length > 0, inBase: false, factor: 1.08, appliesTo: t === home ? "away" : "home", reason: "Sube los puntos esperados del rival." });
+    pushAdj({ condition: `Baja de titular ofensivo de ${t} que sí jugó en la base`, data: offOut.length ? offOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: offOut.length > 0, inBase: false, factor: 0.92, appliesTo: t === home ? "home" : "away", reason: haveInactives ? "Información nueva: baja confirmada por la lista oficial de inactivos." : "Información nueva del reporte de lesiones (Out).", measure: "off" });
+    pushAdj({ condition: `Baja de titular defensivo de ${t} que sí jugó en la base`, data: defOut.length ? defOut.map((i) => `${i.name} (${i.position}, ${i.status})`).join("; ") : "Ninguna", met: defOut.length > 0, inBase: false, factor: 1.08, appliesTo: t === home ? "away" : "home", reason: "Sube los puntos esperados del rival.", measure: "def" });
   }
   let mulHome = 1, mulAway = 1;
   for (const a of adjustments.filter((x) => x.applied)) {

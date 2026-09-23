@@ -17,12 +17,12 @@ import { prisma } from "../src/lib/prisma";
 import { buildFieldPositionEpModel, ownEpaForPlay } from "../src/lib/expected-points";
 import { buildMarkovModel, pearson } from "../src/lib/markov-model";
 import { buildPregameAnalysis, type PregameAnalysis } from "../src/lib/framework-analysis";
-import { loadModelData } from "../src/lib/models/backtest";
+import { loadGameContext, loadModelData } from "../src/lib/models/backtest";
 import { gameModels, labSummary, readParams, runFinal } from "../src/lib/models/lab";
 
 // Equipo que seguimos partido a partido y cuántos de sus partidos ya tienen análisis previo.
 const FOCUS_TEAM = "KC";
-const FOCUS_GAMES_ANALYZED = 2;
+const FOCUS_GAMES_ANALYZED = 3;
 
 const ROOT = path.resolve(__dirname, "..", "snapshot");
 const DIST = path.join(ROOT, "dist");
@@ -244,7 +244,8 @@ async function main() {
 
   // Torneo de modelos: walk-forward de 2018 a hoy con los parámetros optimizados (data/model-params.json).
   console.log("\n-> Torneo de modelos (walk-forward)");
-  const modelData = await loadModelData(2018);
+  const modelBase = await loadModelData(2018);
+  const modelData = { ...modelBase, ctx: await loadGameContext(modelBase.games) };
   const modelParams = await readParams();
   if (!modelParams) console.log("   Sin data/model-params.json: se usan los parámetros iniciales (corre npm run models:optimize)");
   const modelRun = runFinal(modelData, modelParams);

@@ -1,5 +1,5 @@
 {
- "createdAt": "2026-09-23T08:39:00.375Z",
+ "createdAt": "2026-09-23T08:52:49.202Z",
  "protocol": "Calentamiento 2018–2019 · entrenamiento 2020–2022 (modelos) · validación 2023 (ensamble) · prueba 2024",
  "splits": [
   {
@@ -21,7 +21,7 @@
      "initialLoss": 0.6385866878164629,
      "bestLoss": 0.6380409168642077,
      "evaluations": 18,
-     "seconds": 0.686,
+     "seconds": 0.734,
      "trace": [
       {
        "pass": 1,
@@ -237,7 +237,7 @@
      "initialLoss": 0.6440487053475162,
      "bestLoss": 0.6357045190286151,
      "evaluations": 28,
-     "seconds": 0.075,
+     "seconds": 0.077,
      "trace": [
       {
        "pass": 1,
@@ -527,7 +527,7 @@
      "initialLoss": 0.6411891289005809,
      "bestLoss": 0.6409517975327479,
      "evaluations": 56,
-     "seconds": 4.141,
+     "seconds": 4.434,
      "trace": [
       {
        "pass": 1,
@@ -1047,7 +1047,7 @@
      "initialLoss": 0.6417720992871669,
      "bestLoss": 0.6417720992871669,
      "evaluations": 12,
-     "seconds": 4.993,
+     "seconds": 5.194,
      "trace": [
       {
        "pass": 1,
@@ -1156,7 +1156,7 @@
      "initialLoss": 0.647424436813974,
      "bestLoss": 0.6395247727023156,
      "evaluations": 30,
-     "seconds": 11.888,
+     "seconds": 12.009,
      "trace": [
       {
        "pass": 1,
@@ -1461,7 +1461,7 @@
      "initialLoss": 0.6372742829720744,
      "bestLoss": 0.6366503863606651,
      "evaluations": 24,
-     "seconds": 0.56,
+     "seconds": 0.625,
      "trace": [
       {
        "pass": 1,
@@ -1775,7 +1775,7 @@
      "initialLoss": 0.6463097688930008,
      "bestLoss": 0.6330479130290148,
      "evaluations": 28,
-     "seconds": 0.045,
+     "seconds": 0.044,
      "trace": [
       {
        "pass": 1,
@@ -2065,7 +2065,7 @@
      "initialLoss": 0.6397230494661208,
      "bestLoss": 0.6382336312764872,
      "evaluations": 121,
-     "seconds": 6.767,
+     "seconds": 7.093,
      "trace": [
       {
        "pass": 1,
@@ -3089,7 +3089,7 @@
      "initialLoss": 0.640151825804354,
      "bestLoss": 0.6387523931151987,
      "evaluations": 17,
-     "seconds": 5.076,
+     "seconds": 5.476,
      "trace": [
       {
        "pass": 1,
@@ -3289,7 +3289,7 @@
      "initialLoss": 0.653444254938669,
      "bestLoss": 0.643087993545487,
      "evaluations": 30,
-     "seconds": 7.226,
+     "seconds": 7.524,
      "trace": [
       {
        "pass": 1,
@@ -3760,131 +3760,348 @@
  "qb": {
   "k0": 15,
   "window": 17,
+  "seasonFirst": false,
   "grid": [
    {
     "k0": null,
     "window": 0,
+    "seasonFirst": false,
     "loss": 0.6512575997823007
    },
    {
     "k0": 15,
     "window": 8,
+    "seasonFirst": false,
     "loss": 0.6510836096390019
    },
    {
     "k0": 30,
     "window": 8,
+    "seasonFirst": false,
     "loss": 0.6510036939826909
    },
    {
     "k0": 60,
     "window": 8,
+    "seasonFirst": false,
     "loss": 0.6508737721370995
    },
    {
     "k0": 120,
     "window": 8,
+    "seasonFirst": false,
     "loss": 0.6506999689181914
    },
    {
     "k0": 250,
     "window": 8,
+    "seasonFirst": false,
     "loss": 0.6505361092405776
    },
    {
     "k0": 500,
     "window": 8,
+    "seasonFirst": false,
     "loss": 0.6505066833663035
    },
    {
     "k0": 15,
     "window": 12,
+    "seasonFirst": false,
     "loss": 0.6495659912711984
    },
    {
     "k0": 30,
     "window": 12,
+    "seasonFirst": false,
     "loss": 0.649540459839867
    },
    {
     "k0": 60,
     "window": 12,
+    "seasonFirst": false,
     "loss": 0.6495056221778209
    },
    {
     "k0": 120,
     "window": 12,
+    "seasonFirst": false,
     "loss": 0.6494818022740788
    },
    {
     "k0": 250,
     "window": 12,
+    "seasonFirst": false,
     "loss": 0.6495361080033634
    },
    {
     "k0": 500,
     "window": 12,
+    "seasonFirst": false,
     "loss": 0.6497453562065102
    },
    {
     "k0": 15,
     "window": 17,
+    "seasonFirst": false,
     "loss": 0.6480736620135982
    },
    {
     "k0": 30,
     "window": 17,
+    "seasonFirst": false,
     "loss": 0.6480866108651456
    },
    {
     "k0": 60,
     "window": 17,
+    "seasonFirst": false,
     "loss": 0.6481226427031245
    },
    {
     "k0": 120,
     "window": 17,
+    "seasonFirst": false,
     "loss": 0.6482205549198103
    },
    {
     "k0": 250,
     "window": 17,
+    "seasonFirst": false,
     "loss": 0.6484745593467827
    },
    {
     "k0": 500,
     "window": 17,
+    "seasonFirst": false,
     "loss": 0.6489290842494873
    },
    {
     "k0": 15,
     "window": 24,
+    "seasonFirst": false,
     "loss": 0.6508427862521641
    },
    {
     "k0": 30,
     "window": 24,
+    "seasonFirst": false,
     "loss": 0.6507433426808503
    },
    {
     "k0": 60,
     "window": 24,
+    "seasonFirst": false,
     "loss": 0.6505757171094799
    },
    {
     "k0": 120,
     "window": 24,
+    "seasonFirst": false,
     "loss": 0.6503357432831345
    },
    {
     "k0": 250,
     "window": 24,
+    "seasonFirst": false,
     "loss": 0.6500756934449539
    },
    {
     "k0": 500,
     "window": 24,
+    "seasonFirst": false,
     "loss": 0.6499817845421436
+   },
+   {
+    "k0": 15,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6517070106296756
+   },
+   {
+    "k0": 30,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6516096130976067
+   },
+   {
+    "k0": 60,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6514503920128041
+   },
+   {
+    "k0": 120,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6512325447742072
+   },
+   {
+    "k0": 250,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6510043800750478
+   },
+   {
+    "k0": 500,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6508938919227041
+   },
+   {
+    "k0": 15,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6521436813403343
+   },
+   {
+    "k0": 30,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6520314320306626
+   },
+   {
+    "k0": 60,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6518454147009884
+   },
+   {
+    "k0": 120,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6515832052833788
+   },
+   {
+    "k0": 250,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6512867242359877
+   },
+   {
+    "k0": 500,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6510995791779407
+   },
+   {
+    "k0": 15,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.651601598293515
+   },
+   {
+    "k0": 30,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6515229488643384
+   },
+   {
+    "k0": 60,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6513946158054879
+   },
+   {
+    "k0": 120,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6512196880621065
+   },
+   {
+    "k0": 250,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.651038067849276
+   },
+   {
+    "k0": 500,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6509527943666421
+   },
+   {
+    "k0": 15,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.652165740176034
+   },
+   {
+    "k0": 30,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6520496890734867
+   },
+   {
+    "k0": 60,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6518575508707531
+   },
+   {
+    "k0": 120,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6515871663587017
+   },
+   {
+    "k0": 250,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6512823681596227
+   },
+   {
+    "k0": 500,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6510911229544925
+   }
+  ]
+ },
+ "context": {
+  "k0": 100,
+  "grid": [
+   {
+    "k0": null,
+    "loss": 0.6480736620135982,
+    "lossMargin": 4.02684532303639,
+    "lossTotal": 4.026360520900755
+   },
+   {
+    "k0": 10,
+    "loss": 0.6443906830200855,
+    "lossMargin": 4.020723933136127,
+    "lossTotal": 4.025884504643556
+   },
+   {
+    "k0": 30,
+    "loss": 0.6443841377910962,
+    "lossMargin": 4.020701915361265,
+    "lossTotal": 4.026161742922325
+   },
+   {
+    "k0": 100,
+    "loss": 0.6443695254996676,
+    "lossMargin": 4.020642635093962,
+    "lossTotal": 4.026828090296954
+   },
+   {
+    "k0": 300,
+    "loss": 0.6443809515692699,
+    "lossMargin": 4.020588327411222,
+    "lossTotal": 4.0278227920813245
+   },
+   {
+    "k0": 1000,
+    "loss": 0.6446802191535492,
+    "lossMargin": 4.020984510479959,
+    "lossTotal": 4.028542293491428
+   },
+   {
+    "k0": 3000,
+    "loss": 0.6456097064004414,
+    "lossMargin": 4.022531747515197,
+    "lossTotal": 4.028029946471838
    }
   ]
  }

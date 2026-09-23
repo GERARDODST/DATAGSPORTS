@@ -1649,6 +1649,7 @@ const ENSEMBLE_MATH = [
   ["Garantía (sin olvido, γ = 1)", "Σ ℓ(P, y) ≤ min_m Σ ℓ(p_m, y) + ln(M)/η   para η ≤ 1: la log-loss es 1-exp-cóncava, así que el ensamble nunca queda más de ln(5)/η por encima del mejor modelo"],
   ["Margen y total", "μ = Σ w_m μ_m,   σ² = Σ w_m (σ_m² + (μ_m − μ)²),   P(cubre s) = Σ w_m Φ((μ_m − s)/σ_m)"],
   ["Capa de QB", "δ̂ = Σ residuos / (n + k₀),   P' = Φ(Φ⁻¹(P) − δ̂·s/σ),   s = +1 si solo el local cambia de QB, −1 si solo la visita"],
+  ["Capa de bajas y clima (tabla 5.3 medida)", "β̂ = (XᵀX + k₀I)⁻¹ Xᵀr en línea;   margen' = margen + Σ_g β_g·(fuera_local,g − fuera_visita,g);   total' = total + θᵀ[bajas of., bajas def., viento, domo, frío]"],
 ];
 const METRIC_MATH = [
   ["Log-loss", "ℓ = −[y ln p + (1 − y) ln(1 − p)];   siempre 50% ⇒ 0.693"],
@@ -1817,12 +1818,12 @@ async function renderModelLab() {
         <div class="sum-card" style="--cat:var(--accent)"><span class="eyebrow">Modelo final 2024 · ${annotate("log-loss")}</span><span class="num big">${fin.logLoss.toFixed(4)}</span><span class="muted">framework original ${fw.logLoss.toFixed(4)} · mercado ${mkt.logLoss.toFixed(4)}</span></div>
         <div class="sum-card" style="--cat:var(--c1)"><span class="eyebrow">Acierto de ganador 2024</span><span class="num big">${pct(fin.accuracy)}</span><span class="muted">framework ${pct(fw.accuracy)} · mercado ${pct(mkt.accuracy)}</span></div>
         <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Mejor modelo solo en 2024</span><span class="num big">${esc(MODEL_NAMES[bestSingle.key].split(" (")[0])}</span><span class="muted">${bestSingle.logLoss.toFixed(4)} · en 2023 fue otro: por eso se combinan</span></div>
-        <div class="sum-card" style="--cat:var(--c2)"><span class="eyebrow">Distancia al mercado</span><span class="num big">${signed(fin.vsMarket.diff, 4)}</span><span class="muted">z = ${fin.vsMarket.z.toFixed(2)}: el mercado sigue siendo mejor</span></div>
+        <div class="sum-card" style="--cat:var(--c2)"><span class="eyebrow">Distancia al mercado</span><span class="num big">${signed(fin.vsMarket.diff, 4)}</span><span class="muted">z = ${fin.vsMarket.z.toFixed(2)}: ${Math.abs(fin.vsMarket.z) >= 2 ? "el mercado sigue siendo mejor (diferencia significativa)" : "el mercado va adelante, pero la diferencia ya no es significativa (|z| < 2)"}</span></div>
       </div>
     </section>
 
     <section class="panel step">
-      <span class="step-num">Paso 1 de 7</span>
+      <span class="step-num">Paso 1 de 8</span>
       <h2>El protocolo: nada ve el futuro</h2>
       <p class="lede">Prueba ${annotate("walk-forward")}: el modelo predice todos los partidos de una fecha y solo después conoce sus resultados. Los parámetros se eligen en años distintos a los que se usan para medir.</p>
       <div class="protocol">
@@ -1835,7 +1836,7 @@ async function renderModelLab() {
     </section>
 
     <section class="panel step">
-      <span class="step-num">Paso 2 de 7</span>
+      <span class="step-num">Paso 2 de 8</span>
       <h2>Los modelos y sus matemáticas</h2>
       <p class="lede">Cada uno mira el fútbol americano de forma distinta. Abre cada tarjeta para ver sus ecuaciones, de dónde vienen y cómo quedaron sus parámetros.</p>
       <div class="fw-list">
@@ -1868,20 +1869,20 @@ async function renderModelLab() {
     </section>
 
     <section class="panel step">
-      <span class="step-num">Paso 3 de 7</span>
+      <span class="step-num">Paso 3 de 8</span>
       <h2>La tabla del torneo</h2>
       <p class="lede">Mismas predicciones, tres periodos. La prueba 2024 es la que cuenta; el mercado es la referencia (no participa).</p>
       ${D.leaderboard.map((p, i) => group(p.label, leaderboardTable(p, D), { icon: i === 2 ? "★" : "≡", open: i === 2 })).join("")}
       <div class="math-list">${METRIC_MATH.map(([n, e]) => `<div class="formula"><div class="fname">${esc(n)}</div><code>${esc(e)}</code></div>`).join("")}</div>
       ${cloud("take", "Lo que dicen los datos", `<ul>
         <li>${annotate(`El modelo final baja la log-loss de 2024 de ${fw.logLoss.toFixed(4)} (framework original) a ${fin.logLoss.toFixed(4)} y el acierto de ${pct(fw.accuracy)} a ${pct(fin.accuracy)}.`)}</li>
-        <li>El mercado sigue adelante por ${fin.vsMarket.diff.toFixed(4)} de log-loss por partido (z = ${fin.vsMarket.z.toFixed(2)}): con los datos públicos todavía no hay ventaja sistemática, y el modelo no debería apostar en todos los partidos.</li>
+        <li>El mercado sigue adelante por ${fin.vsMarket.diff.toFixed(4)} de log-loss por partido (z = ${fin.vsMarket.z.toFixed(2)}${Math.abs(fin.vsMarket.z) < 2 ? ", ya no significativo" : ""}): el modelo no debería apostar en todos los partidos, solo donde su edge sea grande.</li>
         <li>Contra el spread ningún modelo se separa del 50% más allá de su error estándar (±3.7 pp en 2024). Hace falta 52.4% solo para empatar con el margen de la casa.</li>
       </ul>`, "✓")}
     </section>
 
     <section class="panel step">
-      <span class="step-num">Paso 4 de 7</span>
+      <span class="step-num">Paso 4 de 8</span>
       <h2>Cómo se movieron los pesos en 2024</h2>
       <p class="lede">Al empezar la temporada todos pesan casi 20%: el olvido γ = ${D.ensemble?.gamma} por semana borra casi todo lo de la pretemporada. Conforme avanzan las semanas, el que acierta sube.</p>
       <div class="chart-wrap">${weightsChart(D)}</div>
@@ -1890,7 +1891,7 @@ async function renderModelLab() {
     </section>
 
     <section class="panel step">
-      <span class="step-num">Paso 5 de 7</span>
+      <span class="step-num">Paso 5 de 8</span>
       <h2>¿Las probabilidades dicen la verdad?</h2>
       <div class="two-col">
         <div class="chart-wrap">${calibrationChart(D)}</div>
@@ -1903,7 +1904,7 @@ async function renderModelLab() {
     </section>
 
     <section class="panel step">
-      <span class="step-num">Paso 6 de 7</span>
+      <span class="step-num">Paso 6 de 8</span>
       <h2>La capa de QB: un hallazgo con datos</h2>
       <p class="lede">Cuando un equipo arranca con un QB distinto a su titular habitual, los modelos (que solo ven marcadores y jugadas) no lo saben. Los residuos lo muestran:</p>
       <div class="table-scroll"><table class="compact">
@@ -1911,11 +1912,28 @@ async function renderModelLab() {
         <tbody>${D.qbStats.map((q) => `<tr><td>${{ ninguno: "Ambos con su QB habitual", local: "Solo el local cambia de QB", visita: "Solo la visita cambia de QB", ambos: "Ambos cambian" }[q.case]}</td><td class="r num">${q.n}</td><td class="r num ${Math.abs(q.mean) > 2 * q.se ? (q.mean < 0 ? "negv" : "pos") : ""}">${signed(q.mean, 2)}</td><td class="r num">±${q.se.toFixed(2)}</td></tr>`).join("")}</tbody>
       </table></div>
       ${cloud("take", "Lectura", `<p>Con QB distinto, el equipo rinde unos ${Math.abs(((qbDelta?.mean ?? 0) - (qbAway?.mean ?? 0)) / 2).toFixed(1)} puntos menos de lo que los modelos esperan, a más de 2 errores estándar de cero en ambos lados. La capa corrige ese sesgo con un δ estimado solo con partidos anteriores. Que "habitual" signifique el que más inició en los últimos ${D.qb?.window} partidos (una temporada) también lo decidieron los datos: con 8 partidos, un titular que vuelve de lesión parecía suplente.</p>`, "✓")}
-      ${D.qb ? group("Validación 2023: ventana × k₀", gridTable(D.qb.grid.filter((g) => g.k0 !== null), "window", "k0", "ventana", "k₀"), { icon: "▦", open: false }) : ""}
+      ${D.qb ? group("Validación 2023: ventana × k₀", gridTable(D.qb.grid.filter((g) => g.k0 !== null && Boolean(g.seasonFirst) === Boolean(D.qb.seasonFirst)), "window", "k0", "ventana", "k₀"), { icon: "▦", open: false }) : ""}
+      ${D.qb?.grid.some((g) => g.seasonFirst) ? cloud("warn", "Una regla que se probó y no pasó", `<p>Regla alternativa: con 2 o más partidos jugados en la temporada, el habitual es el que más inició en ella (arreglaría el caso de un fichaje titular como Kirk Cousins en ATL 2024). En la validación 2023 empeora: mejor ${Math.min(...D.qb.grid.filter((g) => g.seasonFirst).map((g) => g.loss)).toFixed(4)} contra ${Math.min(...D.qb.grid.filter((g) => !g.seasonFirst && g.k0 !== null).map((g) => g.loss)).toFixed(4)}. La razón: cuando el titular se lesiona y el suplente inicia 2 partidos, la regla convierte al suplente en "habitual" y castiga al titular cuando regresa. La solución de fondo es medir el valor de cada QB.</p>`, "!") : ""}
     </section>
 
+    ${D.context ? `<section class="panel step">
+      <span class="step-num">Paso 7 de 8</span>
+      <h2>La tabla 5.3 del framework, medida con datos</h2>
+      <p class="lede">Los ajustes por bajas y clima eran factores fijos. Aquí se miden con ${numFmt.format(D.context.games)} partidos (2019–2024): cuánto se desvía el resultado del modelo cuando falta un titular habitual o hay viento, domo o frío. Titular habitual = titular del depth chart en al menos la mitad de sus últimas 8 semanas; fuera = inactivo del día (INA) o en reserva (RES).</p>
+      <div class="table-scroll"><table class="compact">
+        <thead><tr><th>Efecto</th><th class="r">Medido (pts)</th><th class="r">Error estándar</th><th class="r">z</th><th class="r">Partidos con el caso</th><th>Lo que asumía el framework</th><th>Veredicto</th></tr></thead>
+        <tbody>${[...D.context.margin, ...D.context.total].map((e) => `<tr><td>${esc(e.name.replace("margen · ol", "Margen · titular de línea ofensiva fuera").replace("margen · skill", "Margen · titular WR/TE/RB fuera").replace("margen · front", "Margen · titular del front 7 fuera").replace("margen · db", "Margen · titular de secundaria fuera"))}</td><td class="r num">${signed(e.beta, 2)}</td><td class="r num">±${e.se.toFixed(2)}</td><td class="r num">${e.z.toFixed(1)}</td><td class="r num">${e.n}</td><td class="muted">${esc(e.framework)}</td><td>${Math.abs(e.z) >= 2 ? '<span class="pill ok">Efecto real</span>' : '<span class="pill muted">No significativo</span>'}</td></tr>`).join("")}</tbody>
+      </table></div>
+      ${cloud("take", "Lectura", `<ul>
+        <li>Cada titular fuera cuesta del orden de medio a un punto de margen: bastante menos que el ×0.92 del framework (≈ 1.8 puntos por condición). La secundaria casi no se nota.</li>
+        <li>El domo y el viento fuerte se confirman con magnitudes parecidas a las del framework. El frío extremo no: con ${D.context.total.find((e) => e.name.includes("frío"))?.n ?? 0} partidos, su efecto no se distingue de cero.</li>
+        <li>La capa se estima en línea (solo con partidos anteriores) con una previa k₀ = ${D.context.k0} que la validación 2023 eligió; en 2024 bajó la log-loss de ${(D.leaderboard.find((p) => p.period === "test").rows.find((r) => r.key === "qb")?.logLoss ?? 0).toFixed(4)} a ${fin.logLoss.toFixed(4)}.</li>
+      </ul>`, "✓")}
+      ${group("Validación 2023 de la previa k₀", `<div class="table-scroll"><table class="compact"><thead><tr><th>k₀</th><th class="r">Log-loss victoria</th><th class="r">Pérdida margen</th><th class="r">Pérdida total</th></tr></thead><tbody>${D.context.grid.map((g) => `<tr class="${g.k0 === D.context.k0 ? "strong-row" : ""}"><td>${g.k0 === null ? "sin capa" : g.k0}</td><td class="r num">${g.loss.toFixed(5)}</td><td class="r num">${g.lossMargin.toFixed(4)}</td><td class="r num">${g.lossTotal.toFixed(4)}</td></tr>`).join("")}</tbody></table></div>`, { icon: "▦", open: false })}
+    </section>` : ""}
+
     <section class="panel step">
-      <span class="step-num">Paso 7 de 7</span>
+      <span class="step-num">Paso 8 de 8</span>
       <h2>Lo que se probó y se descartó</h2>
       <p class="lede">Se decide con la validación 2023. La columna de 2024 se muestra solo para transparencia.</p>
       <div class="table-scroll"><table class="compact">
@@ -2585,9 +2603,9 @@ function evolutionPanel() {
 }
 
 /* ---------- Torneo de modelos en cada partido ---------- */
-const MODEL_NAMES = { framework: "Framework (λ + triangulación)", elo: "Elo (FiveThirtyEight)", kalman: "Kalman ofensiva/defensa", ridge: "Ridge de puntos", epa: "EPA ajustada por rival", ensemble: "Ensamble (Hedge)", final: "Final: ensamble + QB", market: "Mercado (cierre)" };
-const MODEL_COLORS = { framework: "var(--c8)", elo: "var(--c2)", kalman: "var(--c7)", ridge: "var(--c4)", epa: "var(--c5)", ensemble: "var(--c1)", final: "var(--accent)", market: "var(--ink)" };
-const SHORT_NAMES = { framework: "Framework", elo: "Elo", kalman: "Kalman", ridge: "Ridge", epa: "EPA", ensemble: "Ensamble", final: "Final", market: "Mercado" };
+const MODEL_NAMES = { framework: "Framework (λ + triangulación)", elo: "Elo (FiveThirtyEight)", kalman: "Kalman ofensiva/defensa", ridge: "Ridge de puntos", epa: "EPA ajustada por rival", ensemble: "Ensamble (Hedge)", qb: "Ensamble + capa de QB", final: "Final: + bajas y clima medidos", market: "Mercado (cierre)" };
+const MODEL_COLORS = { framework: "var(--c8)", elo: "var(--c2)", kalman: "var(--c7)", ridge: "var(--c4)", epa: "var(--c5)", ensemble: "var(--c1)", qb: "var(--muted)", final: "var(--accent)", market: "var(--ink)" };
+const SHORT_NAMES = { framework: "Framework", elo: "Elo", kalman: "Kalman", ridge: "Ridge", epa: "EPA", ensemble: "Ensamble", qb: "+QB", final: "Final", market: "Mercado" };
 /** Coloca etiquetas al final de las líneas sin que se encimen (separación mínima gap, dentro de [top, bottom]). */
 function spreadLabels(items, gap, top, bottom) {
   const sorted = [...items].sort((a, b) => a.y - b.y);
@@ -2628,25 +2646,30 @@ function tournamentBlock(a) {
     </tr>`;
   };
   const q = M.qb;
-  const qbText = q ? (q.changeHome || q.changeAway ? `${q.changeHome ? `${esc(a.home)} arranca con ${esc(q.homeQb)} (habitual: ${esc(q.usualHome)})` : ""}${q.changeHome && q.changeAway ? " y " : ""}${q.changeAway ? `${esc(a.away)} arranca con ${esc(q.awayQb)} (habitual: ${esc(q.usualAway)})` : ""}: corrimiento de ${signed(q.shift, 2)} puntos.` : `Ambos arrancan con su QB habitual (${esc(q.homeQb ?? "—")} y ${esc(q.awayQb ?? "—")}): la capa no mueve nada.`) : "Sin datos de QB.";
+  const qbText = q ? (q.changeHome || q.changeAway ? `${q.changeHome ? `${esc(a.home)} arranca con ${esc(q.homeQb)} (habitual: ${esc(q.usualHome)})` : ""}${q.changeHome && q.changeAway ? " y " : ""}${q.changeAway ? `${esc(a.away)} arranca con ${esc(q.awayQb)} (habitual: ${esc(q.usualAway)})` : ""}: corrimiento de ${signed(q.shift, 2)} puntos. Ojo: la capa trata cualquier cambio como el promedio histórico (casi siempre un suplente); si el QB nuevo es un fichaje titular, la corrección exagera.` : `Ambos arrancan con su QB habitual (${esc(q.homeQb ?? "—")} y ${esc(q.awayQb ?? "—")}): la capa no mueve nada.`) : "Sin datos de QB.";
   const f = a.final;
   return `
     ${cloud("explain", "Un modelo nuevo para cada partido", `<p>Para este partido se reconstruyeron desde cero 5 modelos con todos los resultados anteriores a la fecha (desde 2018). El ${annotate("ensamble")} los combina con pesos que suben para el que más acertó y bajan para el que falló (log-loss${info("logloss")} con olvido). Después se corrige por el QB titular y por los ajustes 5.3 con información nueva.</p>`, "?")}
     <div class="table-scroll"><table class="compact tourney">
       <thead><tr><th>Modelo</th><th class="r">P(gana ${esc(a.home)})</th><th class="r">Margen ${esc(a.home)}</th><th class="r">Total</th><th class="r">Peso en el ensamble</th><th class="r">Log-loss · acierto</th></tr></thead>
-      <tbody>${keys.map((k) => row(k)).join("")}${row("ensemble", "sep")}${row("final", "strong-row")}${row("market", "muted-row")}</tbody>
+      <tbody>${keys.map((k) => row(k)).join("")}${row("ensemble", "sep")}${row("qb")}${row("final", "strong-row")}${row("market", "muted-row")}</tbody>
     </table></div>
     <p class="note">Log-loss y acierto medidos en: ${esc(M.sampleLabel)}. Menor log-loss = mejor. El mercado es la referencia a vencer; no entra en el ensamble.</p>
     <div class="proj-flow">
       <div class="proj-box"><span class="eyebrow">Ensamble</span><span class="num">${pct(M.ensemble.pHomeNoQb)}</span></div>
       <span class="flow-arrow" aria-hidden="true">→</span>
-      <div class="proj-box"><span class="eyebrow">Capa de QB ${info("qblayer")}</span><span class="num">${pct(M.ensemble.pHome)}</span></div>
+      <div class="proj-box"><span class="eyebrow">Capa de QB ${info("qblayer")}</span><span class="num">${pct(M.ensemble.pHomeQb ?? M.ensemble.pHome)}</span></div>
       <span class="flow-arrow" aria-hidden="true">→</span>
-      <div class="proj-box"><span class="eyebrow">Ajustes 5.3 (${signed(f?.adjMargin ?? 0, 2)} pts)</span><span class="num">${pct(a.pHome)}</span></div>
+      <div class="proj-box"><span class="eyebrow">Bajas y clima medidos (${signed(M.context?.shiftMargin ?? 0, 2)} pts)</span><span class="num">${pct(M.ensemble.pHome)}</span></div>
+      <span class="flow-arrow" aria-hidden="true">→</span>
+      <div class="proj-box"><span class="eyebrow">Ajustes 5.3 restantes (${signed(f?.adjMargin ?? 0, 2)} pts)</span><span class="num">${pct(a.pHome)}</span></div>
       <span class="flow-arrow" aria-hidden="true">→</span>
       <div class="proj-box strong"><span class="eyebrow">P final para ${esc(a.home)}</span><span class="num">${pct(a.pHome)}</span></div>
     </div>
-    <p class="note">${qbText} ${f && Math.abs(f.adjMargin) > 0.01 ? `Los ajustes 5.3 aplicados vienen de la tabla del framework (factores fijos, todavía sin validar con datos).` : "No hay ajustes 5.3 con información nueva."}</p>`;
+    <p class="note">${qbText}</p>
+    ${M.context ? `<div class="two-col ctx-out">${[[a.home, M.context.home], [a.away, M.context.away]].map(([t, side]) => `<div><h4>${esc(t)}: titulares habituales fuera</h4>${side.out.length ? `<ul class="checklist">${side.out.map((o) => `<li><span class="pill ${o.status === "INA" ? "no" : "warn"}">${o.status === "INA" ? "Inactivo" : "Reserva"}</span><span>${esc(o.name)} <span class="muted">· ${esc({ ol: "línea ofensiva", skill: "WR/TE/RB", front: "front 7", db: "secundaria" }[o.group])}</span></span></li>`).join("")}</ul>` : '<p class="note">Ninguno.</p>'}</div>`).join("")}</div>
+    <p class="note">Efecto medido hasta este partido (regresión con ${M.context.n} partidos anteriores): ${M.context.marginFeatures.map((f) => `${esc(f.name.replace("margen · ", ""))} ${signed(f.beta, 2)}`).join(", ")} pts por titular. Corrimiento: ${signed(M.context.shiftMargin, 2)} pts al margen de ${esc(a.home)} y ${signed(M.context.shiftTotal, 2)} al total${M.context.dome ? " (incluye domo)" : ""}${M.context.wind ? " (incluye viento)" : ""}${M.context.cold ? " (incluye frío)" : ""}.</p>` : ""}
+    <p class="note">${f && Math.abs(f.adjMargin) > 0.01 ? "Quedan ajustes 5.3 de la tabla del framework sin medir con datos." : "Los factores fijos de la tabla 5.3 para bajas y clima ya no se usan: los reemplazan los efectos medidos."}</p>`;
 }
 
 function renderPregame(gameId) {
@@ -2769,8 +2792,10 @@ function renderPregame(gameId) {
               ${x.met === null ? '<span class="pill no">? Sin dato</span>' : x.met ? '<span class="pill warn">Se cumple</span>' : '<span class="pill muted">No se cumple</span>'}
               ${x.inBase ? '<span class="pill derived">Ya está en la base</span>' : '<span class="pill muted">Información nueva</span>'}
               ${x.applied ? '<span class="pill ok">✓ Aplicado</span>' : ""}
+              ${x.replaced ? '<span class="pill derived">↺ Reemplazado por el efecto medido</span>' : ""}
             </div>
             ${x.met && x.inBase ? `<div class="m-note">${esc(x.reason)}</div>` : ""}
+            ${x.measured ? `<div class="m-note">${esc(x.measured)}</div>` : ""}
           </div>`).join("")}</div>`, { icon: "×", count: a.adjustments.length, open: false })}
       ${group(a.models ? "Probabilidad por método: framework, torneo y mercado" : "Triangulación de la probabilidad", `<div class="chart-wrap">${probabilityChart(a, marketHome)}</div><p class="note">Divergencia ${(a.divergence * 100).toFixed(1)} pp → confianza ${esc(a.confidence)}${info("divergence")}</p>`, { icon: "△" })}
       ${group(a.models ? "Distribución del margen del modelo final (mezcla de normales)" : "50,000 partidos simulados (Monte Carlo)", `
