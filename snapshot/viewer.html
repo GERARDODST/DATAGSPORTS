@@ -21,6 +21,8 @@
     --s2: #eb6834;
     --s3: #1baf7a;
     --s4: #eda100;
+    --warn: #9a6200;
+    --warn-soft: rgba(237, 161, 0, 0.16);
     --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     color-scheme: light;
@@ -44,6 +46,8 @@
       --s2: #d95926;
       --s3: #199e70;
       --s4: #c98500;
+      --warn: #f0b429;
+      --warn-soft: rgba(240, 180, 41, 0.14);
       color-scheme: dark;
     }
   }
@@ -65,6 +69,8 @@
     --s2: #d95926;
     --s3: #199e70;
     --s4: #c98500;
+    --warn: #f0b429;
+    --warn-soft: rgba(240, 180, 41, 0.14);
     color-scheme: dark;
   }
 
@@ -95,7 +101,7 @@
   .wordmark { font-weight: 700; letter-spacing: -0.02em; font-size: 18px; text-decoration: none; }
   .wordmark b { color: var(--accent-ink); font-weight: 700; }
   .season-chip { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 520px) { .season-chip .asof { display: none; } }
+  @media (max-width: 520px) { .season-chip { display: none; } }
 
   main { padding-block: 28px 48px; display: flex; flex-direction: column; gap: 36px; }
   h1, h2, h3 { text-wrap: balance; margin: 0; }
@@ -233,6 +239,35 @@
   footer { border-top: 1px solid var(--border); }
   footer .wrap { padding-block: 18px 28px; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
 
+  .focus-card {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; text-decoration: none;
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--team, var(--accent));
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .focus-card:hover { border-color: var(--ink); border-left-color: var(--team, var(--accent)); }
+  .focus-card .matchup { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .focus-card .sub { font-size: 13px; color: var(--muted); }
+  .focus-card .go { font-weight: 600; color: var(--accent-ink); white-space: nowrap; }
+  .team-badge { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; background: var(--team, var(--accent)); }
+  @media (max-width: 560px) { .focus-card { grid-template-columns: 1fr; } .team-badge { display: none; } }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .pill.ok { color: var(--accent-ink); background: var(--accent-soft); }
+  .pill.no { color: var(--neg); background: var(--neg-soft); }
+  .pill.warn { color: var(--warn); background: var(--warn-soft); }
+  .pill.muted { color: var(--muted); background: var(--surface-2); }
+  .pill.next { color: var(--ink); background: var(--surface-2); }
+  .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .checklist li { display: flex; gap: 10px; align-items: baseline; }
+  .versus { display: grid; grid-template-columns: minmax(140px, 1.2fr) 1fr 1fr; }
+  .versus > div { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .versus .h { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .versus .k { color: var(--muted); }
+  .big-proj { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .big-proj .num { font-size: 34px; font-weight: 600; letter-spacing: -0.03em; }
+  .big-proj .dash { color: var(--muted); font-size: 24px; }
+  .schedule td .pill { margin-left: 0; }
+  tr.focus-row td { background: var(--accent-soft); }
+  .result-banner { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: baseline; }
   .topnav { display: flex; gap: 4px; margin-right: auto; margin-left: 12px; }
   .topnav a { font-size: 13px; color: var(--muted); text-decoration: none; padding: 4px 8px; border-radius: 6px; }
   .topnav a[aria-current="page"] { color: var(--ink); background: var(--surface-2); }
@@ -284,6 +319,7 @@
     <a class="wordmark" href="#inicio">DATAG<b>SPORTS</b></a>
     <nav class="topnav" aria-label="Secciones">
       <a href="#inicio" id="nav-home">Partidos</a>
+      <a href="#chiefs" id="nav-focus">Chiefs</a>
       <a href="#lab" id="nav-lab">Laboratorio</a>
     </nav>
     <span class="season-chip" id="season-chip"></span>
@@ -508,6 +544,15 @@ function renderHome() {
         <div class="stat"><span class="num">${numFmt.format(c.players)}</span><span>jugadores</span></div>
       </div>
     </section>
+
+    ${FOCUS.analyzed[0] ? `
+    <section class="stack" style="gap:10px">
+      <div class="section-head" style="margin-bottom:0">
+        <h2>${esc(CORE.teams[FOCUS.team]?.name ?? FOCUS.team)}: modelo antes de cada partido</h2>
+        <p class="lede">Empezamos por su primer partido de ${CORE.season}, con solo los datos de ${CORE.season - 1}. <a href="#chiefs">Ver la sección del equipo →</a></p>
+      </div>
+      ${focusCard(FOCUS.analyzed[0])}
+    </section>` : ""}
 
     <div class="callouts">
       ${featuredGame ? `
@@ -1256,6 +1301,358 @@ async function renderLab() {
   document.getElementById("sim-run").addEventListener("click", () => runSimulation(lab));
 }
 
+/* ---------- Equipo en seguimiento y análisis previo al partido ---------- */
+const FOCUS = CORE.focus ?? { team: null, analyzed: [] };
+const PRE = CORE.pregame ?? {};
+const fmtOdds = (v) => (v === null || v === undefined ? "—" : v > 0 ? `+${v}` : `−${Math.abs(v)}`);
+const pct = (v, d = 1) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(d)}%`);
+const toC = (f) => Math.round(((f - 32) * 5) / 9);
+const gameTypeLabel = (type, week) => (type && type !== "REG" ? POST_LABELS[type] ?? type : `Semana ${week}`);
+
+function focusGames() {
+  return CORE.games.filter((g) => g.home === FOCUS.team || g.away === FOCUS.team);
+}
+function focusCard(gameId) {
+  const a = PRE[gameId];
+  const g = gamesById.get(gameId);
+  if (!a || !g) return "";
+  const team = CORE.teams[FOCUS.team];
+  const opp = g.home === FOCUS.team ? g.away : g.home;
+  const colors = teamColors(FOCUS.team, opp);
+  return `
+    <a class="focus-card" href="#p-${esc(gameId)}" style="--team:${esc(colors.home)}">
+      <span class="team-badge">${esc(FOCUS.team)}</span>
+      <div>
+        <span class="eyebrow">${esc(team?.name ?? FOCUS.team)} · ${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span>
+        <div class="matchup">${esc(CORE.teams[g.away]?.name ?? g.away)} @ ${esc(CORE.teams[g.home]?.name ?? g.home)}</div>
+        <div class="sub">Modelo construido solo con datos anteriores al partido (${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}, ${a.data.currentSeasonGames} de ${a.season}) y comparado con el resultado final.</div>
+      </div>
+      <span class="go">Ver análisis →</span>
+    </a>`;
+}
+
+function renderFocusTeam() {
+  renderToken++;
+  const games = focusGames();
+  const team = CORE.teams[FOCUS.team];
+  const first = FOCUS.analyzed[0];
+  const priorSeason = first ? PRE[first].data.priorSeasonGames : 0;
+  const rows = games.map((g) => {
+    const isHome = g.home === FOCUS.team;
+    const opp = isHome ? g.away : g.home;
+    const ready = FOCUS.analyzed.includes(g.id);
+    const played = g.hs !== null && g.as !== null;
+    const own = isHome ? g.hs : g.as, their = isHome ? g.as : g.hs;
+    const res = played ? `${own > their ? "G" : own < their ? "P" : "E"} ${own}–${their}` : "—";
+    const before = CORE.games.filter((x) => x.date && g.date && x.date < g.date && x.hs !== null).length;
+    return `
+      <tr class="${ready ? "focus-row" : ""}">
+        <td class="muted num" style="white-space:nowrap">${esc(weekLabel(g.week, true))}</td>
+        <td class="muted" style="white-space:nowrap">${esc(fmtDate(g.date))}</td>
+        <td style="white-space:nowrap">${isHome ? "vs" : "@"} ${esc(opp)}</td>
+        <td class="num" style="white-space:nowrap">${esc(res)}</td>
+        <td class="r num muted">${numFmt.format(priorSeason)} + ${before}</td>
+        <td>${ready ? `<a class="pill ok" href="#p-${esc(g.id)}">Análisis listo →</a>` : `<span class="pill muted">Próximamente</span>`}</td>
+      </tr>`;
+  }).join("");
+
+  view.innerHTML = `
+    <section class="intro">
+      <p class="eyebrow">Equipo en seguimiento · temporada ${CORE.season}</p>
+      <h1>${esc(team?.name ?? FOCUS.team)}</h1>
+      <p class="lede">Antes de cada partido de los ${esc(team?.name ?? FOCUS.team)} construimos el modelo <strong>solo con los datos que existían hasta ese día</strong>, y al final lo comparamos con lo que pasó. En la semana 1 todo sale de la temporada ${CORE.season - 1}; cada partido nuevo entra al siguiente modelo con el doble de peso que un partido del año anterior, así que el modelo debería mejorar conforme avanza la temporada.</p>
+    </section>
+
+    ${first ? focusCard(first) : ""}
+
+    <section class="panel">
+      <div class="section-head">
+        <h2>Calendario y datos disponibles</h2>
+        <p class="lede">La columna de datos muestra cuántos partidos conoce el modelo antes de cada juego: los de ${CORE.season - 1} más los de ${CORE.season} ya jugados.</p>
+      </div>
+      <div class="table-scroll">
+        <table class="schedule">
+          <thead><tr><th>Sem</th><th>Fecha</th><th>Rival</th><th>Resultado</th><th class="r">Partidos conocidos</th><th>Modelo previo</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
+function probabilityChart(a, marketHome) {
+  const rows = [
+    ...a.methods.map((m) => ({ label: { log5: "Log5 (Pitagórico)", elo: "Elo", sim: "Simulación" }[m.key] ?? m.label, p: m.p, color: "var(--ink)" })),
+    { label: "Promedio del modelo", p: a.pHome, color: "var(--accent)", strong: true },
+    ...(marketHome !== null ? [{ label: "Mercado (momios sin margen)", p: marketHome, color: "var(--s2)", strong: true }] : []),
+  ];
+  const W = 720, rowH = 30, T = 24, B = 24, L = 250, R = 24;
+  const H = T + rows.length * rowH + B;
+  const PW = W - L - R;
+  const values = rows.map((r) => r.p);
+  const lo = Math.max(0, Math.floor((Math.min(...values, 0.5) - 0.08) * 10) / 10);
+  const hi = Math.min(1, Math.ceil((Math.max(...values, 0.5) + 0.08) * 10) / 10);
+  const x = (p) => L + ((p - lo) / (hi - lo)) * PW;
+  const ticks = [];
+  for (let t = lo; t <= hi + 1e-9; t += 0.05) ticks.push(Number(t.toFixed(2)));
+  return `
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Probabilidad de que gane ${esc(a.home)} según cada método y según el mercado">
+      ${ticks.map((t) => `<line class="${Math.abs(t - 0.5) < 1e-9 ? "mid" : "grid"}" x1="${x(t)}" y1="${T - 6}" x2="${x(t)}" y2="${H - B}"/><text x="${x(t)}" y="${H - 6}" text-anchor="middle">${Math.round(t * 100)}%</text>`).join("")}
+      <text x="${x(0.5)}" y="${T - 10}" text-anchor="middle">parejo</text>
+      ${rows.map((r, i) => {
+        const cy = T + i * rowH + rowH / 2;
+        return `<text class="end-label" x="${L - 12}" y="${cy + 4}" text-anchor="end" style="${r.strong ? "font-weight:600" : ""}">${esc(r.label)}</text>
+          <line class="grid" x1="${L}" y1="${cy}" x2="${W - R}" y2="${cy}" opacity="0.5"/>
+          <circle cx="${x(r.p).toFixed(1)}" cy="${cy}" r="${r.strong ? 6 : 5}" style="fill:${r.color}" stroke="var(--surface)" stroke-width="2"/>
+          <text x="${(x(r.p) + 10).toFixed(1)}" y="${cy + 4}" style="fill:var(--ink)">${pct(r.p)}</text>`;
+      }).join("")}
+    </svg>`;
+}
+
+function marginChart(a) {
+  const W = 720, H = 250, L = 40, R = 16, T = 58, B = 40;
+  const PW = W - L - R, PH = H - T - B;
+  const total = a.marginBins.reduce((s, b) => s + b[1], 0);
+  const maxShare = Math.max(...a.marginBins.map((b) => b[1] / total));
+  const lo = -35, hi = 35;
+  const x = (m) => L + ((m - lo) / (hi - lo)) * PW;
+  const bw = PW / (hi - lo + 1);
+  const y = (s) => T + (1 - s / maxShare) * PH;
+  const bars = a.marginBins.filter(([m]) => m >= lo && m <= hi).map(([m, n]) => {
+    const s = n / total;
+    return `<rect class="mbar" data-m="${m}" data-s="${s}" x="${(x(m) - bw / 2 + 1).toFixed(1)}" y="${y(s).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${(T + PH - y(s)).toFixed(1)}" rx="2" style="fill:${m > 0 ? "var(--s1)" : "var(--s2)"}"/>`;
+  }).join("");
+  const markers = [
+    { m: a.projection.margin, label: `proyección ${signed(a.projection.margin, 1)}`, cls: "cross", color: "var(--ink)" },
+    ...(a.context.spread !== null ? [{ m: a.context.spread, label: `línea: ${a.context.spread >= 0 ? a.home : a.away} −${Math.abs(a.context.spread)}`, color: "var(--muted)" }] : []),
+    ...(a.postgame ? [{ m: a.postgame.homeScore - a.postgame.awayScore, label: `real ${signed(a.postgame.homeScore - a.postgame.awayScore, 0)}`, color: "var(--accent)", strong: true }] : []),
+  ].sort((p, q) => p.m - q.m);
+  const markerSvg = markers.map((mk, i) => {
+    const mx = x(Math.max(lo, Math.min(hi, mk.m)));
+    const ly = 14 + i * 14;
+    return `<line x1="${mx}" y1="${ly + 3}" x2="${mx}" y2="${T + PH}" style="stroke:${mk.color}" stroke-width="${mk.strong ? 2 : 1.5}" ${mk.strong ? "" : 'stroke-dasharray="4 3"'}/>
+      <text x="${mx + 4}" y="${ly}" style="fill:var(--ink);${mk.strong ? "font-weight:600" : ""}">${esc(mk.label)}</text>`;
+  }).join("");
+  const ticks = [-28, -21, -14, -7, 0, 7, 14, 21, 28];
+  return `
+    <svg class="chart" id="margin-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Distribución del margen final en ${numFmt.format(total)} partidos simulados">
+      <line class="grid" x1="${L}" y1="${T + PH}" x2="${W - R}" y2="${T + PH}"/>
+      ${bars}
+      ${markerSvg}
+      ${ticks.map((t) => `<text x="${x(t)}" y="${T + PH + 16}" text-anchor="middle">${t === 0 ? "0" : signed(t, 0)}</text>`).join("")}
+      <text x="${L}" y="${H - 4}">← gana ${esc(a.away)}</text>
+      <text x="${W - R}" y="${H - 4}" text-anchor="end">gana ${esc(a.home)} →</text>
+      <text x="${L + PW / 2}" y="${H - 4}" text-anchor="middle">margen final (${esc(a.home)} − ${esc(a.away)}), múltiplos de 7</text>
+      <rect id="margin-hit" x="${L}" y="${T}" width="${PW}" height="${PH}" fill="transparent"/>
+    </svg>`;
+}
+
+function attachMarginHover(a) {
+  const hit = document.getElementById("margin-hit");
+  const svg = document.getElementById("margin-chart");
+  const readout = document.getElementById("margin-readout");
+  if (!hit) return;
+  const defaultText = readout.innerHTML;
+  const total = a.marginBins.reduce((s, b) => s + b[1], 0);
+  const byM = new Map(a.marginBins.map(([m, n]) => [m, n]));
+  const show = (evt) => {
+    const box = svg.getBoundingClientRect();
+    const sx = ((evt.clientX - box.left) / box.width) * 720;
+    const m = Math.round(-35 + ((sx - 40) / 664) * 70);
+    const n = byM.get(m) ?? 0;
+    svg.querySelectorAll(".mbar").forEach((b) => (b.style.opacity = Number(b.dataset.m) === m ? "1" : "0.55"));
+    const who = m > 0 ? `${a.home} gana por ${m}` : m < 0 ? `${a.away} gana por ${-m}` : "empate en tiempo regular";
+    readout.innerHTML = `<strong>${esc(who)}</strong>: ${pct(n / total)} de las ${numFmt.format(total)} simulaciones.`;
+  };
+  hit.addEventListener("pointermove", show);
+  hit.addEventListener("pointerdown", show);
+  hit.addEventListener("pointerleave", () => {
+    svg.querySelectorAll(".mbar").forEach((b) => (b.style.opacity = "1"));
+    readout.innerHTML = defaultText;
+  });
+}
+
+function marketImpliedHome(a) {
+  const c = a.context;
+  if (c.homeMoneyline === null || c.awayMoneyline === null) return null;
+  const imp = (v) => (v < 0 ? -v / (-v + 100) : 100 / (v + 100));
+  const h = imp(c.homeMoneyline), w = imp(c.awayMoneyline);
+  return h / (h + w);
+}
+
+function lightPill(light) {
+  const cls = light === "Verde" ? "ok" : light === "Amarillo" ? "warn" : "muted";
+  const icon = light === "Verde" ? "●" : light === "Amarillo" ? "▲" : "○";
+  return `<span class="pill ${cls}">${icon} ${esc(light)}</span>`;
+}
+function outcomePill(m) {
+  if (m.won === null) return `<span class="pill muted">Pendiente</span>`;
+  if (m.push) return `<span class="pill muted">= Push</span>`;
+  return m.won ? `<span class="pill ok">✓ Ganó</span>` : `<span class="pill no">✗ Perdió</span>`;
+}
+function marketPickLabel(m) {
+  if (m.market === "Moneyline") return `${m.pick} gana`;
+  return `${m.pick} ${m.line}`;
+}
+
+function renderPregame(gameId) {
+  renderToken++;
+  const a = PRE[gameId];
+  const g = gamesById.get(gameId);
+  const H = a.teams[a.home], A = a.teams[a.away];
+  const colors = teamColors(a.home, a.away);
+  const c = a.context;
+  const marketHome = marketImpliedHome(a);
+  const pg = a.postgame;
+  const missing = a.completeness.filter((x) => !x.ok).length;
+  const recordTxt = (rec) => `${rec.wins}–${rec.losses}${rec.ties ? `–${rec.ties}` : ""}`;
+  const lastTxt = (t) => {
+    const l = t.lastGame;
+    if (!l) return "—";
+    const res = l.pointsFor > l.pointsAgainst ? "Ganó" : l.pointsFor < l.pointsAgainst ? "Perdió" : "Empató";
+    const where = l.location === "Neutral" ? "sede neutral" : l.isHome ? "en casa" : "de visita";
+    return `${res} ${l.pointsFor}–${l.pointsAgainst} vs ${esc(l.opponent)} (${esc(gameTypeLabel(l.type, l.week))}, ${where}, ${esc(fmtDate(l.date))})`;
+  };
+  const vs = (label, h, w) => `<div class="k">${label}</div><div>${h}</div><div>${w}</div>`;
+  const favTeam = c.spread >= 0 ? a.home : a.away;
+
+  view.innerHTML = `
+    <section class="scoreboard">
+      <div class="crumbs"><a href="#chiefs">← ${esc(CORE.teams[FOCUS.team]?.name ?? "Equipo")}</a></div>
+      <div class="sb-meta">${esc(weekLabel(a.week))} · ${esc(fmtDate(a.date))} · ${esc(c.stadium ?? "")}</div>
+      <h1>${esc(CORE.teams[a.away]?.name ?? a.away)} @ ${esc(CORE.teams[a.home]?.name ?? a.home)}</h1>
+      <p class="lede">Análisis previo al partido, construido <strong>solo con partidos jugados antes del ${esc(fmtDate(a.data.cutoff))}</strong>: ${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1} y ${a.data.currentSeasonGames} de ${a.season}. Cada fase sigue el algoritmo maestro del framework (sección 10). El resultado real va al final.</p>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Fase 0 · Datos y gate de completitud</span>
+      <h2>¿Qué sabíamos antes del partido?</h2>
+      <ul class="checklist">
+        ${a.completeness.map((x) => `<li>${x.ok ? '<span class="pill ok">✓ Disponible</span>' : '<span class="pill no">✗ Falta</span>'}<span>${esc(x.field)}</span></li>`).join("")}
+      </ul>
+      <p class="note">${missing ? `Faltan ${missing} campos obligatorios, así que ningún pick de este partido puede ser Verde: el máximo es Amarillo (sección 9.3).` : "Todos los campos obligatorios están presentes."}</p>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Contexto · secciones 1 y 2</span>
+      <h2>Los dos equipos al llegar al partido</h2>
+      <div class="table-scroll">
+        <div class="versus" style="min-width:560px">
+          <div class="h"></div><div class="h"><i class="dot" style="background:${esc(colors.home)}"></i> ${esc(a.home)} (local)</div><div class="h"><i class="dot" style="background:${esc(colors.away)}"></i> ${esc(a.away)} (visitante)</div>
+          ${vs(`Récord ${a.season - 1} (temporada regular)`, recordTxt(H.regular), recordTxt(A.regular))}
+          ${vs(`${a.home} en casa / ${a.away} de visita`, recordTxt(H.home), recordTxt(A.away))}
+          ${vs(`Playoffs ${a.season - 1}`, H.postseason.games ? recordTxt(H.postseason) : "No jugó", A.postseason.games ? recordTxt(A.postseason) : "No jugó")}
+          ${vs("Último partido", lastTxt(H), lastTxt(A))}
+          ${vs("QB titular", esc(c.homeQb ?? "—"), esc(c.awayQb ?? "—"))}
+          ${vs("Días de descanso", c.homeRest ?? "—", c.awayRest ?? "—")}
+        </div>
+      </div>
+      <div class="chips" style="margin-top:12px">
+        <span class="chip">${c.divGame ? "Partido divisional" : "No es divisional"}</span>
+        <span class="chip">${c.location === "Neutral" ? "Sede neutral" : `Local: ${esc(a.home)}`}</span>
+        <span class="chip">${c.roof === "outdoors" && c.temp !== null ? `Aire libre · ${c.temp}°F (${toC(c.temp)}°C) · viento ${c.wind ?? "—"} mph` : esc(c.roof ?? "")}</span>
+        ${a.h2h.map((h) => `<span class="chip">Último cara a cara: ${esc(h.away)} ${h.as}–${h.hs} ${esc(h.home)} (${esc(gameTypeLabel(h.type, 0))})</span>`).join("")}
+      </div>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Fase 1 · Ajuste estadístico</span>
+      <h2>Ratings con regresión a la media</h2>
+      <p class="lede">Con pocos datos nuevos, lo que pasó el año anterior se toma con cautela: cada partido de ${a.season - 1} vale medio partido y el resultado se regresa hacia el promedio de liga (${a.league.mean.toFixed(1)} puntos por equipo). Para ${a.home} eso significa un ajuste de ${Math.round(H.regressionShare * 100)}%, cerca del tercio que usan los modelos públicos entre temporadas.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th></th><th class="r">${esc(a.home)}</th><th class="r">${esc(a.away)}</th></tr></thead>
+          <tbody>
+            <tr><td>Puntos a favor por partido (crudo → regresado)</td><td class="r num">${H.rawOff.toFixed(1)} → <strong>${H.off.toFixed(1)}</strong></td><td class="r num">${A.rawOff.toFixed(1)} → <strong>${A.off.toFixed(1)}</strong></td></tr>
+            <tr><td>Puntos en contra por partido (crudo → regresado)</td><td class="r num">${H.rawDef.toFixed(1)} → <strong>${H.def.toFixed(1)}</strong></td><td class="r num">${A.rawDef.toFixed(1)} → <strong>${A.def.toFixed(1)}</strong></td></tr>
+            <tr><td>Win% real vs Pitagórico (n = 2.37)</td><td class="r num">${pct(H.actualPct, 0)} vs ${pct(H.pythagorean, 0)}</td><td class="r num">${pct(A.actualPct, 0)} vs ${pct(A.pythagorean, 0)}</td></tr>
+            <tr><td>"Suerte" (real − Pitagórico)</td><td class="r num">${signed(H.luck * 100, 1)} pp</td><td class="r num">${signed(A.luck * 100, 1)} pp</td></tr>
+            <tr><td>EPA por jugada ofensiva (pase / carrera)</td><td class="r num">${signed(H.epa.offEpa, 3)} (${signed(H.epa.passEpa, 2)} / ${signed(H.epa.runEpa, 2)})</td><td class="r num">${signed(A.epa.offEpa, 3)} (${signed(A.epa.passEpa, 2)} / ${signed(A.epa.runEpa, 2)})</td></tr>
+            <tr><td>EPA por jugada permitido (defensa: más negativo = mejor)</td><td class="r num">${signed(H.epa.defEpa, 3)}</td><td class="r num">${signed(A.epa.defEpa, 3)}</td></tr>
+            <tr><td>Elo al inicio del partido</td><td class="r num">${H.elo}</td><td class="r num">${A.elo}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Ventaja de local observada en ${a.season - 1}: ${signed(a.league.hfaObserved, 2)} puntos. Desviación del margen final: ${a.league.sigmaMargin.toFixed(1)} puntos (el framework citaba ~13.5 como referencia; con datos reales usamos el valor medido).</p>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Fase 2 · Triangulación</span>
+      <h2>¿Quién gana? Tres métodos independientes</h2>
+      <p class="lede">Probabilidad de que gane ${esc(a.home)}. Divergencia entre métodos: ${(a.divergence * 100).toFixed(1)} puntos → confianza <strong>${esc(a.confidence)}</strong> (alta si coinciden en ±5, baja si se separan más de 10).</p>
+      <div class="chart-wrap">${probabilityChart(a, marketHome)}</div>
+      <p class="note">${a.methods.map((m) => `${esc(m.label)}: ${pct(m.p)}`).join(" · ")}.</p>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Fase 3 · Modelo de puntos</span>
+      <h2>Marcador proyectado</h2>
+      <div class="big-proj">
+        <span class="eyebrow">${esc(a.away)}</span><span class="num">${a.projection.away.toFixed(1)}</span><span class="dash">—</span><span class="num">${a.projection.home.toFixed(1)}</span><span class="eyebrow">${esc(a.home)}</span>
+      </div>
+      <p class="lede">Total proyectado ${a.projection.total.toFixed(1)} puntos (línea del mercado: ${c.total ?? "—"}). Margen proyectado ${signed(a.projection.margin, 1)} para ${esc(a.home)} (el mercado lo tenía como favorito por ${Math.abs(c.spread)} para ${esc(favTeam)}). Abajo, ${numFmt.format(a.simulations)} partidos simulados a partir de ese marcador.</p>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--s1)"></i>Gana ${esc(a.home)}</span>
+        <span><i class="dot" style="background:var(--s2)"></i>Gana ${esc(a.away)}</span>
+      </div>
+      <div class="chart-wrap">${marginChart(a)}</div>
+      <p class="readout" id="margin-readout">Pasa el cursor (o toca) sobre la distribución para ver la probabilidad de cada margen.</p>
+      <p class="note">Limitación conocida: la simulación usa una distribución continua, así que no captura que en la NFL los márgenes se amontonan en 3 y 7 (goles de campo y touchdowns). Con un spread de 3 eso importa: un "push" es mucho más probable de lo que este modelo cree.</p>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Fase 4 · Valor de mercado</span>
+      <h2>Modelo contra los momios de cierre</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Mercado</th><th>Pick del modelo</th><th class="r">Momio</th><th class="r">P. implícita</th><th class="r">P. modelo</th><th class="r">Edge</th><th class="r">Momio justo</th><th class="r">Stake (¼ Kelly)</th><th>Semáforo</th></tr></thead>
+          <tbody>
+            ${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td><strong>${esc(marketPickLabel(m))}</strong></td><td class="r num">${fmtOdds(m.odds)}</td><td class="r num">${pct(m.pImplied)}</td><td class="r num">${pct(m.pModel)}</td><td class="r num ${m.edge > 0 ? "pos" : "negv"}">${signed(m.edge * 100, 1)} pp</td><td class="r num">${fmtOdds(m.fairOdds)}</td><td class="r num">${m.kellyQuarter ? pct(m.kellyQuarter) : "—"}</td><td>${lightPill(m.light)}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <p class="note">P. implícita sin el margen de la casa. En cada mercado se muestra el lado con mayor edge. Amarillo = edge de al menos 3 puntos, limitado por la falta de reporte de lesiones.</p>
+    </section>
+
+    <section class="panel step">
+      <span class="step-num">Fase 5 · Auditoría</span>
+      <h2>Filtros de contradicción</h2>
+      <ul class="checklist">
+        ${a.audit.map((x) => `<li>${x.ok ? '<span class="pill ok">✓ Pasa</span>' : '<span class="pill warn">▲ Alerta</span>'}<span><strong>${esc(x.rule)}.</strong> ${esc(x.detail)}</span></li>`).join("")}
+      </ul>
+    </section>
+
+    ${pg ? `
+    <section class="panel step" style="border-color:var(--accent)">
+      <span class="step-num">Después del partido</span>
+      <h2>Resultado real contra el modelo</h2>
+      <div class="result-banner">
+        <div class="big-proj"><span class="eyebrow">${esc(a.away)}</span><span class="num">${pg.awayScore}</span><span class="dash">—</span><span class="num">${pg.homeScore}</span><span class="eyebrow">${esc(a.home)}</span></div>
+        <a href="#g-${esc(gameId)}" class="go" style="color:var(--accent-ink);font-weight:600">Ver el partido jugada por jugada →</a>
+      </div>
+      <div class="metrics">
+        <div><span class="num ${pg.winnerCorrect ? "pos" : "negv"}">${pg.winnerCorrect ? "Sí" : "No"}</span><span>¿acertó al ganador? (P = ${pct(a.pHome)} para ${esc(a.home)})</span></div>
+        <div><span class="num">${signed(pg.marginError, 1)}</span><span>error en el margen (proyectado − real)</span></div>
+        <div><span class="num">${signed(pg.totalError, 1)}</span><span>error en el total (proyectado − real)</span></div>
+        <div><span class="num">${pg.brierModel.toFixed(3)}</span><span>Brier del modelo (menor = mejor)</span></div>
+        ${pg.brierMarket !== null ? `<div><span class="num">${pg.brierMarket.toFixed(3)}</span><span>Brier del mercado</span></div>` : ""}
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Mercado</th><th>Pick</th><th>Semáforo</th><th>Resultado</th></tr></thead>
+          <tbody>${a.markets.map((m) => `<tr><td>${esc(m.market)}</td><td>${esc(marketPickLabel(m))}</td><td>${lightPill(m.light)}</td><td>${outcomePill(m)}</td></tr>`).join("")}</tbody>
+        </table>
+      </div>
+      <h3>Qué falló y qué aprende el modelo</h3>
+      <ul class="plain">
+        <li>El modelo proyectó un partido de ${a.projection.total.toFixed(1)} puntos y hubo ${pg.homeScore + pg.awayScore}; la línea del mercado (${c.total}) estuvo más cerca. Los ratings de ${a.season - 1} ven dos defensas élite y no saben nada del receso: altas y bajas de jugadores o cambios de reglas, que el mercado sí incorpora.</li>
+        <li>EPA por jugada ofensiva en este partido: ${esc(a.home)} ${signed(pg.epaInGame[a.home], 3)} (vs ${signed(H.epa.offEpa, 3)} en ${a.season - 1}) y ${esc(a.away)} ${signed(pg.epaInGame[a.away], 3)} (vs ${signed(A.epa.offEpa, 3)}).</li>
+        <li>El modelo ${pg.brierModel > (pg.brierMarket ?? 1) ? "fue menos preciso que el mercado" : "fue más preciso que el mercado"} en la probabilidad de victoria (Brier ${pg.brierModel.toFixed(3)} contra ${pg.brierMarket?.toFixed(3) ?? "—"}). Un partido no alcanza para juzgar: la comparación se acumulará semana a semana.</li>
+        <li>Para el siguiente partido este juego entra con peso 1 (el doble que uno de ${a.season - 1}) y la regresión a la media baja: el modelo empieza a moverse con datos de ${a.season}.</li>
+      </ul>
+    </section>` : ""}`;
+  attachMarginHover(a);
+}
+
 /* ---------- Navegación ---------- */
 let currentRoute = "";
 function route() {
@@ -1267,9 +1664,19 @@ function route() {
     if (on) el.setAttribute("aria-current", "page");
     else el.removeAttribute("aria-current");
   };
+  const pre = /^p-(.+)$/.exec(hash);
+  const isFocus = hash === "chiefs" || Boolean(pre && PRE[pre[1]]);
   setCurrent("nav-lab", hash === "lab");
-  setCurrent("nav-home", hash !== "lab");
-  if (hash === "lab") {
+  setCurrent("nav-focus", isFocus);
+  setCurrent("nav-home", hash !== "lab" && !isFocus);
+  if (pre && PRE[pre[1]]) {
+    renderPregame(pre[1]);
+    const pg = gamesById.get(pre[1]);
+    document.title = `${pg ? `${pg.away} @ ${pg.home}` : "Análisis"} · modelo previo · DATAGSPORTS`;
+  } else if (hash === "chiefs" && FOCUS.team) {
+    renderFocusTeam();
+    document.title = `${CORE.teams[FOCUS.team]?.name ?? FOCUS.team} · DATAGSPORTS`;
+  } else if (hash === "lab") {
     renderLab();
     document.title = "Laboratorio · DATAGSPORTS";
   } else if (game) {

@@ -61,6 +61,22 @@ model Game {
   spreadLine   Float?
   totalLine    Float?
 
+  // Información disponible antes de la patada inicial (momios de cierre, sede, QBs, descanso, clima).
+  location       String?
+  divGame        Boolean?
+  homeRest       Int?
+  awayRest       Int?
+  homeMoneyline  Int?
+  awayMoneyline  Int?
+  homeSpreadOdds Int?
+  awaySpreadOdds Int?
+  overOdds       Int?
+  underOdds      Int?
+  temp           Int?
+  wind           Int?
+  homeQbName     String?
+  awayQbName     String?
+
   weekStats PlayerWeekStat[]
   drives    Drive[]
   plays     Play[]

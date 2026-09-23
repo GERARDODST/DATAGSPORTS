@@ -16,6 +16,11 @@ import path from "node:path";
 import { prisma } from "../src/lib/prisma";
 import { buildFieldPositionEpModel, ownEpaForPlay } from "../src/lib/expected-points";
 import { buildMarkovModel, pearson } from "../src/lib/markov-model";
+import { buildPregameAnalysis, type PregameAnalysis } from "../src/lib/pregame-model";
+
+// Equipo que seguimos partido a partido y cuántos de sus partidos ya tienen análisis previo.
+const FOCUS_TEAM = "KC";
+const FOCUS_GAMES_ANALYZED = 1;
 
 const ROOT = path.resolve(__dirname, "..", "snapshot");
 const DIST = path.join(ROOT, "dist");
@@ -119,6 +124,8 @@ async function main() {
       .sort((a, b) => (b.epa ?? 0) - (a.epa ?? 0)),
     epCompare: null as null | { n: number; r: number | null; mae: number },
     markov: null as null | { n: number; r: number | null; mae: number; iterations: number },
+    focus: { team: FOCUS_TEAM, analyzed: [] as string[] },
+    pregame: {} as Record<string, PregameAnalysis>,
   };
 
   console.log("-> Resolviendo la cadena de Markov (iteración de valor)");
@@ -231,6 +238,20 @@ async function main() {
     totalBytes += json.length;
     await writeFile(path.join(DIST, "data", `week-${String(week).padStart(2, "0")}.json`), json);
     process.stdout.write(`\r   semana ${week}/${weeks[weeks.length - 1]} exportada`);
+  }
+
+  const focusGames = games
+    .filter((g) => g.homeTeamAbbr === FOCUS_TEAM || g.awayTeamAbbr === FOCUS_TEAM)
+    .slice(0, FOCUS_GAMES_ANALYZED);
+  for (const g of focusGames) {
+    console.log(`\n-> Modelo previo al partido: ${g.gameId} (solo datos antes del ${g.gameDate?.toISOString().slice(0, 10)})`);
+    const analysis = await buildPregameAnalysis(g.gameId);
+    core.pregame[g.gameId] = analysis;
+    core.focus.analyzed.push(g.gameId);
+    console.log(
+      `   P(${analysis.home} gana)=${analysis.pHome} · proyección ${analysis.home} ${analysis.projection.home} - ${analysis.away} ${analysis.projection.away}` +
+        (analysis.postgame ? ` · real ${analysis.postgame.homeScore}-${analysis.postgame.awayScore}` : "")
+    );
   }
 
   core.epCompare = {

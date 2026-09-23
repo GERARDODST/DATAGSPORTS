@@ -38,6 +38,26 @@ npm run dev             # http://localhost:3000
 Abre un partido jugado (ej. `/partidos/2024_22_KC_PHI`, el Super Bowl LIX) para ver la
 probabilidad de victoria jugada por jugada y el detalle de cada posesión.
 
+## Modelo previo al partido (equipo en seguimiento: Chiefs)
+
+`src/lib/pregame-model.ts` construye el análisis de un partido usando **solo partidos jugados
+antes de su fecha** y siguiendo el algoritmo maestro del framework: gate de completitud,
+ratings con regresión a la media (la temporada anterior pesa la mitad), triangulación
+Log5 / Elo / simulación, marcador proyectado, valor contra los momios de cierre, auditoría y,
+al final, comparación con el resultado real. En la semana 1 todo sale de la temporada
+anterior; cada partido nuevo entra al siguiente modelo con más peso.
+
+Para la semana 1 se necesitan los datos de la temporada anterior:
+
+```bash
+npm run data:extract -- --season=2023
+npm run data:extract-pbp -- --season=2023
+npm run data:extract -- --season=2024   # deja los rosters en su estado actual
+```
+
+El equipo y cuántos de sus partidos se analizan se configuran en `scripts/export-snapshot.ts`
+(`FOCUS_TEAM`, `FOCUS_GAMES_ANALYZED`).
+
 ## Versión publicada (sin servidor)
 
 `npm run snapshot:export -- --season=2024` genera en `snapshot/dist/` una versión estática
