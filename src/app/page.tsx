@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -199,15 +200,19 @@ function GameCard({ game }: { game: GameWithTeams }) {
   const awayWon = played && (game.awayScore as number) > (game.homeScore as number);
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3">
+    <Link
+      href={`/partidos/${game.gameId}`}
+      className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3 hover:border-accent transition-colors"
+    >
       <div className="flex items-center justify-between text-[11px] text-muted uppercase tracking-wide">
         <span>
           Semana {game.week} {game.gameType && game.gameType !== "REG" ? `· ${game.gameType}` : ""}
         </span>
+        {played && <span className="text-accent">Ver jugadas →</span>}
       </div>
       <TeamRow abbr={game.awayTeam.abbr} name={game.awayTeam.name} score={game.awayScore} winner={awayWon} />
       <TeamRow abbr={game.homeTeam.abbr} name={game.homeTeam.name} score={game.homeScore} winner={homeWon} />
-    </div>
+    </Link>
   );
 }
 

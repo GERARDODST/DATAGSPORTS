@@ -364,6 +364,12 @@ Nunca subir el total por un solo factor.
 
 ### 5.4 Modelo de simulación (reemplaza el modelo Poisson directo de MLB)
 
+Hay dos niveles de granularidad para simular un partido. El framework usa el nivel 1 como
+atajo rápido y el nivel 2 como modelo de referencia — **el nivel 2 ya tiene su estructura de
+datos implementada en este repositorio** (ver 5.4.1).
+
+**Nivel 1 — conteo de posesiones (rápido, agregado):**
+
 ```
 Para cada equipo:
   1. Muestrear número de posesiones ofensivas del partido (Poisson/Normal según ritmo combinado)
@@ -377,8 +383,72 @@ Repetir 20,000-50,000 veces (sección 5.7.9) → distribución empírica de:
   - Totales combinados (para Over/Under)
 ```
 
+**Nivel 2 — cadena de Markov jugada por jugada (granular, el modelo real detrás de EPA/WP):**
+
+```
+Para cada posesión, en vez de un solo Bernoulli "¿anota o no?":
+  1. Empezar en un estado s = (down, distancia, yardline100, tiempo restante)
+  2. Muestrear la siguiente jugada (tipo + yardas) según las transiciones observadas en
+     `plays` para equipos con perfil ofensivo/defensivo similar al matchup real
+  3. Actualizar el estado s' con el resultado de la jugada
+  4. Repetir hasta llegar a un estado absorbente: touchdown, gol de campo, pérdida de
+     balón, punto, safety o fin de cuarto/mitad (los mismos 9 resultados que ya están en
+     `drives.result`, sección 5.4.1)
+  5. El resultado absorbente define los puntos de esa posesión exactamente, sin necesidad
+     de la distribución categórica del Nivel 1 — la trayectoria completa ya lo determina
+```
+
 Probabilidad de victoria, empate (raro en NFL, pero posible) y cobertura de spread se leen
-directo de la distribución simulada, igual que en MLB se leía de la suma de Poissons.
+directo de la distribución simulada, igual que en MLB se leía de la suma de Poissons. El
+Nivel 2 es más costoso de calibrar (necesita suficientes jugadas por matchup para que las
+transiciones no sean puro ruido — aplicar shrinkage, sección 5.7.4) pero es el que de verdad
+respeta la dinámica del juego: down y distancia condicionan qué tan probable es cada
+resultado, no solo "cuántas posesiones hay".
+
+#### 5.4.1 Estructura de datos para el proceso estocástico (implementado)
+
+El estado `s` del Nivel 2 y los resultados absorbentes de cada posesión ya están
+modelados en `prisma/schema.prisma` y poblados por `scripts/extract-pbp.ts` desde el
+play-by-play de nflverse:
+
+```
+model Play {
+  down, yardsToGo, yardLine100, quarter, gameSecondsRemaining   // el estado s
+  playType, yardsGained                                        // la transición observada
+  epa, winProbability, homeWinProbability                       // ya resueltos por nflverse
+  isTouchdown, isInterception, isFumbleLost, isSack, isSuccess  // eventos de la jugada
+}
+
+model Drive {
+  driveNumber, startYardLine, endYardLine, playCount
+  result   // TouchDown / Field goal / Punt / Turnover / Turnover on downs / Safety / End of half
+}
+```
+
+Con esto, dos cosas que antes eran teóricas ya se pueden calcular directo de la base de
+datos:
+
+- **La matriz de transición empírica** (sección 5.7.3): agrupar `plays` por
+  `(down, yardsToGo bucket, yardLine100 bucket)` y contar a qué estado siguiente se mueve
+  cada jugada, o si termina la posesión — es literalmente estimar `P(s'|s)` por conteo,
+  la definición de una cadena de Markov.
+- **Los 9 estados absorbentes reales de una temporada** — ya verificado con datos de 2024
+  (6,134 posesiones): Punt 34%, Touchdown 23%, Field goal 16%, Turnover 10%, End of half 7%,
+  Turnover on downs 5%, Missed field goal 3%, Opp touchdown 1%, Safety 0.3%. Esta
+  distribución (no un valor inventado) es la que debe calibrar la Capa 2 del Nivel 1.
+
+**Por qué es semi-Markov, no Markov puro:** el tiempo que dura cada jugada es en sí mismo
+aleatorio (una jugada por aire con el balón fuera del campo no corre el reloj, una carrera
+sí) y depende del contexto (two-minute drill vs. ritmo normal). `gameSecondsRemaining` se
+guarda por jugada precisamente para poder estimar esa duración empíricamente en vez de
+asumirla constante — necesario para simular con reloj real (garbage time, desesperación de
+los últimos 2 minutos, etc.).
+
+**Visualización de este cálculo (implementado):** la página `/partidos/[gameId]` grafica
+`homeWinProbability` jugada por jugada (la curva de probabilidad de victoria, calculada por
+nflverse sobre este mismo modelo de estados) y lista las posesiones del partido con su
+estado absorbente — la forma más directa de *ver* la cadena de Markov en acción sobre un
+partido real, no solo describirla en la fórmula.
 
 ### 5.5 Probabilidad por mercado
 
@@ -452,6 +522,16 @@ simplemente la diferencia de EP entre el antes y el después de cada jugada.**
 **Aplicación:** sustento formal de por qué no basta con proyectar yardas totales (sección
 6.6): el valor real de una jugada depende del down, la distancia y la yardlínea en que
 ocurre, no es un evento fijo — igual que en MLB un hit vale distinto según el estado base-out.
+
+**Formalización como proceso estocástico:** EP es la función de valor de una cadena de
+Markov cuyos estados son `(down, distancia, yardlínea, tiempo restante)` y cuyos estados
+absorbentes son touchdown/gol de campo/pérdida de balón/punto/safety/fin de periodo — el
+mismo espacio de estados que `model Play`/`model Drive` (sección 5.4.1). `EP(s)` es el valor
+esperado descontado de puntos desde `s` hasta el estado absorbente, y `EPA(jugada) =
+EP(s') − EP(s)` es la diferencia de valor entre dos estados consecutivos, exactamente como
+una recompensa de un paso en un proceso de decisión de Markov (MDP) sin decisiones — aquí no
+hace falta re-derivar `EP(s)` porque nflverse ya publica su valor resuelto en la columna
+`epa` de cada jugada, que ya extraemos y guardamos.
 
 #### 5.7.4 Regresión a la media / shrinkage bayesiano
 
@@ -857,10 +937,15 @@ ventaja: nflverse **sí** publica play-by-play con EPA precalculado y una API/li
 documentada (`nfl_data_py` en Python, o los CSV de releases que ya consumimos directo en
 TypeScript).
 
-**Lo que falta agregar a la extracción actual para completar esta sección:**
+**Ya implementado:** `scripts/extract-pbp.ts` descarga
+`pbp/play_by_play_{season}.csv.gz` y lo carga como `Drive` + `Play` (down, distancia,
+yardlínea, tiempo restante, EPA, win probability por jugada) — la base de datos para las
+secciones 3, 4, 5 y 5.7.3 (EPA/play, success rate) y para la simulación Nivel 2 (5.4.1).
 
-- Play-by-play con EPA (`pbp/play_by_play_{season}.csv.gz`) — necesario para secciones 3, 4
-  y 5 (EPA/play, success rate, pressure rate)
+**Lo que todavía falta agregar a la extracción para completar esta sección:**
+
+- Pressure rate / pass rush por jugador — no viene precalculado en el pbp de nflverse, hay
+  que derivarlo de columnas de sacks/QB hits o de una fuente con grades (PFF)
 - Injury reports semanales — no está en nflverse-data de forma estructurada; requiere fuente
   complementaria
 - Clima por estadio y semana
@@ -956,8 +1041,10 @@ numérica en una apuesta mala.
 | Pieza del framework | Estado |
 | --- | --- |
 | Datos de equipos, jugadores, calendario, stats semanales (secciones 1-3, 9.1) | ✅ Implementado (`scripts/extract-nflverse.ts`) |
-| Play-by-play con EPA/play (secciones 3.4, 4, 5.7.3) | ⏳ Pendiente |
+| Play-by-play con EPA/play y win probability, estructura Drive/Play (secciones 3.4, 4, 5.4.1, 5.7.3) | ✅ Implementado (`scripts/extract-pbp.ts`) |
+| Visualización de probabilidad de victoria y posesiones por partido | ✅ Implementado (`/partidos/[gameId]`) |
+| Matriz de transición empírica `P(s'\|s)` sobre `plays` (sección 5.7.3) | ⏳ Pendiente — datos listos, falta el cálculo |
 | Injury reports y clima (secciones 4.2, 6, 9.2) | ⏳ Pendiente |
-| Motor de simulación Monte Carlo (sección 5.4) | ⏳ Pendiente |
+| Motor de simulación Monte Carlo Nivel 1 y Nivel 2 (sección 5.4) | ⏳ Pendiente — datos listos, falta el motor |
 | Cuotas y cálculo de edge (sección 7) | ⏳ Pendiente |
 | Auditoría de contradicciones automatizada (sección 8) | ⏳ Pendiente |

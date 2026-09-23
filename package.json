@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "data:extract": "tsx scripts/extract-nflverse.ts"
+    "data:extract": "tsx scripts/extract-nflverse.ts",
+    "data:extract-pbp": "tsx scripts/extract-pbp.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

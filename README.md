@@ -29,10 +29,14 @@ npm install
 cp .env.example .env   # ajusta DATABASE_URL si es necesario
 
 npm run db:push        # crea las tablas en la base de datos
-npm run data:extract -- --season=2024   # extrae datos reales de NFL
+npm run data:extract -- --season=2024       # equipos, rosters, calendario, stats semanales
+npm run data:extract-pbp -- --season=2024   # play-by-play: posesiones y jugadas (EPA, win prob)
 
 npm run dev             # http://localhost:3000
 ```
+
+Abre un partido jugado (ej. `/partidos/2024_22_KC_PHI`, el Super Bowl LIX) para ver la
+probabilidad de victoria jugada por jugada y el detalle de cada posesión.
 
 ## Scripts
 
@@ -42,7 +46,8 @@ npm run dev             # http://localhost:3000
 | `npm run build` / `npm run start` | Build y arranque de producción |
 | `npm run db:push` | Sincroniza `prisma/schema.prisma` con la base de datos |
 | `npm run db:studio` | Abre Prisma Studio para inspeccionar los datos |
-| `npm run data:extract -- --season=YYYY` | Descarga y carga datos de nflverse-data para una temporada |
+| `npm run data:extract -- --season=YYYY` | Descarga equipos, rosters, calendario y stats semanales |
+| `npm run data:extract-pbp -- --season=YYYY` | Descarga play-by-play (posesiones y jugadas) |
 
 ## Modelo de datos (`prisma/schema.prisma`)
 
@@ -51,6 +56,10 @@ npm run dev             # http://localhost:3000
 - **Game** — calendario/resultados por temporada y semana
 - **PlayerWeekStat** — estadísticas de cada jugador por semana (pase, carrera, recepción,
   fantasy points), vinculadas a `Player` y opcionalmente a `Game`
+- **Drive** — cada posesión ofensiva de un partido (inicio, fin, nº de jugadas, resultado)
+- **Play** — cada jugada individual (down, distancia, yardlínea, tiempo restante, EPA,
+  probabilidad de victoria) — es el estado atómico del modelo de procesos estocásticos que
+  describe `docs/nfl_framework_v1.md` (sección 5.4.1)
 
 La fuente de datos es [nflverse-data](https://github.com/nflverse/nflverse-data), un
 proyecto abierto y mantenido por la comunidad — sin necesidad de scraping ni claves de API.
@@ -68,8 +77,9 @@ proyecto abierto y mantenido por la comunidad — sin necesidad de scraping ni c
 
 Implementar el motor de análisis descrito en `docs/nfl_framework_v1.md`:
 
-1. Extender la extracción de datos con play-by-play (EPA/play) — falta en el pipeline actual
+1. Calcular la matriz de transición empírica `P(s'|s)` sobre `plays` (sección 5.7.3) — los
+   datos ya están, falta el cálculo
 2. Sumar fuentes de injury reports, clima y momios (sección 9.2 del framework)
-3. Construir el modelo de simulación Monte Carlo de posesiones (sección 5.4)
+3. Construir el motor de simulación Monte Carlo (sección 5.4, Nivel 1 y Nivel 2)
 4. Implementar la auditoría de contradicciones (sección 8) como reglas verificables sobre
    los picks generados

@@ -7,7 +7,7 @@ datasource db {
 }
 
 model Team {
-  abbr           String   @id
+  abbr           String  @id
   name           String
   nickname       String?
   conference     String?
@@ -24,18 +24,18 @@ model Team {
 }
 
 model Player {
-  gsisId      String    @id
-  fullName    String
-  position    String?
-  teamAbbr    String?
-  team        Team?     @relation(fields: [teamAbbr], references: [abbr])
-  birthDate   DateTime?
-  heightIn    Int?
-  weightLb    Int?
-  college     String?
+  gsisId       String    @id
+  fullName     String
+  position     String?
+  teamAbbr     String?
+  team         Team?     @relation(fields: [teamAbbr], references: [abbr])
+  birthDate    DateTime?
+  heightIn     Int?
+  weightLb     Int?
+  college      String?
   jerseyNumber Int?
-  status      String?
-  headshotUrl String?
+  status       String?
+  headshotUrl  String?
 
   weekStats PlayerWeekStat[]
 
@@ -62,6 +62,8 @@ model Game {
   totalLine    Float?
 
   weekStats PlayerWeekStat[]
+  drives    Drive[]
+  plays     Play[]
 
   @@index([season, week])
   @@index([homeTeamAbbr])
@@ -70,31 +72,31 @@ model Game {
 }
 
 model PlayerWeekStat {
-  id               String  @id @default(cuid())
-  playerId         String
-  player           Player  @relation(fields: [playerId], references: [gsisId])
-  gameId           String?
-  game             Game?   @relation(fields: [gameId], references: [gameId])
-  season           Int
-  week             Int
-  seasonType       String?
-  teamAbbr         String?
-  opponentAbbr     String?
+  id           String  @id @default(cuid())
+  playerId     String
+  player       Player  @relation(fields: [playerId], references: [gsisId])
+  gameId       String?
+  game         Game?   @relation(fields: [gameId], references: [gameId])
+  season       Int
+  week         Int
+  seasonType   String?
+  teamAbbr     String?
+  opponentAbbr String?
 
-  completions      Int?
-  attempts         Int?
-  passingYards     Int?
-  passingTds       Int?
-  interceptions    Int?
+  completions   Int?
+  attempts      Int?
+  passingYards  Int?
+  passingTds    Int?
+  interceptions Int?
 
-  carries          Int?
-  rushingYards     Int?
-  rushingTds       Int?
+  carries      Int?
+  rushingYards Int?
+  rushingTds   Int?
 
-  receptions       Int?
-  targets          Int?
-  receivingYards   Int?
-  receivingTds     Int?
+  receptions     Int?
+  targets        Int?
+  receivingYards Int?
+  receivingTds   Int?
 
   fantasyPoints    Float?
   fantasyPointsPpr Float?
@@ -102,4 +104,73 @@ model PlayerWeekStat {
   @@unique([playerId, season, week, seasonType])
   @@index([season, week])
   @@map("player_week_stats")
+}
+
+// Una posesión ofensiva completa (varias jugadas). Es la unidad natural del
+// modelo de "dos capas" del framework (sección 5.4): cuántas posesiones hay
+// y en qué termina cada una.
+model Drive {
+  id                 String   @id
+  gameId             String
+  game               Game     @relation(fields: [gameId], references: [gameId])
+  driveNumber        Int
+  season             Int
+  possessionTeamAbbr String?
+  quarterStart       Int?
+  playCount          Int?
+  timeOfPossession   String?
+  firstDowns         Int?
+  reachedRedZone     Boolean?
+  endedWithScore     Boolean?
+  startYardLine      String?
+  endYardLine        String?
+  result             String?
+
+  plays Play[]
+
+  @@unique([gameId, driveNumber])
+  @@index([season, possessionTeamAbbr])
+  @@map("drives")
+}
+
+// Una jugada individual. Es el estado atómico de la cadena de Markov:
+// (down, distancia, yardas hasta el touchdown, tiempo restante) -> siguiente
+// estado o resultado absorbente (touchdown, gol de campo, pérdida de balón,
+// punto/despeje, fin de cuarto/mitad). epa/wp vienen precalculados por
+// nflverse sobre su propio modelo público de puntos/probabilidad esperada.
+model Play {
+  id                   String   @id
+  gameId               String
+  game                 Game     @relation(fields: [gameId], references: [gameId])
+  driveId              String?
+  drive                Drive?   @relation(fields: [driveId], references: [id])
+  season               Int
+  week                 Int
+  quarter              Int?
+  down                 Int?
+  yardsToGo            Int?
+  yardLine100          Int?
+  gameSecondsRemaining Int?
+  possessionTeamAbbr   String?
+  defenseTeamAbbr      String?
+  playType             String?
+  yardsGained          Int?
+  epa                  Float?
+  winProbability       Float?
+  homeWinProbability   Float?
+  scoreDifferential    Int?
+  isTouchdown          Boolean  @default(false)
+  isInterception       Boolean  @default(false)
+  isFumbleLost         Boolean  @default(false)
+  isSack               Boolean  @default(false)
+  isSuccess            Boolean?
+  passerPlayerId       String?
+  rusherPlayerId       String?
+  receiverPlayerId     String?
+  description          String?
+
+  @@index([gameId])
+  @@index([season, possessionTeamAbbr])
+  @@index([playType])
+  @@map("plays")
 }
