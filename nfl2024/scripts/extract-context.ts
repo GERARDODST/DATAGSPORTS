@@ -31,7 +31,7 @@ async function insertChunks<T>(rows: T[], insert: (chunk: T[]) => Promise<unknow
 
 async function main() {
   const seasonArg = process.argv.find((a) => a.startsWith("--season="));
-  const season = seasonArg ? Number(seasonArg.split("=")[1]) : new Date().getFullYear() - 1;
+  const season = seasonArg ? Number(seasonArg.split("=")[1]) : 2024;
   console.log(`\n=== Contexto previo al partido (temporada ${season}) ===\n`);
 
   const injuries = await fetchCsv(`${RELEASES_BASE}/injuries/injuries_${season}.csv`);

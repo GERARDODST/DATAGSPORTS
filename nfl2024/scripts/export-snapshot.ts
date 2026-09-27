@@ -34,7 +34,7 @@ const round = (v: number | null | undefined, digits: number) =>
 
 function parseArgs() {
   const seasonArg = process.argv.find((a) => a.startsWith("--season="));
-  return { season: seasonArg ? Number(seasonArg.split("=")[1]) : new Date().getFullYear() - 1 };
+  return { season: seasonArg ? Number(seasonArg.split("=")[1]) : 2024 };
 }
 
 async function main() {

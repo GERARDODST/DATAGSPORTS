@@ -1,0 +1,54 @@
+<title>DATAGSPORTS</title>
+<style>
+  /* Portada mínima mientras se carga la edición; cada edición trae su propio diseño. */
+  :root { --dg-ground: #eef2f5; --dg-muted: #566575; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --dg-ground: #0b0f14; --dg-muted: #8e9bab; color-scheme: dark; } }
+  :root[data-theme="dark"] { --dg-ground: #0b0f14; --dg-muted: #8e9bab; color-scheme: dark; }
+  body { background: var(--dg-ground); }
+  .dg-boot { padding: 48px 16px; text-align: center; color: var(--dg-muted); font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+</style>
+<p class="dg-boot" id="dg-boot">Cargando DATAGSPORTS…</p>
+<script>
+/*
+ * Sitio combinado de DATAGSPORTS: dos ediciones independientes (NFL 2024 y NFL 2026), cada una con
+ * su propio código, base de datos y archivos publicados en su carpeta (nfl2024/, nfl2026/). Esta
+ * portada solo decide qué edición abrir y la monta en la página; las ediciones no comparten datos.
+ *
+ * Edición elegida: #ed-2024 / #ed-2026 en el enlace, o el año del partido en el enlace (#p-2026_03_…),
+ * o la última elegida en esta pestaña; si no hay ninguna, NFL 2026.
+ */
+(async () => {
+  const boot = document.getElementById("dg-boot");
+  const EDITIONS = ["2024", "2026"];
+  const hash = location.hash.slice(1);
+  let ed = /^ed-(\d{4})$/.exec(hash)?.[1] ?? /(?:^|-)(\d{4})_\d{2}_/.exec(hash)?.[1] ?? null;
+  if (!EDITIONS.includes(ed)) { try { ed = sessionStorage.getItem("dg-edition"); } catch (e) { ed = null; } }
+  if (!EDITIONS.includes(ed)) ed = "2026";
+  try { sessionStorage.setItem("dg-edition", ed); } catch (e) {}
+
+  let html;
+  try {
+    const res = await fetch(`nfl${ed}/index.html`);
+    if (!res.ok) throw new Error(String(res.status));
+    html = await res.text();
+  } catch (e) {
+    boot.textContent = "No se pudo cargar la edición. Recarga la página para intentarlo de nuevo.";
+    return;
+  }
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  window.__DG_SHELL = true;
+  window.__DG_BASE = `nfl${ed}/`;
+  document.title = doc.title || "DATAGSPORTS";
+  for (const el of doc.head.querySelectorAll("link, style")) document.head.appendChild(document.adoptNode(el));
+  const scripts = [...doc.querySelectorAll("script")];
+  scripts.forEach((s) => s.remove());
+  boot.remove();
+  for (const node of [...doc.body.childNodes]) document.body.appendChild(document.adoptNode(node));
+  // Los scripts de la edición se vuelven a crear para que el navegador los ejecute, en orden.
+  for (const old of scripts) {
+    const s = document.createElement("script");
+    if (old.src) { s.src = old.src; s.async = false; } else s.textContent = old.textContent;
+    document.body.appendChild(s);
+  }
+})();
+</script>

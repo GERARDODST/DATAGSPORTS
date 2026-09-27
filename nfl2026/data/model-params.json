@@ -1,0 +1,5391 @@
+{
+ "createdAt": "2026-09-27T16:00:49.356Z",
+ "protocol": "Calentamiento 2025 sem 1–4 · entrenamiento 2025 sem 5–playoffs (modelos) · validación 2026 sem 1–3 jugadas al 2026-09-25 + 2025 sem 10+ (ensamble y capas) · en vivo 2026 desde el domingo de la semana 3",
+ "splits": [
+  {
+   "split": {
+    "name": "principal",
+    "label": "2025 sem 5–playoffs",
+    "trainFrom": 202505,
+    "trainTo": 202599
+   },
+   "models": {
+    "framework": {
+     "best": {
+      "priorWeight": 0.5,
+      "shrinkK": 2
+     },
+     "start": {
+      "priorWeight": 0.5,
+      "shrinkK": 6
+     },
+     "initialLoss": 0.6342623261130108,
+     "bestLoss": 0.6295000205092628,
+     "evaluations": 18,
+     "seconds": 0.207,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.2,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.35,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.5,
+       "loss": 0.6342623261130108,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.65,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.8,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 1,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 2,
+       "loss": 0.6295000205092628,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 4,
+       "loss": 0.6316480247346279,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 6,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 8,
+       "loss": 0.6368098609891475,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 10,
+       "loss": 0.6391550038577926,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 14,
+       "loss": 0.6431733683256079,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 20,
+       "loss": 0.6477953715797071,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 30,
+       "loss": 0.6530420176028419,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.2,
+       "loss": 0.6295000205092628,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.35,
+       "loss": 0.6295000205092628,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.5,
+       "loss": 0.6295000205092628,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.65,
+       "loss": 0.6295000205092628,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.8,
+       "loss": 0.6295000205092628,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 1,
+       "loss": 0.6295000205092628,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 2,
+       "loss": 0.6295000205092628,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 4,
+       "loss": 0.6316480247346279,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 6,
+       "loss": 0.6342623261130108,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 8,
+       "loss": 0.6368098609891475,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 10,
+       "loss": 0.6391550038577926,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 14,
+       "loss": 0.6431733683256079,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 20,
+       "loss": 0.6477953715797071,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 30,
+       "loss": 0.6530420176028419,
+       "chosen": false
+      }
+     ]
+    },
+    "elo": {
+     "best": {
+      "k": 30,
+      "hfa": 10,
+      "revert": 0.3333333333333333,
+      "eloPerPoint": 22.5
+     },
+     "start": {
+      "k": 20,
+      "hfa": 65,
+      "revert": 0.3333333333333333,
+      "eloPerPoint": 25
+     },
+     "initialLoss": 0.6358958129122749,
+     "bestLoss": 0.6183593294463755,
+     "evaluations": 22,
+     "seconds": 0.023,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 10,
+       "loss": 0.654529206884328,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 15,
+       "loss": 0.6428009667387685,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 20,
+       "loss": 0.6358958129122749,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 25,
+       "loss": 0.632324680490528,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 30,
+       "loss": 0.6311696792200765,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 40,
+       "loss": 0.6339785500191161,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 0,
+       "loss": 0.6186742063723765,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 10,
+       "loss": 0.6183593294463755,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 20,
+       "loss": 0.6188652279465477,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 30,
+       "loss": 0.6201889769558971,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 40,
+       "loss": 0.6223254506172339,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 55,
+       "loss": 0.6270375796556114,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 65,
+       "loss": 0.6311696792200765,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.15,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.25,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.3333333333333333,
+       "loss": 0.6183593294463755,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.4,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.5,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.65,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 10,
+       "loss": 0.6424224740787463,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 15,
+       "loss": 0.6305692070587597,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 20,
+       "loss": 0.6235102100022196,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 25,
+       "loss": 0.6197436329054927,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 30,
+       "loss": 0.6183593294463755,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 40,
+       "loss": 0.6206630218579597,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 0,
+       "loss": 0.6186742063723765,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 10,
+       "loss": 0.6183593294463755,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 20,
+       "loss": 0.6188652279465477,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 30,
+       "loss": 0.6201889769558971,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 40,
+       "loss": 0.6223254506172339,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 55,
+       "loss": 0.6270375796556114,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 65,
+       "loss": 0.6311696792200765,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.15,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.25,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.3333333333333333,
+       "loss": 0.6183593294463755,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.4,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.5,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.65,
+       "loss": 0.6183593294463755,
+       "chosen": false
+      }
+     ]
+    },
+    "kalman": {
+     "best": {
+      "sigma": 9,
+      "rho": -0.2,
+      "omegaWeek": 1.4,
+      "betaSeason": 0.7,
+      "omegaSeason": 2.5,
+      "p0": 6
+     },
+     "start": {
+      "sigma": 9.5,
+      "rho": 0,
+      "omegaWeek": 0.6,
+      "betaSeason": 0.7,
+      "omegaSeason": 2.5,
+      "p0": 4
+     },
+     "initialLoss": 0.6327926711395826,
+     "bestLoss": 0.6273483739327729,
+     "evaluations": 84,
+     "seconds": 1.566,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 8,
+       "loss": 0.6323550698720535,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 9,
+       "loss": 0.6318795523661709,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 9.5,
+       "loss": 0.6327926711395826,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 10,
+       "loss": 0.6341830928281594,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 11,
+       "loss": 0.6378369232348988,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 12,
+       "loss": 0.6420451368180066,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.2,
+       "loss": 0.6351616775683074,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.4,
+       "loss": 0.6337025061430454,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.6,
+       "loss": 0.6318795523661709,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.8,
+       "loss": 0.6301905313016435,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 1,
+       "loss": 0.6289276179506406,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 1.4,
+       "loss": 0.6279489508766598,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.4,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.55,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.7,
+       "loss": 0.6279489508766598,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.8,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.9,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 1,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 0.5,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 1,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 1.5,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 2,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 2.5,
+       "loss": 0.6279489508766598,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 3.5,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 2,
+       "loss": 0.6307652039666244,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 3,
+       "loss": 0.6287693230860629,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 4,
+       "loss": 0.6279489508766598,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 6,
+       "loss": 0.6282242121034648,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 8,
+       "loss": 0.6291859697616746,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 12,
+       "loss": 0.6307636977124322,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": -0.2,
+       "loss": 0.6283235775947131,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": -0.1,
+       "loss": 0.627904121673352,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0,
+       "loss": 0.6279489508766598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0.1,
+       "loss": 0.6286901766822919,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0.2,
+       "loss": 0.6304908249206606,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0.3,
+       "loss": 0.6339411812615989,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 8,
+       "loss": 0.6291111093417873,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 9,
+       "loss": 0.627904121673352,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 9.5,
+       "loss": 0.628485931144232,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 10,
+       "loss": 0.6295787563837123,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 11,
+       "loss": 0.632750459288759,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 12,
+       "loss": 0.6366280629471306,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.2,
+       "loss": 0.6359432119738758,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.4,
+       "loss": 0.6345050907588455,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.6,
+       "loss": 0.6326528682179317,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.8,
+       "loss": 0.6308528973710429,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 1,
+       "loss": 0.6294010826574548,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 1.4,
+       "loss": 0.627904121673352,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.4,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.55,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.7,
+       "loss": 0.627904121673352,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.8,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.9,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 1,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 0.5,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 1,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 1.5,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 2,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 2.5,
+       "loss": 0.627904121673352,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 3.5,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 2,
+       "loss": 0.6316298437640456,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 3,
+       "loss": 0.6291791226252769,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 4,
+       "loss": 0.627904121673352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 6,
+       "loss": 0.6275277379333588,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 8,
+       "loss": 0.6281371433450258,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 12,
+       "loss": 0.6294223679253742,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": -0.2,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": -0.1,
+       "loss": 0.6275277379333588,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0,
+       "loss": 0.6282242121034648,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0.1,
+       "loss": 0.6296710131347374,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0.2,
+       "loss": 0.6322297597073651,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0.3,
+       "loss": 0.6364847465745908,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 8,
+       "loss": 0.6288617193566887,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 9,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 9.5,
+       "loss": 0.6276674651559869,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 10,
+       "loss": 0.6284608406642701,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 11,
+       "loss": 0.6309945104610235,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 12,
+       "loss": 0.6342574648587811,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.2,
+       "loss": 0.6330941110483227,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.4,
+       "loss": 0.6321885284493941,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.6,
+       "loss": 0.6309651213982891,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.8,
+       "loss": 0.629702069702795,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 1,
+       "loss": 0.6286119212416033,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 1.4,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.4,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.55,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.7,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.8,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.9,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 1,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 0.5,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 1,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 1.5,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 2,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 2.5,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 3.5,
+       "loss": 0.6273483739327729,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 2,
+       "loss": 0.6328251788839558,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 3,
+       "loss": 0.6299965192566779,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 4,
+       "loss": 0.6283235775947131,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 6,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 8,
+       "loss": 0.6276194957136204,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 12,
+       "loss": 0.6286131266607133,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": -0.2,
+       "loss": 0.6273483739327729,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": -0.1,
+       "loss": 0.6275277379333588,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0,
+       "loss": 0.6282242121034648,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0.1,
+       "loss": 0.6296710131347374,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0.2,
+       "loss": 0.6322297597073651,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0.3,
+       "loss": 0.6364847465745908,
+       "chosen": false
+      }
+     ]
+    },
+    "ridge": {
+     "best": {
+      "lambda": 2,
+      "halfLife": 6
+     },
+     "start": {
+      "lambda": 4,
+      "halfLife": 20
+     },
+     "initialLoss": 0.6376937687205861,
+     "bestLoss": 0.6331909231832842,
+     "evaluations": 17,
+     "seconds": 0.772,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 1,
+       "loss": 0.6384104645487125,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 2,
+       "loss": 0.6366826636552703,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 4,
+       "loss": 0.6376937687205861,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 8,
+       "loss": 0.6447150743064273,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 16,
+       "loss": 0.6580938489364891,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 32,
+       "loss": 0.6737169515709032,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6331909231832842,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6346618319710187,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6359209982749956,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6366826636552703,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6375298525787328,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6381405251437735,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6385983699742822,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 1,
+       "loss": 0.6344317150187242,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 2,
+       "loss": 0.6331909231832842,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 4,
+       "loss": 0.6369461898378298,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 8,
+       "loss": 0.6483688495514336,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 16,
+       "loss": 0.6648909352538352,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 32,
+       "loss": 0.6806795396344981,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6331909231832842,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6346618319710187,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6359209982749956,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6366826636552703,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6375298525787328,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6381405251437735,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6385983699742822,
+       "chosen": false
+      }
+     ]
+    },
+    "epa": {
+     "best": {
+      "lambda": 25,
+      "halfLife": 6,
+      "clip": 1.5
+     },
+     "start": {
+      "lambda": 400,
+      "halfLife": 20,
+      "clip": 6
+     },
+     "initialLoss": 0.6565247452945902,
+     "bestLoss": 0.6332301244278509,
+     "evaluations": 35,
+     "seconds": 1.699,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 5,
+       "loss": 0.6527475102335515,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 10,
+       "loss": 0.6525867071957967,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 25,
+       "loss": 0.6518645293755594,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 50,
+       "loss": 0.6509098034826545,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 100,
+       "loss": 0.6501620942080804,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 200,
+       "loss": 0.6512814132321876,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 400,
+       "loss": 0.6565247452945902,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6458355240758381,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6478818908752589,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.649331897807412,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6501620942080804,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6510602731693192,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6516957071623598,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.652167019604853,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 0.75,
+       "loss": 0.6473430690147088,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 1,
+       "loss": 0.6415102276895609,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 1.5,
+       "loss": 0.6363231281267634,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 2,
+       "loss": 0.6374224517691433,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 3,
+       "loss": 0.6395585404444322,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 6,
+       "loss": 0.6458355240758381,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 5,
+       "loss": 0.6335364983694872,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 10,
+       "loss": 0.6333911730970355,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 25,
+       "loss": 0.6332301244278509,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 50,
+       "loss": 0.6337529776351208,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 100,
+       "loss": 0.6363231281267634,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 200,
+       "loss": 0.6430225249116284,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 400,
+       "loss": 0.6548079486873963,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6332301244278509,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.635752906421723,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6373670575646931,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6382572725981681,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6392001201935965,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6398567515646936,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6403390299971572,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 0.75,
+       "loss": 0.6434652985811118,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 1,
+       "loss": 0.6373353108505038,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 1.5,
+       "loss": 0.6332301244278509,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 2,
+       "loss": 0.6358203349628546,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 3,
+       "loss": 0.6394514667100095,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 6,
+       "loss": 0.6468938587349078,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 5,
+       "loss": 0.6335364983694872,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 10,
+       "loss": 0.6333911730970355,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 25,
+       "loss": 0.6332301244278509,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 50,
+       "loss": 0.6337529776351208,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 100,
+       "loss": 0.6363231281267634,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 200,
+       "loss": 0.6430225249116284,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 400,
+       "loss": 0.6548079486873963,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6332301244278509,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.635752906421723,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6373670575646931,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6382572725981681,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6392001201935965,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6398567515646936,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6403390299971572,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 0.75,
+       "loss": 0.6434652985811118,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 1,
+       "loss": 0.6373353108505038,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 1.5,
+       "loss": 0.6332301244278509,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 2,
+       "loss": 0.6358203349628546,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 3,
+       "loss": 0.6394514667100095,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 6,
+       "loss": 0.6468938587349078,
+       "chosen": false
+      }
+     ]
+    }
+   }
+  },
+  {
+   "split": {
+    "name": "estabilidad",
+    "label": "2025 sem 5–13",
+    "trainFrom": 202505,
+    "trainTo": 202513
+   },
+   "models": {
+    "framework": {
+     "best": {
+      "priorWeight": 0.5,
+      "shrinkK": 2
+     },
+     "start": {
+      "priorWeight": 0.5,
+      "shrinkK": 6
+     },
+     "initialLoss": 0.6367490160180336,
+     "bestLoss": 0.6306482666960783,
+     "evaluations": 18,
+     "seconds": 0.044,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.2,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.35,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.5,
+       "loss": 0.6367490160180336,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.65,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 0.8,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "priorWeight",
+       "value": 1,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 2,
+       "loss": 0.6306482666960783,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 4,
+       "loss": 0.6333738580891504,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 6,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 8,
+       "loss": 0.6399782680345981,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 10,
+       "loss": 0.6428859055233102,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 14,
+       "loss": 0.6477161371085297,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 20,
+       "loss": 0.6530355237433766,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "shrinkK",
+       "value": 30,
+       "loss": 0.6587771063519211,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.2,
+       "loss": 0.6306482666960783,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.35,
+       "loss": 0.6306482666960783,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.5,
+       "loss": 0.6306482666960783,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.65,
+       "loss": 0.6306482666960783,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 0.8,
+       "loss": 0.6306482666960783,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "priorWeight",
+       "value": 1,
+       "loss": 0.6306482666960783,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 2,
+       "loss": 0.6306482666960783,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 4,
+       "loss": 0.6333738580891504,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 6,
+       "loss": 0.6367490160180336,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 8,
+       "loss": 0.6399782680345981,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 10,
+       "loss": 0.6428859055233102,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 14,
+       "loss": 0.6477161371085297,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 20,
+       "loss": 0.6530355237433766,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "shrinkK",
+       "value": 30,
+       "loss": 0.6587771063519211,
+       "chosen": false
+      }
+     ]
+    },
+    "elo": {
+     "best": {
+      "k": 30,
+      "hfa": 10,
+      "revert": 0.3333333333333333,
+      "eloPerPoint": 25.3
+     },
+     "start": {
+      "k": 20,
+      "hfa": 65,
+      "revert": 0.3333333333333333,
+      "eloPerPoint": 25
+     },
+     "initialLoss": 0.6407081764369875,
+     "bestLoss": 0.6254355775175556,
+     "evaluations": 22,
+     "seconds": 0.007,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 10,
+       "loss": 0.6587193645634821,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 15,
+       "loss": 0.6474480792992274,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 20,
+       "loss": 0.6407081764369875,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 25,
+       "loss": 0.63730326728094,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 30,
+       "loss": 0.636414844848987,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "k",
+       "value": 40,
+       "loss": 0.6400998669317317,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 0,
+       "loss": 0.6261594666057057,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 10,
+       "loss": 0.6254355775175556,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 20,
+       "loss": 0.6255550173115023,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 30,
+       "loss": 0.6265155116440236,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 40,
+       "loss": 0.6283124966185697,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 55,
+       "loss": 0.6325609595687267,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "hfa",
+       "value": 65,
+       "loss": 0.636414844848987,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.15,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.25,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.3333333333333333,
+       "loss": 0.6254355775175556,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.4,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.5,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "revert",
+       "value": 0.65,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 10,
+       "loss": 0.6478344054728447,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 15,
+       "loss": 0.6365372021781477,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 20,
+       "loss": 0.629796291479201,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 25,
+       "loss": 0.6263722897611468,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 30,
+       "loss": 0.6254355775175556,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "k",
+       "value": 40,
+       "loss": 0.6289629678371829,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 0,
+       "loss": 0.6261594666057057,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 10,
+       "loss": 0.6254355775175556,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 20,
+       "loss": 0.6255550173115023,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 30,
+       "loss": 0.6265155116440236,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 40,
+       "loss": 0.6283124966185697,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 55,
+       "loss": 0.6325609595687267,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "hfa",
+       "value": 65,
+       "loss": 0.636414844848987,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.15,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.25,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.3333333333333333,
+       "loss": 0.6254355775175556,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.4,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.5,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "revert",
+       "value": 0.65,
+       "loss": 0.6254355775175556,
+       "chosen": false
+      }
+     ]
+    },
+    "kalman": {
+     "best": {
+      "sigma": 9,
+      "rho": -0.2,
+      "omegaWeek": 0.2,
+      "betaSeason": 0.7,
+      "omegaSeason": 2.5,
+      "p0": 6
+     },
+     "start": {
+      "sigma": 9.5,
+      "rho": 0,
+      "omegaWeek": 0.6,
+      "betaSeason": 0.7,
+      "omegaSeason": 2.5,
+      "p0": 4
+     },
+     "initialLoss": 0.6362878285422733,
+     "bestLoss": 0.6329958628879361,
+     "evaluations": 66,
+     "seconds": 0.699,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 8,
+       "loss": 0.6366918116465146,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 9,
+       "loss": 0.6355306954145785,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 9.5,
+       "loss": 0.6362878285422733,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 10,
+       "loss": 0.6375899496714308,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 11,
+       "loss": 0.641172903496137,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "sigma",
+       "value": 12,
+       "loss": 0.6453586493488707,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.2,
+       "loss": 0.6356697790477376,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.4,
+       "loss": 0.6355618418193123,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.6,
+       "loss": 0.6355306954145785,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 0.8,
+       "loss": 0.635720089528452,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 1,
+       "loss": 0.6362312846508189,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaWeek",
+       "value": 1.4,
+       "loss": 0.6383119690487276,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.4,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.55,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.7,
+       "loss": 0.6355306954145785,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.8,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 0.9,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "betaSeason",
+       "value": 1,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 0.5,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 1,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 1.5,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 2,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 2.5,
+       "loss": 0.6355306954145785,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "omegaSeason",
+       "value": 3.5,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 2,
+       "loss": 0.6512035197174608,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 3,
+       "loss": 0.640220074360958,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 4,
+       "loss": 0.6355306954145785,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 6,
+       "loss": 0.6344040556568062,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 8,
+       "loss": 0.6360714562326139,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "p0",
+       "value": 12,
+       "loss": 0.639163186916196,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": -0.2,
+       "loss": 0.6333109083236089,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": -0.1,
+       "loss": 0.6335612860887753,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0,
+       "loss": 0.6344040556568062,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0.1,
+       "loss": 0.6361132596713402,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0.2,
+       "loss": 0.6391159549429295,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "rho",
+       "value": 0.3,
+       "loss": 0.6441058734717535,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 8,
+       "loss": 0.6351597369826598,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 9,
+       "loss": 0.6333109083236089,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 9.5,
+       "loss": 0.6336085552827468,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 10,
+       "loss": 0.6344339246945782,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 11,
+       "loss": 0.637111163117581,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "sigma",
+       "value": 12,
+       "loss": 0.6405411871971343,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.2,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.4,
+       "loss": 0.6330983898682224,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.6,
+       "loss": 0.6333109083236089,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 0.8,
+       "loss": 0.6336772757639162,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 1,
+       "loss": 0.634232642253892,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaWeek",
+       "value": 1.4,
+       "loss": 0.6359581567811134,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.4,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.55,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.7,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.8,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 0.9,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "betaSeason",
+       "value": 1,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 0.5,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 1,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 1.5,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 2,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 2.5,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "omegaSeason",
+       "value": 3.5,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 2,
+       "loss": 0.6619198493037564,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 3,
+       "loss": 0.6459682699494617,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 4,
+       "loss": 0.637834263305063,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 6,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 8,
+       "loss": 0.6330352223530834,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "p0",
+       "value": 12,
+       "loss": 0.6349328300231816,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": -0.2,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": -0.1,
+       "loss": 0.633104160276365,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0,
+       "loss": 0.6337774228279378,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0.1,
+       "loss": 0.6352825297748387,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0.2,
+       "loss": 0.6380368280962468,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "rho",
+       "value": 0.3,
+       "loss": 0.6427206551406693,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 8,
+       "loss": 0.6344321365774744,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 9,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 9.5,
+       "loss": 0.6334532592533706,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 10,
+       "loss": 0.6344131541612558,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 11,
+       "loss": 0.6372976990081555,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "sigma",
+       "value": 12,
+       "loss": 0.640871182376811,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.2,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.4,
+       "loss": 0.6330983898682224,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.6,
+       "loss": 0.6333109083236089,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 0.8,
+       "loss": 0.6336772757639162,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 1,
+       "loss": 0.634232642253892,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaWeek",
+       "value": 1.4,
+       "loss": 0.6359581567811134,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.4,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.55,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.7,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.8,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 0.9,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "betaSeason",
+       "value": 1,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 0.5,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 1,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 1.5,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 2,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 2.5,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "omegaSeason",
+       "value": 3.5,
+       "loss": 0.6329958628879361,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 2,
+       "loss": 0.6619198493037564,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 3,
+       "loss": 0.6459682699494617,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 4,
+       "loss": 0.637834263305063,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 6,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 8,
+       "loss": 0.6330352223530834,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "p0",
+       "value": 12,
+       "loss": 0.6349328300231816,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": -0.2,
+       "loss": 0.6329958628879361,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": -0.1,
+       "loss": 0.633104160276365,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0,
+       "loss": 0.6337774228279378,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0.1,
+       "loss": 0.6352825297748387,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0.2,
+       "loss": 0.6380368280962468,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "rho",
+       "value": 0.3,
+       "loss": 0.6427206551406693,
+       "chosen": false
+      }
+     ]
+    },
+    "ridge": {
+     "best": {
+      "lambda": 2,
+      "halfLife": 70
+     },
+     "start": {
+      "lambda": 4,
+      "halfLife": 20
+     },
+     "initialLoss": 0.6434327146039406,
+     "bestLoss": 0.6422163585281221,
+     "evaluations": 17,
+     "seconds": 0.359,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 1,
+       "loss": 0.6459127811829954,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 2,
+       "loss": 0.6429087654081729,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 4,
+       "loss": 0.6434327146039406,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 8,
+       "loss": 0.6509783736386661,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 16,
+       "loss": 0.6649102777722986,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 32,
+       "loss": 0.6802322241475319,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6462435083821029,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6441442086338937,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6432867550278017,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6429087654081729,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6425654590926924,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6423561575765201,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6422163585281221,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 1,
+       "loss": 0.6450605909847106,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 2,
+       "loss": 0.6422163585281221,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 4,
+       "loss": 0.6423707794698442,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 8,
+       "loss": 0.6490792484774569,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 16,
+       "loss": 0.6623997307234828,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 32,
+       "loss": 0.6778432999661285,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6462435083821029,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6441442086338937,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6432867550278017,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6429087654081729,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6425654590926924,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6423561575765201,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6422163585281221,
+       "chosen": true
+      }
+     ]
+    },
+    "epa": {
+     "best": {
+      "lambda": 50,
+      "halfLife": 70,
+      "clip": 1.5
+     },
+     "start": {
+      "lambda": 400,
+      "halfLife": 20,
+      "clip": 6
+     },
+     "initialLoss": 0.655637522878687,
+     "bestLoss": 0.6362352240347116,
+     "evaluations": 35,
+     "seconds": 0.92,
+     "trace": [
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 5,
+       "loss": 0.6511948791833742,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 10,
+       "loss": 0.6508556203451915,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 25,
+       "loss": 0.6496016177162526,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 50,
+       "loss": 0.6480717640158637,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 100,
+       "loss": 0.6469683171922465,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 200,
+       "loss": 0.6486286010659138,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "lambda",
+       "value": 400,
+       "loss": 0.655637522878687,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6503867213921957,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6482272246898689,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6473497008351886,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.6469683171922465,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6466276288654098,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.646423976026588,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6462903349222083,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 0.75,
+       "loss": 0.6515484792349322,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 1,
+       "loss": 0.643528224742173,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 1.5,
+       "loss": 0.6369630987207353,
+       "chosen": true
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 2,
+       "loss": 0.6389780683691042,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 3,
+       "loss": 0.6421611435357578,
+       "chosen": false
+      },
+      {
+       "pass": 1,
+       "param": "clip",
+       "value": 6,
+       "loss": 0.6462903349222083,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 5,
+       "loss": 0.6375923009281745,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 10,
+       "loss": 0.6373315577796169,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 25,
+       "loss": 0.6366758588793727,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 50,
+       "loss": 0.6362352240347116,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 100,
+       "loss": 0.6369630987207353,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 200,
+       "loss": 0.6409423126607198,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "lambda",
+       "value": 400,
+       "loss": 0.6500701316779685,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6385411478145789,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6372230035133623,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6367367357156979,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.636541155306391,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6363787864047603,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6362895098127015,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6362352240347116,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 0.75,
+       "loss": 0.6508007258195445,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 1,
+       "loss": 0.6424161798662942,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 1.5,
+       "loss": 0.6362352240347116,
+       "chosen": true
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 2,
+       "loss": 0.6389931108572704,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 3,
+       "loss": 0.642931427679934,
+       "chosen": false
+      },
+      {
+       "pass": 2,
+       "param": "clip",
+       "value": 6,
+       "loss": 0.6474764583035821,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 5,
+       "loss": 0.6375923009281745,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 10,
+       "loss": 0.6373315577796169,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 25,
+       "loss": 0.6366758588793727,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 50,
+       "loss": 0.6362352240347116,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 100,
+       "loss": 0.6369630987207353,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 200,
+       "loss": 0.6409423126607198,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "lambda",
+       "value": 400,
+       "loss": 0.6500701316779685,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 6,
+       "loss": 0.6385411478145789,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 10,
+       "loss": 0.6372230035133623,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 15,
+       "loss": 0.6367367357156979,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 20,
+       "loss": 0.636541155306391,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 30,
+       "loss": 0.6363787864047603,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 45,
+       "loss": 0.6362895098127015,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "halfLife",
+       "value": 70,
+       "loss": 0.6362352240347116,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 0.75,
+       "loss": 0.6508007258195445,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 1,
+       "loss": 0.6424161798662942,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 1.5,
+       "loss": 0.6362352240347116,
+       "chosen": true
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 2,
+       "loss": 0.6389931108572704,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 3,
+       "loss": 0.642931427679934,
+       "chosen": false
+      },
+      {
+       "pass": 3,
+       "param": "clip",
+       "value": 6,
+       "loss": 0.6474764583035821,
+       "chosen": false
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "ensemble": {
+  "eta": 4,
+  "gamma": 1,
+  "grid": [
+   {
+    "eta": 0,
+    "gamma": 0.9,
+    "loss": 0.654853631694515
+   },
+   {
+    "eta": 0,
+    "gamma": 0.95,
+    "loss": 0.654853631694515
+   },
+   {
+    "eta": 0,
+    "gamma": 0.98,
+    "loss": 0.654853631694515
+   },
+   {
+    "eta": 0,
+    "gamma": 0.99,
+    "loss": 0.654853631694515
+   },
+   {
+    "eta": 0,
+    "gamma": 1,
+    "loss": 0.654853631694515
+   },
+   {
+    "eta": 0.25,
+    "gamma": 0.9,
+    "loss": 0.6537745537857749
+   },
+   {
+    "eta": 0.25,
+    "gamma": 0.95,
+    "loss": 0.6533257798974824
+   },
+   {
+    "eta": 0.25,
+    "gamma": 0.98,
+    "loss": 0.6519604067988027
+   },
+   {
+    "eta": 0.25,
+    "gamma": 0.99,
+    "loss": 0.6509513175840844
+   },
+   {
+    "eta": 0.25,
+    "gamma": 1,
+    "loss": 0.6494450734359678
+   },
+   {
+    "eta": 0.5,
+    "gamma": 0.9,
+    "loss": 0.6529764232613342
+   },
+   {
+    "eta": 0.5,
+    "gamma": 0.95,
+    "loss": 0.6521691759356114
+   },
+   {
+    "eta": 0.5,
+    "gamma": 0.98,
+    "loss": 0.6497616354266357
+   },
+   {
+    "eta": 0.5,
+    "gamma": 0.99,
+    "loss": 0.6480695919810009
+   },
+   {
+    "eta": 0.5,
+    "gamma": 1,
+    "loss": 0.6457724874340955
+   },
+   {
+    "eta": 1,
+    "gamma": 0.9,
+    "loss": 0.6521984322303676
+   },
+   {
+    "eta": 1,
+    "gamma": 0.95,
+    "loss": 0.650903998132714
+   },
+   {
+    "eta": 1,
+    "gamma": 0.98,
+    "loss": 0.6471955555364581
+   },
+   {
+    "eta": 1,
+    "gamma": 0.99,
+    "loss": 0.6449009293344121
+   },
+   {
+    "eta": 1,
+    "gamma": 1,
+    "loss": 0.6424326784035206
+   },
+   {
+    "eta": 2,
+    "gamma": 0.9,
+    "loss": 0.6520614930937298
+   },
+   {
+    "eta": 2,
+    "gamma": 0.95,
+    "loss": 0.6501337207604143
+   },
+   {
+    "eta": 2,
+    "gamma": 0.98,
+    "loss": 0.6451496326109092
+   },
+   {
+    "eta": 2,
+    "gamma": 0.99,
+    "loss": 0.6423600021217809
+   },
+   {
+    "eta": 2,
+    "gamma": 1,
+    "loss": 0.6403677587158246
+   },
+   {
+    "eta": 4,
+    "gamma": 0.9,
+    "loss": 0.6522572349306477
+   },
+   {
+    "eta": 4,
+    "gamma": 0.95,
+    "loss": 0.650156130995859
+   },
+   {
+    "eta": 4,
+    "gamma": 0.98,
+    "loss": 0.6436621204984049
+   },
+   {
+    "eta": 4,
+    "gamma": 0.99,
+    "loss": 0.6406279920797229
+   },
+   {
+    "eta": 4,
+    "gamma": 1,
+    "loss": 0.6399219654041943
+   },
+   {
+    "eta": 8,
+    "gamma": 0.9,
+    "loss": 0.6517918020950344
+   },
+   {
+    "eta": 8,
+    "gamma": 0.95,
+    "loss": 0.6503112912398686
+   },
+   {
+    "eta": 8,
+    "gamma": 0.98,
+    "loss": 0.6421699746599315
+   },
+   {
+    "eta": 8,
+    "gamma": 0.99,
+    "loss": 0.6405326129715807
+   },
+   {
+    "eta": 8,
+    "gamma": 1,
+    "loss": 0.6404778695223123
+   }
+  ]
+ },
+ "qbValue": {
+  "params": {
+   "k": 300,
+   "halfLife": 1000000,
+   "teamHalfLife": 4,
+   "k0": 0.05
+  },
+  "grid": [
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6365398741117099
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6375335568493489
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6387509949653134
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6368383356583587
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6376946506508943
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6387917564016632
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6371277753362548
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6378887676053775
+   },
+   {
+    "k": 300,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6388758569965163
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6363687683976538
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6373945915152182
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.638671881365839
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6367126969103918
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6375859072961799
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6387243528047462
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.637026244862028
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6377977186121941
+   },
+   {
+    "k": 300,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.63881666222639
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.636287457080398
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6373274515267134
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6386329029643094
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6366533747569332
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6375335957255075
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.638691190703905
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6369784151145825
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.637753968063692
+   },
+   {
+    "k": 300,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6387875281031132
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6362479925019286
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6372945669377128
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6386136068773152
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6366246771758948
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6375080289215975
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6386747844321845
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6369553028021965
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6377325958521665
+   },
+   {
+    "k": 300,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6387731108717881
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6362093820151029
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6372621865298241
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6385944638416844
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6365966635944265
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6374828902976949
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6386585149387392
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6369327581718377
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.637711588046718
+   },
+   {
+    "k": 300,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6387588110586928
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6370316132454836
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6383273165859233
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6393113068142684
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6374206745786631
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.638497224403566
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6393578536441995
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6377407722411768
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6386701975585989
+   },
+   {
+    "k": 600,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6394202723515866
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6368944093071287
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6382262398284091
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6392645819217031
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6373324690992905
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6384233662465988
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6393200481639183
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6376773446571995
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6386125989076915
+   },
+   {
+    "k": 600,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6393889341465873
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6368293822783369
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6381765609591731
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6392410056571378
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6372913388458201
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6383873714646685
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6393010257628806
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.637648049488821
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6385846330076037
+   },
+   {
+    "k": 600,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6393731713394151
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6367978810491505
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6381520096411819
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6392291872919612
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6372715839804342
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6383696572133458
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6392915017268861
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6376340478720683
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6385708931257561
+   },
+   {
+    "k": 600,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6393652789530933
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6367671083259967
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6381276861326306
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6392173615878463
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6372523999745445
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6383521561179745
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6392819788286362
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6376204962941656
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6385573327857959
+   },
+   {
+    "k": 600,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6393573866347922
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6375272343172138
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6388816064638836
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6395833339105939
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6379112907631734
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6390128372114325
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6396176111542813
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.638216628505969
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6391443739565262
+   },
+   {
+    "k": 1000,
+    "halfLife": 32,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6396591048270899
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.63741810409805
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6388120324946835
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6395564884852005
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6378494299911903
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6389648889845125
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6395971625971408
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6381788623376785
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6391101242288945
+   },
+   {
+    "k": 1000,
+    "halfLife": 64,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6396434465798639
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6373662650561401
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6387771955977546
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.639542700344232
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6378210291937685
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6389412172151494
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6395867230416163
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.638162127806023
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6390933963670389
+   },
+   {
+    "k": 1000,
+    "halfLife": 128,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6396354843094776
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6373411321788878
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6387598077488421
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6395357224890661
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6378075154116452
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.6389294858615207
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6395814543734707
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6381543245029191
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6390851498949721
+   },
+   {
+    "k": 1000,
+    "halfLife": 256,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.6396314724858814
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.05,
+    "loss": 0.6373165708911291
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 0.25,
+    "loss": 0.6387424626968912
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 4,
+    "k0": 1,
+    "loss": 0.6395286940054847
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.05,
+    "loss": 0.6377944830405642
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 0.25,
+    "loss": 0.638917838971346
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 8,
+    "k0": 1,
+    "loss": 0.6395761566807439
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.05,
+    "loss": 0.6381469086205357
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 0.25,
+    "loss": 0.6390769910935253
+   },
+   {
+    "k": 1000,
+    "halfLife": 1000000,
+    "teamHalfLife": 16,
+    "k0": 1,
+    "loss": 0.639627442413421
+   }
+  ],
+  "offLoss": 0.6399219654041943
+ },
+ "qb": {
+  "k0": null,
+  "window": 0,
+  "seasonFirst": false,
+  "grid": [
+   {
+    "k0": null,
+    "window": 0,
+    "seasonFirst": false,
+    "loss": 0.6362093820151029
+   },
+   {
+    "k0": 15,
+    "window": 8,
+    "seasonFirst": false,
+    "loss": 0.6375837336124515
+   },
+   {
+    "k0": 30,
+    "window": 8,
+    "seasonFirst": false,
+    "loss": 0.637305826362389
+   },
+   {
+    "k0": 60,
+    "window": 8,
+    "seasonFirst": false,
+    "loss": 0.6369867944044953
+   },
+   {
+    "k0": 120,
+    "window": 8,
+    "seasonFirst": false,
+    "loss": 0.6366975326142985
+   },
+   {
+    "k0": 250,
+    "window": 8,
+    "seasonFirst": false,
+    "loss": 0.6364777627153774
+   },
+   {
+    "k0": 500,
+    "window": 8,
+    "seasonFirst": false,
+    "loss": 0.6363526352371478
+   },
+   {
+    "k0": 15,
+    "window": 12,
+    "seasonFirst": false,
+    "loss": 0.6381124235234621
+   },
+   {
+    "k0": 30,
+    "window": 12,
+    "seasonFirst": false,
+    "loss": 0.637785452963249
+   },
+   {
+    "k0": 60,
+    "window": 12,
+    "seasonFirst": false,
+    "loss": 0.637388165748756
+   },
+   {
+    "k0": 120,
+    "window": 12,
+    "seasonFirst": false,
+    "loss": 0.6369970639743822
+   },
+   {
+    "k0": 250,
+    "window": 12,
+    "seasonFirst": false,
+    "loss": 0.6366693740458842
+   },
+   {
+    "k0": 500,
+    "window": 12,
+    "seasonFirst": false,
+    "loss": 0.6364653635093231
+   },
+   {
+    "k0": 15,
+    "window": 17,
+    "seasonFirst": false,
+    "loss": 0.6393967047368813
+   },
+   {
+    "k0": 30,
+    "window": 17,
+    "seasonFirst": false,
+    "loss": 0.6388791013726248
+   },
+   {
+    "k0": 60,
+    "window": 17,
+    "seasonFirst": false,
+    "loss": 0.6382310326682774
+   },
+   {
+    "k0": 120,
+    "window": 17,
+    "seasonFirst": false,
+    "loss": 0.6375745304197744
+   },
+   {
+    "k0": 250,
+    "window": 17,
+    "seasonFirst": false,
+    "loss": 0.6370124315345785
+   },
+   {
+    "k0": 500,
+    "window": 17,
+    "seasonFirst": false,
+    "loss": 0.636657958749964
+   },
+   {
+    "k0": 15,
+    "window": 24,
+    "seasonFirst": false,
+    "loss": 0.6393967047368813
+   },
+   {
+    "k0": 30,
+    "window": 24,
+    "seasonFirst": false,
+    "loss": 0.6388791013726248
+   },
+   {
+    "k0": 60,
+    "window": 24,
+    "seasonFirst": false,
+    "loss": 0.6382310326682774
+   },
+   {
+    "k0": 120,
+    "window": 24,
+    "seasonFirst": false,
+    "loss": 0.6375745304197744
+   },
+   {
+    "k0": 250,
+    "window": 24,
+    "seasonFirst": false,
+    "loss": 0.6370124315345785
+   },
+   {
+    "k0": 500,
+    "window": 24,
+    "seasonFirst": false,
+    "loss": 0.636657958749964
+   },
+   {
+    "k0": 15,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6372932664406556
+   },
+   {
+    "k0": 30,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6370552732242969
+   },
+   {
+    "k0": 60,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6367901317134079
+   },
+   {
+    "k0": 120,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6365596387548251
+   },
+   {
+    "k0": 250,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6363937523778136
+   },
+   {
+    "k0": 500,
+    "window": 8,
+    "seasonFirst": true,
+    "loss": 0.6363045638854634
+   },
+   {
+    "k0": 15,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6379913040370632
+   },
+   {
+    "k0": 30,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6376549072666675
+   },
+   {
+    "k0": 60,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6372578890695011
+   },
+   {
+    "k0": 120,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6368845022770293
+   },
+   {
+    "k0": 250,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6365892285013033
+   },
+   {
+    "k0": 500,
+    "window": 12,
+    "seasonFirst": true,
+    "loss": 0.6364152555314118
+   },
+   {
+    "k0": 15,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6385148387672156
+   },
+   {
+    "k0": 30,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6381113530384607
+   },
+   {
+    "k0": 60,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6376211429055703
+   },
+   {
+    "k0": 120,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6371423706081829
+   },
+   {
+    "k0": 250,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.6367475363573218
+   },
+   {
+    "k0": 500,
+    "window": 17,
+    "seasonFirst": true,
+    "loss": 0.636506099297482
+   },
+   {
+    "k0": 15,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6385148387672156
+   },
+   {
+    "k0": 30,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6381113530384607
+   },
+   {
+    "k0": 60,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6376211429055703
+   },
+   {
+    "k0": 120,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6371423706081829
+   },
+   {
+    "k0": 250,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.6367475363573218
+   },
+   {
+    "k0": 500,
+    "window": 24,
+    "seasonFirst": true,
+    "loss": 0.636506099297482
+   }
+  ]
+ },
+ "context": {
+  "k0": null,
+  "grid": [
+   {
+    "k0": null,
+    "loss": 0.636209374745324,
+    "lossMargin": 4.026374930642142,
+    "lossTotal": 4.155336000998927
+   },
+   {
+    "k0": 10,
+    "loss": 0.6406218441239332,
+    "lossMargin": 4.040346920666944,
+    "lossTotal": 4.164788252431176
+   },
+   {
+    "k0": 30,
+    "loss": 0.6401446602423149,
+    "lossMargin": 4.038387690671935,
+    "lossTotal": 4.163299746287058
+   },
+   {
+    "k0": 100,
+    "loss": 0.6392333028480466,
+    "lossMargin": 4.0346925879178475,
+    "lossTotal": 4.161651851735189
+   },
+   {
+    "k0": 300,
+    "loss": 0.6381869657727205,
+    "lossMargin": 4.031017106784974,
+    "lossTotal": 4.160172312990255
+   },
+   {
+    "k0": 1000,
+    "loss": 0.6371500440439828,
+    "lossMargin": 4.0282649062929154,
+    "lossTotal": 4.158789963238574
+   },
+   {
+    "k0": 3000,
+    "loss": 0.6365894901447156,
+    "lossMargin": 4.027083925610641,
+    "lossTotal": 4.157571721728271
+   }
+  ]
+ },
+ "keyNumbers": {
+  "margin": {
+   "a": 1,
+   "grid": [
+    {
+     "a": null,
+     "score": 4.026280132880705
+    },
+    {
+     "a": 1,
+     "score": 3.894209332210755
+    },
+    {
+     "a": 5,
+     "score": 3.9441911922601713
+    },
+    {
+     "a": 20,
+     "score": 3.992281625880721
+    },
+    {
+     "a": 100,
+     "score": 4.0179775933867665
+    }
+   ]
+  },
+  "total": {
+   "a": 20,
+   "grid": [
+    {
+     "a": null,
+     "score": 4.155681145665449
+    },
+    {
+     "a": 1,
+     "score": 4.2220281172423615
+    },
+    {
+     "a": 5,
+     "score": 4.158379443471821
+    },
+    {
+     "a": 20,
+     "score": 4.153473109316547
+    },
+    {
+     "a": 100,
+     "score": 4.154961413641688
+    }
+   ]
+  }
+ }
+}

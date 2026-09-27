@@ -307,6 +307,39 @@
   #view[data-filter="parcial"] .metric[data-status]:not([data-status="parcial"]),
   #view[data-filter="faltante"] .metric[data-status]:not([data-status="faltante"]),
   #view[data-filter="no_aplica"] .metric[data-status]:not([data-status="no_aplica"]) { display: none; }
+  /* Picks */
+  .record { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .rec-card .big { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .rec-card .vs { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted); }
+  .rec-card .vs b { color: var(--ink); font-weight: 600; }
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .pick-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .pick-card.hit { border-left: 4px solid var(--accent); }
+  .pick-card.miss { border-left: 4px solid var(--neg); }
+  .pk-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); }
+  .pk-row { display: grid; grid-template-columns: 10px 38px 1fr auto; align-items: center; gap: 8px; }
+  .pk-row .abbr { font-weight: 600; font-size: 13px; }
+  .pk-row .qb { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pk-row .num { font-size: 15px; }
+  .pk-row.won .num { font-weight: 600; }
+  .pk-row.lost .abbr, .pk-row.lost .num { color: var(--muted); }
+  .pbar2 { position: relative; height: 8px; border-radius: 4px; overflow: hidden; display: flex; background: var(--surface-2); }
+  .pbar2 i { display: block; height: 100%; }
+  .pbar2 .mk { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
+  .pk-lines { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pk-lines .chip.pick { background: var(--accent-soft); color: var(--accent-ink); }
+  .pk-lines .chip.pick b { color: var(--accent-ink); }
+  .pk-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+  .pk-foot a { font-weight: 600; color: var(--accent-ink); text-decoration: none; white-space: nowrap; }
+  .pk-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+  .tier { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .edition { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+  .edition a { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-decoration: none; color: var(--muted); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .edition a:hover { color: var(--ink); }
+  .edition a[aria-current="true"] { background: var(--ink); color: var(--ground); }
+  .topbar .wrap { flex-wrap: wrap; row-gap: 8px; }
   .topnav { display: flex; gap: 4px; margin-right: auto; margin-left: 12px; }
   .topnav a { font-size: 13px; color: var(--muted); text-decoration: none; padding: 4px 8px; border-radius: 6px; }
   .topnav a[aria-current="page"] { color: var(--ink); background: var(--surface-2); }
@@ -596,10 +629,16 @@
 
 <header class="topbar">
   <div class="wrap">
-    <a class="wordmark" href="#inicio">DATAG<b>SPORTS</b></a>
+    <div class="brand">
+      <a class="wordmark" href="#inicio">DATAG<b>SPORTS</b></a>
+      <nav class="edition" aria-label="Edición">
+        <a href="#ed-2024" data-edition="2024" aria-current="false">NFL 2024</a>
+        <a href="#ed-2026" data-edition="2026" aria-current="true">NFL 2026</a>
+      </nav>
+    </div>
     <nav class="topnav" aria-label="Secciones">
       <a href="#inicio" id="nav-home">Partidos</a>
-      <a href="#chiefs" id="nav-focus">Chiefs</a>
+      <a href="#picks" id="nav-picks">Picks</a>
       <a href="#lab" id="nav-lab">Laboratorio</a>
     </nav>
     <span class="season-chip" id="season-chip"></span>
@@ -615,6 +654,23 @@
 
 <script>
 const CORE = /*__CORE_DATA__*/null;
+const EDITION = "2026";
+// Dentro del sitio combinado los datos viven en la carpeta de la edición (nfl2024/ o nfl2026/).
+const DATA_BASE = window.__DG_BASE ?? "";
+
+/* Selector de edición: cada edición es una copia independiente (código, base de datos y datos
+   publicados). El sitio combinado (index.html de la raíz) carga la edición elegida desde su carpeta;
+   cambiar de edición recarga el sitio con la otra. */
+document.querySelectorAll(".edition a").forEach((a) => {
+  a.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    const ed = a.dataset.edition;
+    if (ed === EDITION) { location.hash = "inicio"; return; }
+    try { sessionStorage.setItem("dg-edition", ed); } catch (e) {}
+    if (window.__DG_SHELL) { location.hash = `ed-${ed}`; location.reload(); }
+    else location.href = `../nfl${ed}/index.html`;
+  });
+});
 
 const view = document.getElementById("view");
 const numFmt = new Intl.NumberFormat("es-MX");
@@ -751,14 +807,14 @@ function totalInfo(g) {
 
 async function loadWeek(week) {
   if (weekCache.has(week)) return weekCache.get(week);
-  const res = await fetch(`data/week-${String(week).padStart(2, "0")}.json`);
+  const res = await fetch(`${DATA_BASE}data/week-${String(week).padStart(2, "0")}.json`);
   if (!res.ok) throw new Error(String(res.status));
   const data = await res.json();
   weekCache.set(week, data);
   return data;
 }
 
-let selectedWeek = featuredGame ? featuredGame.week : weeks.at(-1);
+let selectedWeek = CORE.games.find((g) => g.hs === null)?.week ?? weeks.at(-1);
 try {
   const stored = Number(localStorage.getItem("dg-week"));
   if (weeks.includes(stored)) selectedWeek = stored;
@@ -772,6 +828,10 @@ function gameCard(g) {
   const awayWon = played && g.as > g.hs;
   const sp = spreadInfo(g);
   const tot = totalInfo(g);
+  const pk = PICKS.get(g.id);
+  const side = pk ? pickSides(g, pk) : null;
+  const res = pk ? pickResult(g, pk) : null;
+  const href = played ? `#g-${g.id}` : ANALYZED_SET.has(g.id) ? `#p-${g.id}` : `#picks`;
   const row = (abbr, score, color, won, lost) => `
     <div class="team-row ${won ? "win" : ""} ${lost ? "loss" : ""}">
       <span class="dot" style="background:${esc(color)}"></span>
@@ -780,11 +840,12 @@ function gameCard(g) {
       <span class="num">${score ?? "–"}</span>
     </div>`;
   return `
-    <a class="game" href="#g-${esc(g.id)}">
-      <div class="game-meta"><span>${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span><span>${played ? "Ver jugadas →" : "Programado"}</span></div>
+    <a class="game" href="${esc(href)}">
+      <div class="game-meta"><span>${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span><span>${played ? "Ver jugadas →" : ANALYZED_SET.has(g.id) ? "Ver análisis →" : "Programado"}</span></div>
       ${row(g.away, g.as, colors.away, awayWon, homeWon)}
       ${row(g.home, g.hs, colors.home, homeWon, awayWon)}
       <div class="chips">
+        ${side ? `<span class="chip">Pick <b>${esc(side.win.team)} ${pct(side.win.p, 0)}</b>${res ? ` ${mark(res.win)}` : ""}</span>` : ""}
         ${sp ? `<span class="chip">${esc(sp.line)}${sp.cover ? ` · <b>${esc(sp.cover)}</b>` : ""}</span>` : ""}
         ${tot ? `<span class="chip">${esc(tot.line)}${tot.result ? ` · <b>${esc(tot.result)}</b>` : ""}</span>` : ""}
       </div>
@@ -811,34 +872,37 @@ function renderHome() {
   renderToken++;
   const c = CORE.counts;
   const featuredTeams = featuredGame ? `${featuredGame.away} @ ${featuredGame.home}` : "";
+  const cw = currentWeek();
+  const cwGames = CORE.games.filter((g) => g.week === cw && PICKS.has(g.id));
+  const strongest = cwGames.filter((g) => !isPlayed(g)).map((g) => ({ g, s: pickSides(g, PICKS.get(g.id)) })).sort((a, b) => b.s.win.p - a.s.win.p).slice(0, 3);
+  const playedCount = CORE.games.filter(isPlayed).length;
   const totalDrives = CORE.driveResults.reduce((s, d) => s + d.n, 0);
   view.innerHTML = `
     <section class="intro">
       <p class="eyebrow">Pronósticos NFL · análisis matemático y estadístico</p>
-      <h1>Temporada ${CORE.season}, jugada por jugada</h1>
-      <p class="lede">Resultados, probabilidad de victoria y el modelo de Puntos Esperados construido desde cero con los datos reales de cada posesión.</p>
+      <h1>NFL ${CORE.season}: picks de todos los partidos</h1>
+      <p class="lede">Edición separada de la de 2024: su propia base de datos con solo las temporadas ${CORE.season - 1} y ${CORE.season}. Cada semana, el modelo da su pick para todos los partidos antes de jugarse y después lo compara con el resultado.</p>
       <div class="stats">
-        <div class="stat"><span class="num">${numFmt.format(c.games)}</span><span>partidos</span></div>
+        <div class="stat"><span class="num">${numFmt.format(playedCount)}/${numFmt.format(c.games)}</span><span>partidos jugados</span></div>
         <div class="stat"><span class="num">${numFmt.format(c.drives)}</span><span>posesiones</span></div>
         <div class="stat"><span class="num">${numFmt.format(c.plays)}</span><span>jugadas</span></div>
         <div class="stat"><span class="num">${numFmt.format(c.players)}</span><span>jugadores</span></div>
       </div>
     </section>
 
-    ${FOCUS.analyzed[0] ? `
     <section class="stack" style="gap:10px">
       <div class="section-head" style="margin-bottom:0">
-        <h2>${esc(CORE.teams[FOCUS.team]?.name ?? FOCUS.team)}: modelo antes de cada partido</h2>
-        <p class="lede">${FOCUS.analyzed.length > 1 ? `${FOCUS.analyzed.length} partidos de ${CORE.season} analizados: cada uno con los datos que existían ese día.` : `Empezamos por su primer partido de ${CORE.season}, con solo los datos de ${CORE.season - 1}.`} <a href="#chiefs">Ver la sección del equipo y la evolución del modelo →</a></p>
+        <h2>${esc(weekLabel(cw))}: los picks más firmes</h2>
+        <p class="lede">${cwGames.length} partidos esta semana${CORE.record?.valid?.n ? ` · en las semanas 1–3 el modelo acertó ${CORE.record.valid.model.hits} de ${CORE.record.valid.n} ganadores (mercado ${CORE.record.valid.market.hits})` : ""}. <a href="#picks">Ver los picks de todos los partidos →</a></p>
       </div>
-      ${focusCard(FOCUS.analyzed[FOCUS.analyzed.length - 1])}
-    </section>` : ""}
+      <div class="picks">${strongest.map(({ g }) => pickCard(g)).join("")}</div>
+    </section>
 
     <div class="callouts">
       ${featuredGame ? `
       <a class="callout" href="#m-${esc(featuredGame.id)}">
         <div>
-          <span class="eyebrow">Paso 1 · modelo simple</span>
+          <span class="eyebrow">Paso 1 · modelo simple (entrenado con ${CORE.modelSeason})</span>
           <strong>Puntos Esperados desde cero, con ${esc(featuredTeams)} (${esc(weekLabel(featuredGame.week))}) como caso de estudio</strong>
         </div>
         <span class="go">Ver construcción →</span>
@@ -1143,7 +1207,7 @@ function attachEpHover(highlightCounts) {
       bar?.classList.add("hover");
       const range = bucketRange(bucket);
       const inGame = highlightCounts.get(bucket) ?? 0;
-      readout.innerHTML = `<strong>${esc(range.field)} · EP ${b.ep.toFixed(2)} puntos</strong><br>${numFmt.format(b.n)} jugadas de 1er down en ${CORE.season} a ${range.lo}–${range.hi} yardas de la zona de anotación rival${inGame ? ` · ${inGame} en este partido` : ""}.`;
+      readout.innerHTML = `<strong>${esc(range.field)} · EP ${b.ep.toFixed(2)} puntos</strong><br>${numFmt.format(b.n)} jugadas de 1er down en ${CORE.modelSeason} a ${range.lo}–${range.hi} yardas de la zona de anotación rival${inGame ? ` · ${inGame} en este partido` : ""}.`;
     };
     hit.addEventListener("pointerenter", show);
     hit.addEventListener("pointerdown", show);
@@ -1189,7 +1253,7 @@ function renderModeloTab(g, data) {
       <section class="panel step">
         <span class="step-num">Paso 1 de 4</span>
         <h2>Qué estamos construyendo</h2>
-        <p class="lede">El framework define los Puntos Esperados (EP) como la función de valor de una cadena de Markov sobre el estado <code>(down, distancia, yardas, tiempo)</code>. Aquí construimos la versión más simple posible, con datos reales: todas las jugadas de <strong>1er down</strong> de la temporada ${CORE.season}, agrupadas por posición del balón, promediando cuántos puntos anotó el equipo con el balón antes de que terminara esa posesión.</p>
+        <p class="lede">El framework define los Puntos Esperados (EP) como la función de valor de una cadena de Markov sobre el estado <code>(down, distancia, yardas, tiempo)</code>. Aquí construimos la versión más simple posible, con datos reales: todas las jugadas de <strong>1er down</strong> de la temporada ${CORE.modelSeason} (la completa anterior a estos partidos), agrupadas por posición del balón, promediando cuántos puntos anotó el equipo con el balón antes de que terminara esa posesión.</p>
         <p class="note">Valores por resultado de la posesión: touchdown 6.94 (7 menos los puntos extra fallados), gol de campo 3, safety −2, touchdown del rival −6.94, cualquier otro final 0.</p>
       </section>
 
@@ -1296,7 +1360,7 @@ let labZone = 7;
 
 async function loadLab() {
   if (labData) return labData;
-  const res = await fetch("data/lab.json");
+  const res = await fetch(`${DATA_BASE}data/lab.json`);
   if (!res.ok) throw new Error(String(res.status));
   labData = await res.json();
   return labData;
@@ -1483,7 +1547,7 @@ function runSimulation(lab) {
     </div>
     <div class="legend">
       <span><i class="dot" style="background:var(--s1)"></i>Simulado</span>
-      <span><i class="dot" style="background:var(--s2)"></i>Real ${CORE.season}</span>
+      <span><i class="dot" style="background:var(--s2)"></i>Real ${CORE.modelSeason}</span>
     </div>
     <div class="compare">
       ${cats.map((c) => `
@@ -1517,7 +1581,7 @@ async function renderLab() {
       ${labTabs("markov")}
       <p class="eyebrow">Laboratorio · modelo v2</p>
       <h1>La cadena de Markov completa</h1>
-      <p class="lede">El modelo simple solo miraba la yarda del 1er down. Aquí el estado es <code>(down, distancia, zona del campo)</code>: 160 estados, sus valores resueltos por iteración de valor sobre las ${numFmt.format(CORE.counts.drives)} posesiones de ${CORE.season}, y un simulador que recorre la cadena jugada por jugada.</p>
+      <p class="lede">El modelo simple solo miraba la yarda del 1er down. Aquí el estado es <code>(down, distancia, zona del campo)</code>: 160 estados, sus valores resueltos por iteración de valor sobre las posesiones de ${CORE.modelSeason} (temporada completa), y un simulador que recorre la cadena jugada por jugada.</p>
     </section>
 
     <section class="panel step">
@@ -1561,7 +1625,7 @@ async function renderLab() {
     <section class="panel step">
       <span class="step-num">Paso 5 de 5</span>
       <h2>Simular posesiones con la cadena</h2>
-      <p class="lede">Desde un 1ro y 10 en la zona que elijas, el simulador toma en cada estado una jugada real que ocurrió en ese mismo estado durante ${CORE.season}, avanza el balón y repite hasta llegar a un estado absorbente. Luego compara 10,000 posesiones simuladas contra las posesiones reales que empezaron ahí.</p>
+      <p class="lede">Desde un 1ro y 10 en la zona que elijas, el simulador toma en cada estado una jugada real que ocurrió en ese mismo estado durante ${CORE.modelSeason}, avanza el balón y repite hasta llegar a un estado absorbente. Luego compara 10,000 posesiones simuladas contra las posesiones reales que empezaron ahí.</p>
       <div class="zones" role="group" aria-label="Zona de inicio">
         ${ZONES_LTR.map((z) => `<button type="button" id="zone-${z}" data-zone="${z}" aria-pressed="${z === labZone}">${zoneLabel(z)}</button>`).join("")}
       </div>
@@ -1587,7 +1651,7 @@ async function renderLab() {
 let modelsData = null;
 async function loadModels() {
   if (modelsData) return modelsData;
-  const res = await fetch("data/models.json");
+  const res = await fetch(`${DATA_BASE}data/models.json`);
   if (!res.ok) throw new Error(String(res.status));
   modelsData = await res.json();
   return modelsData;
@@ -1608,7 +1672,7 @@ const PARAM_INFO = {
 };
 const MODEL_MATH = {
   framework: {
-    idea: "El modelo del documento del framework, reproducido de forma pura para poder probarlo en 1,942 partidos. Puntos esperados por equipo con regresión a la media y tres métodos promediados.",
+    idea: "El modelo del documento del framework, reproducido de forma pura para poder probarlo en todos los partidos de 2025 y 2026. Puntos esperados por equipo con regresión a la media y tres métodos promediados.",
     eqs: [
       ["Promedio de liga ponderado", "μ = Σ w_g (pts_local + pts_visita) / Σ 2w_g,   w = 1 temporada actual, w = ω temporada anterior"],
       ["Regresión a la media", "off_i = (n_i·PF̄_i + k·μ) / (n_i + k),   def_i = (n_i·PĀ_i + k·μ) / (n_i + k)"],
@@ -1717,7 +1781,7 @@ function optimizationPanel(D, key) {
     </div>
     <div class="curves">${curves}</div>
     <div class="table-scroll"><table class="compact">
-      <thead><tr><th>Parámetro</th><th class="r">Inicial</th><th class="r">Óptimo 2020–22</th><th class="r">Óptimo 2019–21</th></tr></thead>
+      <thead><tr><th>Parámetro</th><th class="r">Inicial</th><th class="r">Óptimo ${esc(D.splits?.[0]?.label ?? "")}</th><th class="r">Óptimo ${esc(D.splits?.[1]?.label ?? "")}</th></tr></thead>
       <tbody>${Object.keys(opt.best).map((p) => `<tr><td>${esc(PARAM_INFO[key]?.[p] ?? p)}</td><td class="r num">${opt.start[p] !== undefined ? fmtParam(opt.start[p]) : "—"}</td><td class="r num"><b>${fmtParam(opt.best[p])}</b></td><td class="r num">${stab?.best[p] !== undefined ? fmtParam(stab.best[p]) : "—"}</td></tr>`).join("")}</tbody>
     </table></div>`;
 }
@@ -1742,7 +1806,7 @@ function leaderboardTable(period, D) {
 
 function weightsChart(D) {
   const W = 720, H = 240, L = 40, R = 110, T = 16, B = 30;
-  const data = D.weights2024;
+  const data = D.weightsSeason;
   if (!data.length) return "";
   const keys = ["framework", "elo", "kalman", "ridge", "epa"];
   const top = Math.ceil(Math.max(...data.flatMap((w) => keys.map((k) => w.win[k] ?? 0))) * 10) / 10;
@@ -1751,7 +1815,7 @@ function weightsChart(D) {
   const lastY = spreadLabels(keys.map((k) => ({ k, y: y(data[data.length - 1].win[k] ?? 0) + 4 })), 13, T + 4, H - B);
   const ticks = [];
   for (let v = 0; v <= top + 1e-9; v += 0.1) ticks.push(Number(v.toFixed(1)));
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Peso de cada modelo en el ensamble durante 2024">
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Peso de cada modelo en el ensamble durante 2026">
     ${ticks.map((v) => `<line class="grid" x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${Math.round(v * 100)}%</text>`).join("")}
     <line class="mid" x1="${L}" y1="${y(0.2)}" x2="${W - R}" y2="${y(0.2)}"/>
     ${keys.map((k) => `<path d="${data.map((w, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(w.win[k] ?? 0).toFixed(1)}`).join("")}" fill="none" stroke="${MODEL_COLORS[k]}" stroke-width="2"/>
@@ -1773,7 +1837,7 @@ function cumulativeChart(D) {
   for (let t = Math.ceil(lo * 50) / 50; t <= hi; t += 0.02) ticks.push(t);
   const last = data[data.length - 1];
   const labelY = spreadLabels(keys.map((k) => ({ k, y: y(last.loss[k]) + 4 })), 13, T + 4, H - B + 4);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Log-loss acumulada por semana en 2024">
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Log-loss acumulada por semana en 2026">
     ${ticks.map((t) => `<line class="grid" x1="${L}" y1="${y(t)}" x2="${W - R}" y2="${y(t)}"/><text x="${L - 6}" y="${y(t) + 3}" text-anchor="end">${t.toFixed(2)}</text>`).join("")}
     ${keys.map((k) => `<path d="${data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.loss[k]).toFixed(1)}`).join("")}" fill="none" stroke="${MODEL_COLORS[k]}" stroke-width="${k === "final" || k === "market" ? 3 : 1.5}" ${k === "market" ? 'stroke-dasharray="5 4"' : ""}/>
       <text x="${W - R + 6}" y="${labelY.get(k)}" style="fill:${MODEL_COLORS[k]};${k === "final" || k === "market" ? "font-weight:600" : ""}">${SHORT_NAMES[k]} ${last.loss[k].toFixed(3)}</text>`).join("")}
@@ -1806,9 +1870,9 @@ function gridTable(grid, rowsKey, colsKey, rowsLabel, colsLabel, fmtRow = fmtPar
 
 function yearSwap(D) {
   const rank = (period) => D.leaderboard.find((p) => p.period === period).rows.filter((r) => ["framework", "elo", "kalman", "ridge", "epa"].includes(r.key)).sort((a, b) => a.logLoss - b.logLoss);
-  const v = rank("valid"), t = rank("test");
+  const v = rank("train"), t = rank("valid");
   const name = (r) => MODEL_NAMES[r.key].split(" (")[0];
-  return `en 2023 el mejor fue ${name(v[0])} y el peor ${name(v[v.length - 1])}; en 2024 el mejor fue ${name(t[0])} y el peor ${name(t[t.length - 1])}`;
+  return `en el entrenamiento 2025 el mejor fue ${name(v[0])} y el peor ${name(v[v.length - 1])}; en las semanas 1–3 de 2026 el mejor fue ${name(t[0])} y el peor ${name(t[t.length - 1])}`;
 }
 
 function keyNumbersChart(K) {
@@ -1840,7 +1904,11 @@ async function renderModelLab() {
     return;
   }
   if (token !== renderToken) return;
-  const test = D.leaderboard.find((p) => p.period === "test");
+  const liveP = D.leaderboard.find((p) => p.period === "test");
+  const validP = D.leaderboard.find((p) => p.period === "valid");
+  const liveN = liveP.rows.find((r) => r.key === "final")?.n ?? 0;
+  const test = liveN >= 16 ? liveP : validP;
+  const H = liveN >= 16 ? `en vivo ${CORE.season}` : `validación ${CORE.season} (sem 1–3)`;
   const fin = test.rows.find((r) => r.key === "final"), mkt = test.rows.find((r) => r.key === "market");
   const fw = test.rows.find((r) => r.key === "framework");
   const bestSingle = test.rows.filter((r) => ["framework", "elo", "kalman", "ridge", "epa"].includes(r.key)).sort((a, b) => a.logLoss - b.logLoss)[0];
@@ -1853,26 +1921,26 @@ async function renderModelLab() {
       ${labTabs("modelos")}
       <p class="eyebrow">Laboratorio · torneo de modelos</p>
       <h1>Cinco modelos compiten partido a partido</h1>
-      <p class="lede">Para cada partido desde 2018 se reconstruyen cinco modelos con solo lo que existía antes de esa fecha, se combinan según cuánto han acertado y se comparan contra el resultado y contra el mercado. ${numFmt.format(D.games)} partidos, corrida completa en ${D.runSeconds} s.</p>
+      <p class="lede">Edición ${CORE.season}: la historia empieza en la semana 1 de ${CORE.season - 1}, con todos los equipos iguales. Para cada partido se reconstruyen cinco modelos con solo lo que existía antes de esa fecha, se combinan según cuánto han acertado y se comparan contra el resultado y contra el mercado. ${numFmt.format(D.games)} partidos jugados y ${numFmt.format(D.upcoming ?? 0)} por jugar, corrida completa en ${D.runSeconds} s.</p>
       <div class="summary-cards">
-        <div class="sum-card" style="--cat:var(--accent)"><span class="eyebrow">Modelo final 2024 · ${annotate("log-loss")}</span><span class="num big">${fin.logLoss.toFixed(4)}</span><span class="muted">framework original ${fw.logLoss.toFixed(4)} · mercado ${mkt.logLoss.toFixed(4)}</span></div>
-        <div class="sum-card" style="--cat:var(--c1)"><span class="eyebrow">Acierto de ganador 2024</span><span class="num big">${pct(fin.accuracy)}</span><span class="muted">framework ${pct(fw.accuracy)} · mercado ${pct(mkt.accuracy)}</span></div>
-        <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Mejor modelo solo en 2024</span><span class="num big">${esc(MODEL_NAMES[bestSingle.key].split(" (")[0])}</span><span class="muted">${bestSingle.logLoss.toFixed(4)} · en 2023 fue otro: por eso se combinan</span></div>
-        <div class="sum-card" style="--cat:var(--c2)"><span class="eyebrow">Distancia al mercado</span><span class="num big">${signed(fin.vsMarket.diff, 4)}</span><span class="muted">z = ${fin.vsMarket.z.toFixed(2)}: ${Math.abs(fin.vsMarket.z) >= 2 ? "el mercado sigue siendo mejor (diferencia significativa)" : "el mercado va adelante, pero la diferencia ya no es significativa (|z| < 2)"}</span></div>
+        <div class="sum-card" style="--cat:var(--accent)"><span class="eyebrow">Modelo final · ${esc(H)} · ${annotate("log-loss")}</span><span class="num big">${fin.logLoss.toFixed(4)}</span><span class="muted">framework original ${fw.logLoss.toFixed(4)} · mercado ${mkt.logLoss.toFixed(4)} · ${fin.n} partidos</span></div>
+        <div class="sum-card" style="--cat:var(--c1)"><span class="eyebrow">Acierto de ganador · ${esc(H)}</span><span class="num big">${pct(fin.accuracy)}</span><span class="muted">framework ${pct(fw.accuracy)} · mercado ${pct(mkt.accuracy)}</span></div>
+        <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Mejor modelo solo · ${esc(H)}</span><span class="num big">${esc(MODEL_NAMES[bestSingle.key].split(" (")[0])}</span><span class="muted">${bestSingle.logLoss.toFixed(4)} · con tan pocos partidos el orden cambia mucho: por eso se combinan</span></div>
+        <div class="sum-card" style="--cat:var(--c2)"><span class="eyebrow">Distancia al mercado</span><span class="num big">${fin.vsMarket ? signed(fin.vsMarket.diff, 4) : "—"}</span><span class="muted">${fin.vsMarket ? `z = ${fin.vsMarket.z.toFixed(2)}: ${Math.abs(fin.vsMarket.z) >= 2 ? "el mercado es mejor (diferencia significativa)" : "el mercado va adelante, pero con esta muestra la diferencia no es significativa (|z| < 2)"}` : "sin partidos todavía"}</span></div>
       </div>
     </section>
 
     <section class="panel step">
       <span class="step-num">Paso 1 de 10</span>
       <h2>El protocolo: nada ve el futuro</h2>
-      <p class="lede">Prueba ${annotate("walk-forward")}: el modelo predice todos los partidos de una fecha y solo después conoce sus resultados. Los parámetros se eligen en años distintos a los que se usan para medir.</p>
+      <p class="lede">Prueba ${annotate("walk-forward")}: el modelo predice todos los partidos de una fecha y solo después conoce sus resultados. Los parámetros se eligen con partidos distintos a los que se usan para medir.</p>
       <div class="protocol">
-        <div class="pseg warm"><b>2018–2019</b><span>Calentamiento: los modelos aprenden, nadie se mide</span></div>
-        <div class="pseg train"><b>2020–2022</b><span>Entrenamiento: se eligen los parámetros de cada modelo</span></div>
-        <div class="pseg valid"><b>2023</b><span>Validación: se elige cómo combinarlos (η, γ, capa de QB)</span></div>
-        <div class="pseg test"><b>2024</b><span>Prueba: nada se ajusta; medición honesta</span></div>
+        <div class="pseg warm"><b>2025 · sem 1–4</b><span>Calentamiento: los modelos aprenden desde cero, nadie se mide</span></div>
+        <div class="pseg train"><b>2025 · sem 5–playoffs</b><span>Entrenamiento: se eligen los parámetros de cada modelo</span></div>
+        <div class="pseg valid"><b>2026 · sem 1–3</b><span>Validación: cómo combinarlos y qué capas usar (con 2025 sem 10+ como apoyo)</span></div>
+        <div class="pseg test"><b>2026 · desde el ${esc(fmtDay(LIVE_FROM))}</b><span>En vivo: nada se ajusta; cada pick queda fijo antes del partido</span></div>
       </div>
-      ${cloud("warn", "Por qué tanto cuidado", "<p>Con 1,942 partidos es fácil encontrar una combinación que \"funciona\" por casualidad. Si la prueba se usara para decidir, el resultado estaría inflado. Abajo hay dos ideas que en 2024 parecían mejores y se descartaron porque empeoraban la validación.</p>", "!")}
+      ${cloud("warn", "Muestra chica: por qué la validación mezcla dos bloques", `<p>Hasta el ${esc(fmtDate(D.validCutoff))} solo se habían jugado ${validP.rows[0].n} partidos de ${CORE.season}. Elegir con tan pocos partidos es casi elegir al azar, así que cada decisión se toma con la mitad del peso en esas semanas 1–3 y la otra mitad en la segunda mitad de ${CORE.season - 1}. La prueba real son los partidos en vivo, que se van sumando cada semana.</p>`, "!")}
     </section>
 
     <section class="panel step">
@@ -1902,7 +1970,7 @@ async function renderModelLab() {
           <div class="fw-body">
             ${cloud("explain", "La idea", `<p>Ningún modelo gana todos los años (${esc(yearSwap(D))}). En vez de elegir uno, se combinan: el peso de cada modelo decae exponencialmente con su error pasado, y el error viejo se va olvidando semana a semana.</p>`, "?")}
             <div class="math-list">${ENSEMBLE_MATH.map(([n, e]) => `<div class="formula"><div class="fname">${esc(n)}</div><code>${esc(e)}</code></div>`).join("")}</div>
-            <p class="note">Elegidos en la validación 2023: η = ${D.ensemble?.eta}, γ = ${D.ensemble?.gamma} por semana; capa de QB con ventana de ${D.qb?.window} partidos y k₀ = ${D.qb?.k0}.</p>
+            <p class="note">Elegidos en la validación: η = ${D.ensemble?.eta}, γ = ${D.ensemble?.gamma} por semana; ${D.qb?.k0 === null ? "capa binaria de cambio de QB apagada (no mejoró la validación)" : `capa de QB con ventana de ${D.qb?.window} partidos y k₀ = ${D.qb?.k0}`}.</p>
           </div>
         </details>
       </div>
@@ -1911,20 +1979,20 @@ async function renderModelLab() {
     <section class="panel step">
       <span class="step-num">Paso 3 de 10</span>
       <h2>La tabla del torneo</h2>
-      <p class="lede">Mismas predicciones, tres periodos. La prueba 2024 es la que cuenta; el mercado es la referencia (no participa).</p>
-      ${D.leaderboard.map((p, i) => group(p.label, leaderboardTable(p, D), { icon: i === 2 ? "★" : "≡", open: i === 2 })).join("")}
+      <p class="lede">Mismas predicciones, tres periodos. "En vivo" es el que cuenta y se llena conforme se juegan los partidos; el mercado es la referencia (no participa).</p>
+      ${D.leaderboard.map((p, i) => (p.rows[0].n ? group(p.label, leaderboardTable(p, D), { icon: i === 2 ? "★" : "≡", open: p === test }) : group(p.label, `<p class="note">Todavía no hay partidos jugados en este periodo.</p>`, { icon: "★", open: false }))).join("")}
       <div class="math-list">${METRIC_MATH.map(([n, e]) => `<div class="formula"><div class="fname">${esc(n)}</div><code>${esc(e)}</code></div>`).join("")}</div>
       ${cloud("take", "Lo que dicen los datos", `<ul>
-        <li>${annotate(`El modelo final baja la log-loss de 2024 de ${fw.logLoss.toFixed(4)} (framework original) a ${fin.logLoss.toFixed(4)} y el acierto de ${pct(fw.accuracy)} a ${pct(fin.accuracy)}.`)}</li>
-        <li>El mercado sigue adelante por ${fin.vsMarket.diff.toFixed(4)} de log-loss por partido (z = ${fin.vsMarket.z.toFixed(2)}${Math.abs(fin.vsMarket.z) < 2 ? ", ya no significativo" : ""}): el modelo no debería apostar en todos los partidos, solo donde su edge sea grande.</li>
-        <li>Contra el spread ningún modelo se separa del 50% más allá de su error estándar (±3.7 pp en 2024). Hace falta 52.4% solo para empatar con el margen de la casa.</li>
+        <li>${annotate(`En la ${H}, el modelo final tiene log-loss ${fin.logLoss.toFixed(4)} contra ${fw.logLoss.toFixed(4)} del framework original, y acierta ${pct(fin.accuracy)} de los ganadores (framework ${pct(fw.accuracy)}).`)}</li>
+        <li>${fin.vsMarket ? `El mercado va adelante por ${fin.vsMarket.diff.toFixed(4)} de log-loss por partido (z = ${fin.vsMarket.z.toFixed(2)}${Math.abs(fin.vsMarket.z) < 2 ? ", no significativo con esta muestra" : ""}). Con una sola temporada de historia es lo esperado: el mercado incorpora años de información que esta edición no usa a propósito.` : "Sin comparación con el mercado todavía."}</li>
+        <li>Contra el spread ningún resultado con tan pocos partidos se separa del 50% más allá de su error estándar. Hace falta 52.4% solo para empatar con el margen de la casa.</li>
       </ul>`, "✓")}
     </section>
 
     <section class="panel step">
       <span class="step-num">Paso 4 de 10</span>
-      <h2>Cómo se movieron los pesos en 2024</h2>
-      <p class="lede">Al empezar la temporada todos pesan casi 20%: el olvido γ = ${D.ensemble?.gamma} por semana borra casi todo lo de la pretemporada. Conforme avanzan las semanas, el que acierta sube.</p>
+      <h2>Cómo se mueven los pesos en ${CORE.season}</h2>
+      <p class="lede">Los pesos vienen de todo lo acertado desde la semana 5 de ${CORE.season - 1} (olvido γ = ${D.ensemble?.gamma} por semana; con γ = 1 no se olvida nada) y se actualizan después de cada fecha de ${CORE.season}.</p>
       <div class="chart-wrap">${weightsChart(D)}</div>
       <h3>Log-loss acumulada por semana</h3>
       <div class="chart-wrap">${cumulativeChart(D)}</div>
@@ -1936,9 +2004,9 @@ async function renderModelLab() {
       <div class="two-col">
         <div class="chart-wrap">${calibrationChart(D)}</div>
         <div class="stack" style="gap:10px">
-          <p class="lede">Calibración 2023–2024: si el modelo dice 70%, el favorito debería ganar 7 de cada 10. Cada círculo agrupa los partidos de un rango de probabilidad; su tamaño es cuántos hay. Sobre la diagonal = calibrado.</p>
+          <p class="lede">Calibración con todos los partidos puntuados de ${CORE.season - 1} y ${CORE.season}: si el modelo dice 70%, el favorito debería ganar 7 de cada 10. Cada círculo agrupa los partidos de un rango de probabilidad; su tamaño es cuántos hay. Sobre la diagonal = calibrado.</p>
           <div class="legend"><span><i class="dot" style="background:${MODEL_COLORS.final}"></i>Modelo final</span><span><i class="dot" style="background:${MODEL_COLORS.market}"></i>Mercado</span></div>
-          ${cloud("take", "Lectura", "<p>El modelo final queda cerca de la diagonal. En el centro (45–55%) tiende a quedarse corto: los partidos que ve como volados se inclinan más de lo que cree. La recalibración de Platt intenta corregirlo (paso 7).</p>", "✓")}
+          ${cloud("take", "Lectura", "<p>Con unos cientos de partidos cada círculo tiene pocos juegos, así que las desviaciones de la diagonal son en buena parte ruido. La recalibración de Platt que intenta corregirlas se prueba en el paso 10.</p>", "✓")}
         </div>
       </div>
     </section>
@@ -1948,12 +2016,12 @@ async function renderModelLab() {
       <h2>La capa de QB: un hallazgo con datos</h2>
       <p class="lede">Cuando un equipo arranca con un QB distinto a su titular habitual, los modelos (que solo ven marcadores y jugadas) no lo saben. Los residuos lo muestran:</p>
       <div class="table-scroll"><table class="compact">
-        <thead><tr><th>Caso (2019–2024)</th><th class="r">Partidos</th><th class="r">Margen real − modelo</th><th class="r">Error estándar</th></tr></thead>
+        <thead><tr><th>Caso (2025–2026)</th><th class="r">Partidos</th><th class="r">Margen real − modelo</th><th class="r">Error estándar</th></tr></thead>
         <tbody>${D.qbStats.map((q) => `<tr><td>${{ ninguno: "Ambos con su QB habitual", local: "Solo el local cambia de QB", visita: "Solo la visita cambia de QB", ambos: "Ambos cambian" }[q.case]}</td><td class="r num">${q.n}</td><td class="r num ${Math.abs(q.mean) > 2 * q.se ? (q.mean < 0 ? "negv" : "pos") : ""}">${signed(q.mean, 2)}</td><td class="r num">±${q.se.toFixed(2)}</td></tr>`).join("")}</tbody>
       </table></div>
-      ${cloud("take", "Lectura", `<p>Con QB distinto, el equipo rinde unos ${Math.abs(((qbDelta?.mean ?? 0) - (qbAway?.mean ?? 0)) / 2).toFixed(1)} puntos menos de lo que los modelos esperan, a más de 2 errores estándar de cero en ambos lados. La capa corrige ese sesgo con un δ estimado solo con partidos anteriores. Que "habitual" signifique el que más inició en los últimos ${D.qb?.window} partidos (una temporada) también lo decidieron los datos: con 8 partidos, un titular que vuelve de lesión parecía suplente.</p>`, "✓")}
-      ${D.qb ? group("Validación 2023: ventana × k₀", gridTable(D.qb.grid.filter((g) => g.k0 !== null && Boolean(g.seasonFirst) === Boolean(D.qb.seasonFirst)), "window", "k0", "ventana", "k₀"), { icon: "▦", open: false }) : ""}
-      ${D.qb?.grid.some((g) => g.seasonFirst) ? cloud("warn", "Una regla que se probó y no pasó", `<p>Regla alternativa: con 2 o más partidos jugados en la temporada, el habitual es el que más inició en ella (arreglaría el caso de un fichaje titular como Kirk Cousins en ATL 2024). En la validación 2023 empeora: mejor ${Math.min(...D.qb.grid.filter((g) => g.seasonFirst).map((g) => g.loss)).toFixed(4)} contra ${Math.min(...D.qb.grid.filter((g) => !g.seasonFirst && g.k0 !== null).map((g) => g.loss)).toFixed(4)}. La razón: cuando el titular se lesiona y el suplente inicia 2 partidos, la regla convierte al suplente en "habitual" y castiga al titular cuando regresa. La solución de fondo es medir el valor de cada QB.</p>`, "!") : ""}
+      ${cloud("take", "Lectura", `<p>Con QB distinto, el equipo rinde unos ${Math.abs(((qbDelta?.mean ?? 0) - (qbAway?.mean ?? 0)) / 2).toFixed(1)} puntos ${((qbDelta?.mean ?? 0) - (qbAway?.mean ?? 0)) < 0 ? "menos" : "más"} de lo que los modelos esperan, pero con una sola temporada de datos ${[qbDelta, qbAway].every((q) => q && Math.abs(q.mean) > 2 * q.se) ? "la diferencia ya es significativa" : "la diferencia todavía no se distingue de cero (menos de 2 errores estándar)"}. ${D.qb?.k0 === null ? "La validación apagó la capa binaria: el valor por QB (paso 7) ya cubre los cambios de titular." : `La validación eligió ventana de ${D.qb?.window} partidos y k₀ = ${D.qb?.k0}.`}</p>`, "✓")}
+      ${D.qb ? group("Validación: ventana × k₀", gridTable(D.qb.grid.filter((g) => g.k0 !== null && Boolean(g.seasonFirst) === Boolean(D.qb.seasonFirst)), "window", "k0", "ventana", "k₀"), { icon: "▦", open: false }) : ""}
+      ${D.qb?.grid.some((g) => g.seasonFirst) ? cloud("warn", "Regla alternativa: temporada primero", `<p>Con 2 o más partidos jugados en la temporada, el habitual sería el que más inició en ella. En la validación: mejor ${Math.min(...D.qb.grid.filter((g) => g.seasonFirst).map((g) => g.loss)).toFixed(4)} con la regla contra ${Math.min(...D.qb.grid.filter((g) => !g.seasonFirst && g.k0 !== null).map((g) => g.loss)).toFixed(4)} sin ella, y ${D.qbValue?.offLoss !== undefined ? `${Math.min(...D.qb.grid.filter((g) => g.k0 === null).map((g) => g.loss)).toFixed(4)} sin capa binaria` : ""}.</p>`, "!") : ""}
     </section>
 
     ${D.qbValue?.params ? `<section class="panel step">
@@ -1962,15 +2030,15 @@ async function renderModelLab() {
       <p class="lede">La capa binaria trata igual a un suplente de práctica que a un titular recién firmado. El valor por QB mide a cada uno con su EPA por jugada (pases, sacks y carreras) en toda su carrera en los datos, regresado al nivel de un QB nuevo (medido, no supuesto). Es la idea del ajuste de QB de FiveThirtyEight y de nfeloqb, medida con EPA.</p>
       <div class="two-col">
         <div>
-          <h4>QB titulares de 2024 (300+ jugadas en los datos)</h4>
+          <h4>QB titulares de 2026 (300+ jugadas desde 2025)</h4>
           <div class="table-scroll"><table class="compact"><thead><tr><th>QB</th><th>Equipo</th><th class="r">EPA/jugada (valor)</th><th class="r">Jugadas</th></tr></thead>
           <tbody>${D.qbValue.top.map((q, i) => (i < 8 || i >= D.qbValue.top.length - 5) ? `<tr><td>${esc(q.name)}</td><td>${esc(q.team)}</td><td class="r num ${q.v > 0 ? "pos" : "negv"}">${signed(q.v, 3)}</td><td class="r num">${numFmt.format(q.n)}</td></tr>` : (i === 8 ? `<tr><td colspan="4" class="muted">… ${D.qbValue.top.length - 13} más …</td></tr>` : "")).join("")}</tbody></table></div>
         </div>
         <div class="stack" style="gap:10px">
-          <div class="math-list"><div class="formula"><div class="fname">Parámetros elegidos en la validación 2023</div><code>k = ${D.qbValue.params.k} jugadas de regresión · vida media ${D.qbValue.params.halfLife > 1e5 ? "sin olvido (toda la carrera)" : `${D.qbValue.params.halfLife} partidos`} · nivel del equipo con vida media de ${D.qbValue.params.teamHalfLife} partidos · k₀ = ${D.qbValue.params.k0}</code></div></div>
+          <div class="math-list"><div class="formula"><div class="fname">Parámetros elegidos en la validación</div><code>k = ${D.qbValue.params.k} jugadas de regresión · vida media ${D.qbValue.params.halfLife > 1e5 ? "sin olvido (toda la carrera)" : `${D.qbValue.params.halfLife} partidos`} · nivel del equipo con vida media de ${D.qbValue.params.teamHalfLife} partidos · k₀ = ${D.qbValue.params.k0}</code></div></div>
           ${cloud("take", "Lo que dicen los datos", `<ul>
-            <li>Validación 2023: la log-loss baja de ${D.qbValue.offLoss.toFixed(4)} (sin la capa) a ${Math.min(...D.qbValue.grid.map((g) => g.loss)).toFixed(4)}.</li>
-            <li>La mejor memoria para el valor de un QB es toda su carrera: los QB cambian menos de lo que parece semana a semana.</li>
+            <li>Validación: la log-loss baja de ${D.qbValue.offLoss.toFixed(4)} (sin la capa) a ${Math.min(...D.qbValue.grid.map((g) => g.loss)).toFixed(4)}.</li>
+            <li>${D.qbValue.params.halfLife > 1e5 ? "La mejor memoria es todo lo que hay en los datos (desde 2025): los QB cambian menos de lo que parece semana a semana." : `Memoria elegida: vida media de ${D.qbValue.params.halfLife} partidos del QB.`} Un QB sin jugadas desde 2025 (novato o regreso de una temporada entera fuera) arranca en el nivel medido de los QB nuevos.</li>
             <li>${D.qb?.k0 !== null ? "La capa binaria de cambio de QB se mantiene encima (la validación la eligió): captura lo que el valor todavía no sabe, como un novato sin jugadas." : "La capa binaria de cambio de QB ya no aporta encima del valor: la validación la apagó."}</li>
           </ul>`, "✓")}
         </div>
@@ -1980,10 +2048,10 @@ async function renderModelLab() {
     ${D.keyNumbers ? `<section class="panel step">
       <span class="step-num">Paso 8 de 10</span>
       <h2>Números clave: el margen no es una curva suave</h2>
-      <p class="lede">Los puntos llegan de a 3 y de a 7, así que ciertos márgenes se repiten mucho más de lo que dice una normal. Con ${numFmt.format(D.keyNumbers.games)} partidos (2019–2023) se mide cuántas veces ocurrió cada margen contra lo que esperaba el modelo continuo, y ese cociente ω corrige la distribución.</p>
+      <p class="lede">Los puntos llegan de a 3 y de a 7, así que ciertos márgenes se repiten mucho más de lo que dice una normal. Con ${numFmt.format(D.keyNumbers.games)} partidos (2025 y 2026 hasta el ${esc(fmtDate(D.validCutoff))}) se mide cuántas veces ocurrió cada margen contra lo que esperaba el modelo continuo, y ese cociente ω corrige la distribución.</p>
       <div class="chart-wrap">${keyNumbersChart(D.keyNumbers)}</div>
       <div class="table-scroll"><table class="compact">
-        <thead><tr><th>Medición (log score: prueba 2024)</th><th class="r">Continua</th><th class="r">Con números clave</th></tr></thead>
+        <thead><tr><th>Medición (log score: ${esc(D.keyNumbers.scoresOn ?? "")})</th><th class="r">Continua</th><th class="r">Con números clave</th></tr></thead>
         <tbody>
           <tr><td>Log score del margen (menor es mejor)</td><td class="r num">${D.keyNumbers.scores.margin.continuous.toFixed(4)}</td><td class="r num"><b>${D.keyNumbers.scores.margin.discrete.toFixed(4)}</b></td></tr>
           <tr><td>Log score del total</td><td class="r num">${D.keyNumbers.scores.total.continuous.toFixed(4)}</td><td class="r num"><b>${D.keyNumbers.scores.total.discrete.toFixed(4)}</b></td></tr>
@@ -1996,29 +2064,29 @@ async function renderModelLab() {
     ${D.context ? `<section class="panel step">
       <span class="step-num">Paso 9 de 10</span>
       <h2>La tabla 5.3 del framework, medida con datos</h2>
-      <p class="lede">Los ajustes por bajas y clima eran factores fijos. Aquí se miden con ${numFmt.format(D.context.games)} partidos (2019–2024): cuánto se desvía el resultado del modelo cuando falta un titular habitual o hay viento, domo o frío. Titular habitual = titular del depth chart en al menos la mitad de sus últimas 8 semanas; fuera = inactivo del día (INA) o en reserva (RES).</p>
+      <p class="lede">Los ajustes por bajas y clima eran factores fijos. Aquí se miden con ${numFmt.format(D.context.games)} partidos (2025–2026): cuánto se desvía el resultado del modelo cuando falta un titular habitual o hay viento, domo o frío. Titular habitual = titular del depth chart en al menos la mitad de sus últimas 8 semanas; fuera = inactivo del día (INA) o en reserva (RES).</p>
       <div class="table-scroll"><table class="compact">
         <thead><tr><th>Efecto</th><th class="r">Medido (pts)</th><th class="r">Error estándar</th><th class="r">z</th><th class="r">Partidos con el caso</th><th>Lo que asumía el framework</th><th>Veredicto</th></tr></thead>
         <tbody>${[...D.context.margin, ...D.context.total].map((e) => `<tr><td>${esc(e.name.replace("margen · ol", "Margen · titular de línea ofensiva fuera").replace("margen · skill", "Margen · titular WR/TE/RB fuera").replace("margen · front", "Margen · titular del front 7 fuera").replace("margen · db", "Margen · titular de secundaria fuera"))}</td><td class="r num">${signed(e.beta, 2)}</td><td class="r num">±${e.se.toFixed(2)}</td><td class="r num">${e.z.toFixed(1)}</td><td class="r num">${e.n}</td><td class="muted">${esc(e.framework)}</td><td>${Math.abs(e.z) >= 2 ? '<span class="pill ok">Efecto real</span>' : '<span class="pill muted">No significativo</span>'}</td></tr>`).join("")}</tbody>
       </table></div>
       ${cloud("take", "Lectura", `<ul>
-        <li>Cada titular fuera cuesta del orden de medio a un punto de margen: bastante menos que el ×0.92 del framework (≈ 1.8 puntos por condición). La secundaria casi no se nota.</li>
-        <li>El domo y el viento fuerte se confirman con magnitudes parecidas a las del framework. El frío extremo no: con ${D.context.total.find((e) => e.name.includes("frío"))?.n ?? 0} partidos, su efecto no se distingue de cero.</li>
-        <li>La capa se estima en línea (solo con partidos anteriores) con una previa k₀ = ${D.context.k0} que la validación 2023 eligió; en 2024 bajó la log-loss de ${(D.leaderboard.find((p) => p.period === "test").rows.find((r) => r.key === "qb")?.logLoss ?? 0).toFixed(4)} a ${fin.logLoss.toFixed(4)}.</li>
+        <li>Con una sola temporada, ${[...D.context.margin, ...D.context.total].filter((e) => Math.abs(e.z) >= 2).length ? `solo ${[...D.context.margin, ...D.context.total].filter((e) => Math.abs(e.z) >= 2).map((e) => esc(e.name)).join(", ")} pasa(n) la prueba de 2 errores estándar` : "ningún efecto pasa todavía la prueba de 2 errores estándar"}: los signos de las bajas van en la dirección esperada, pero los errores son grandes.</li>
+        <li>${D.context.k0 === null ? "La validación apagó la capa: por ahora los picks no se corrigen por bajas ni clima. La medición se sigue acumulando y se vuelve a decidir al reoptimizar." : `La capa se estima en línea con una previa k₀ = ${D.context.k0} elegida en la validación.`}</li>
+        <li>La edición 2024 midió lo mismo con 6 temporadas; aquí no se usa esa información a propósito (las ediciones no comparten datos).</li>
       </ul>`, "✓")}
-      ${group("Validación 2023 de la previa k₀", `<div class="table-scroll"><table class="compact"><thead><tr><th>k₀</th><th class="r">Log-loss victoria</th><th class="r">Pérdida margen</th><th class="r">Pérdida total</th></tr></thead><tbody>${D.context.grid.map((g) => `<tr class="${g.k0 === D.context.k0 ? "strong-row" : ""}"><td>${g.k0 === null ? "sin capa" : g.k0}</td><td class="r num">${g.loss.toFixed(5)}</td><td class="r num">${g.lossMargin.toFixed(4)}</td><td class="r num">${g.lossTotal.toFixed(4)}</td></tr>`).join("")}</tbody></table></div>`, { icon: "▦", open: false })}
+      ${group("Validación de la previa k₀", `<div class="table-scroll"><table class="compact"><thead><tr><th>k₀</th><th class="r">Log-loss victoria</th><th class="r">Pérdida margen</th><th class="r">Pérdida total</th></tr></thead><tbody>${D.context.grid.map((g) => `<tr class="${g.k0 === D.context.k0 ? "strong-row" : ""}"><td>${g.k0 === null ? "sin capa" : g.k0}</td><td class="r num">${g.loss.toFixed(5)}</td><td class="r num">${g.lossMargin.toFixed(4)}</td><td class="r num">${g.lossTotal.toFixed(4)}</td></tr>`).join("")}</tbody></table></div>`, { icon: "▦", open: false })}
     </section>` : ""}
 
     <section class="panel step">
       <span class="step-num">Paso 10 de 10</span>
       <h2>Lo que se probó y se descartó</h2>
-      <p class="lede">Se decide con la validación 2023. La columna de 2024 se muestra solo para transparencia.</p>
+      <p class="lede">Se decide con la validación de las semanas 1–3 de ${CORE.season}. La columna en vivo se muestra solo para transparencia.</p>
       <div class="table-scroll"><table class="compact">
-        <thead><tr><th>Variante</th><th>Fórmula</th><th class="r">Validación 2023</th><th class="r">Prueba 2024</th><th>Decisión</th></tr></thead>
-        <tbody>${exp.map((e) => `<tr><td>${esc(e.label)}${e.coef ? `<div class="m-note">coeficientes: ${e.coef.map((c) => c.toFixed(3)).join(", ")}</div>` : ""}</td><td><code>${esc(e.formula)}</code></td><td class="r num">${e.valid.toFixed(4)}</td><td class="r num">${e.test.toFixed(4)}</td><td>${e.key === "final" ? '<span class="pill ok">✓ Se usa</span>' : e.decision.startsWith("Descartado") ? '<span class="pill no">✗ Descartado</span>' : '<span class="pill warn">Mejora</span>'}</td></tr>`).join("")}</tbody>
+        <thead><tr><th>Variante</th><th>Fórmula</th><th class="r">Validación ${CORE.season}</th><th class="r">En vivo ${CORE.season}</th><th>Decisión</th></tr></thead>
+        <tbody>${exp.map((e) => `<tr><td>${esc(e.label)}${e.coef ? `<div class="m-note">coeficientes: ${e.coef.map((c) => c.toFixed(3)).join(", ")}</div>` : ""}</td><td><code>${esc(e.formula)}</code></td><td class="r num">${e.valid?.toFixed(4) ?? "—"}</td><td class="r num">${e.test?.toFixed(4) ?? "—"}</td><td>${e.key === "final" ? '<span class="pill ok">✓ Se usa</span>' : e.decision.startsWith("Descartado") ? '<span class="pill no">✗ Descartado</span>' : '<span class="pill warn">Mejora</span>'}</td></tr>`).join("")}</tbody>
       </table></div>
-      ${cloud("warn", "La trampa que se evitó", "<p>El stacking logístico da la mejor log-loss en 2024, pero empeora la validación y reparte pesos negativos entre modelos casi idénticos (colinealidad): es sobreajuste. Elegirlo por su número de 2024 sería hacer trampa con la prueba.</p>", "!")}
-      ${D.ensemble ? group("Validación 2023: η × γ del ensamble", gridTable(D.ensemble.grid, "eta", "gamma", "η", "γ"), { icon: "▦", open: false }) : ""}
+      ${cloud("warn", "La trampa a evitar", "<p>Si una variante sale mejor en vivo pero peor en la validación, no se cambia a mitad de temporada: elegirla por su número en vivo sería hacer trampa con la prueba. Los cambios se deciden al reoptimizar, con una validación nueva.</p>", "!")}
+      ${D.ensemble ? group("Validación: η × γ del ensamble", gridTable(D.ensemble.grid, "eta", "gamma", "η", "γ"), { icon: "▦", open: false }) : ""}
     </section>
 
     <section class="panel stack">
@@ -2043,7 +2111,7 @@ async function renderModelLab() {
 let researchData = null;
 async function loadResearch() {
   if (researchData) return researchData;
-  const res = await fetch("data/research.json");
+  const res = await fetch(`${DATA_BASE}data/research.json`);
   if (!res.ok) throw new Error(String(res.status));
   researchData = await res.json();
   return researchData;
@@ -2184,87 +2252,177 @@ async function renderResearch() {
 }
 
 /* ---------- Equipo en seguimiento y análisis previo al partido ---------- */
-const FOCUS = CORE.focus ?? { team: null, analyzed: [] };
-const PRE = CORE.pregame ?? {};
+const FOCUS = { team: null, analyzed: [] };
+/* Análisis previos: uno por partido con línea publicada, cargado bajo demanda desde data/pregame/. */
+const PRE = {};
+const ANALYZED = CORE.analyzed ?? [];
+const ANALYZED_SET = new Set(ANALYZED);
+/** Primer día en vivo: el primer partido posterior al corte de la validación. */
+const LIVE_FROM = CORE.games.map((g) => g.date).filter((d) => d && d > CORE.validCutoff).sort()[0] ?? CORE.validCutoff;
+const PICKS = new Map((CORE.picks ?? []).map((p) => [p.id, p]));
 const fmtOdds = (v) => (v === null || v === undefined ? "—" : v > 0 ? `+${v}` : `−${Math.abs(v)}`);
 const pct = (v, d = 1) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(d)}%`);
 const toC = (f) => Math.round(((f - 32) * 5) / 9);
 const gameTypeLabel = (type, week) => (type && type !== "REG" ? POST_LABELS[type] ?? type : `Semana ${week}`);
+const isPlayed = (g) => g.hs !== null && g.as !== null;
+const weekdayFmt = new Intl.DateTimeFormat("es-MX", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDay = (iso) => (iso ? weekdayFmt.format(new Date(iso + "T12:00:00Z")) : "");
 
-function focusGames() {
-  return CORE.games.filter((g) => g.home === FOCUS.team || g.away === FOCUS.team);
+async function loadPregame(id) {
+  if (PRE[id]) return PRE[id];
+  const res = await fetch(`${DATA_BASE}data/pregame/${id}.json`);
+  if (!res.ok) throw new Error(String(res.status));
+  PRE[id] = await res.json();
+  return PRE[id];
 }
-function focusCard(gameId) {
-  const a = PRE[gameId];
-  const g = gamesById.get(gameId);
-  if (!a || !g) return "";
-  const team = CORE.teams[FOCUS.team];
-  const opp = g.home === FOCUS.team ? g.away : g.home;
-  const colors = teamColors(FOCUS.team, opp);
+async function openPregame(id) {
+  const token = ++renderToken;
+  if (!PRE[id]) {
+    view.innerHTML = `<p class="status">Cargando el análisis previo…</p>`;
+    try { await loadPregame(id); } catch {
+      if (token === renderToken) view.innerHTML = `<p class="status">No se pudo cargar el análisis. Recarga la página para intentarlo de nuevo.</p>`;
+      return;
+    }
+    if (token !== renderToken) return;
+  }
+  renderPregame(id);
+}
+
+/** Semana en curso: la primera con partidos por jugar (o la última si ya terminó la temporada). */
+function currentWeek() {
+  return CORE.games.find((g) => !isPlayed(g))?.week ?? weeks.at(-1);
+}
+/** Lado elegido por el modelo para ganar, cubrir y el total, con su probabilidad. */
+function pickSides(g, pk) {
+  const win = pk.p >= 0.5 ? { team: g.home, p: pk.p, mkt: pk.pMkt } : { team: g.away, p: 1 - pk.p, mkt: pk.pMkt === null ? null : 1 - pk.pMkt };
+  let cover = null;
+  if (g.spread !== null && pk.pCover !== null) {
+    const homeLine = -g.spread;
+    cover = pk.pCover >= 0.5 ? { team: g.home, line: homeLine, p: pk.pCover } : { team: g.away, line: -homeLine, p: 1 - pk.pCover };
+  }
+  const ou = g.total !== null && pk.pOver !== null ? (pk.pOver >= 0.5 ? { side: "Over", p: pk.pOver } : { side: "Under", p: 1 - pk.pOver }) : null;
+  return { win, cover, ou };
+}
+function pickResult(g, pk) {
+  if (!isPlayed(g)) return null;
+  const s = pickSides(g, pk);
+  const m = g.hs - g.as, t = g.hs + g.as;
+  const winner = m > 0 ? g.home : m < 0 ? g.away : null;
+  const win = winner === null ? "push" : winner === s.win.team ? "hit" : "miss";
+  let cover = null;
+  if (s.cover) { const r = (m - g.spread) * (s.cover.team === g.home ? 1 : -1); cover = r > 0 ? "hit" : r < 0 ? "miss" : "push"; }
+  let ou = null;
+  if (s.ou) { const r = (t - g.total) * (s.ou.side === "Over" ? 1 : -1); ou = r > 0 ? "hit" : r < 0 ? "miss" : "push"; }
+  return { win, cover, ou };
+}
+const tierOf = (p) => (p >= 0.7 ? ["Fuerte", "ok"] : p >= 0.6 ? ["Moderado", "next"] : ["Volado", "muted"]);
+const mark = (r) => (r === "hit" ? '<span class="pos">✓</span>' : r === "miss" ? '<span class="negv">✗</span>' : r === "push" ? '<span class="muted">push</span>' : "");
+const fmtLine = (v) => (v === 0 ? "PK" : v > 0 ? `+${v}` : `−${Math.abs(v)}`);
+
+function pickCard(g) {
+  const pk = PICKS.get(g.id);
+  if (!pk) return "";
+  const colors = teamColors(g.home, g.away);
+  const s = pickSides(g, pk);
+  const res = pickResult(g, pk);
+  const played = isPlayed(g);
+  const [tier, tierCls] = tierOf(s.win.p);
+  const edge = s.win.mkt === null ? null : s.win.p - s.win.mkt;
+  const row = (abbr, qb, p, color, score, won, lost) => `
+    <div class="pk-row ${won ? "won" : ""} ${lost ? "lost" : ""}">
+      <span class="dot" style="background:${esc(color)}"></span>
+      <span class="abbr">${esc(abbr)}</span>
+      <span class="qb">${esc(qb ?? "QB sin confirmar")}${pk.qbProjected ? ' <span class="muted">(proyectado)</span>' : ""}</span>
+      <span class="num">${played ? score : pct(p, 0)}</span>
+    </div>`;
+  const pa = 1 - pk.p;
   return `
-    <a class="focus-card" href="#p-${esc(gameId)}" style="--team:${esc(colors.home)}">
-      <span class="team-badge">${esc(FOCUS.team)}</span>
-      <div>
-        <span class="eyebrow">${esc(team?.name ?? FOCUS.team)} · ${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span>
-        <div class="matchup">${esc(CORE.teams[g.away]?.name ?? g.away)} @ ${esc(CORE.teams[g.home]?.name ?? g.home)}</div>
-        <div class="sub">Modelo construido solo con datos anteriores al partido (${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}, ${a.data.currentSeasonGames} de ${a.season}) y comparado con el resultado final.</div>
-        <div class="chips" style="margin-top:6px"><span class="chip">P(gana ${esc(FOCUS.team)}) <b>${pct(g.home === FOCUS.team ? a.pHome : 1 - a.pHome)}</b></span><span class="chip">Proyección <b>${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}</b></span>${a.postgame ? `<span class="chip">Real <b>${a.postgame.awayScore} – ${a.postgame.homeScore}</b></span>` : ""}</div>
+    <article class="pick-card ${res ? (res.win === "hit" ? "hit" : res.win === "miss" ? "miss" : "") : ""}">
+      <div class="pk-meta"><span>${esc(fmtDay(g.date))} · ${esc(weekLabel(g.week, true))}</span><span class="tier pill ${tierCls}">${tier}</span></div>
+      ${row(g.away, pk.awayQb, pa, colors.away, g.as, played && g.as > g.hs, played && g.as < g.hs)}
+      ${row(g.home, pk.homeQb, pk.p, colors.home, g.hs, played && g.hs > g.as, played && g.hs < g.as)}
+      <div class="pbar2" title="Modelo: ${esc(g.away)} ${pct(pa)} · ${esc(g.home)} ${pct(pk.p)}${pk.pMkt !== null ? ` · mercado ${esc(g.home)} ${pct(pk.pMkt)}` : ""}">
+        <i style="width:${(pa * 100).toFixed(1)}%;background:${esc(colors.away)}"></i><i style="width:${(pk.p * 100).toFixed(1)}%;background:${esc(colors.home)}"></i>
+        ${pk.pMkt !== null ? `<span class="mk" style="left:calc(${((1 - pk.pMkt) * 100).toFixed(1)}% - 1px)"></span>` : ""}
       </div>
-      <span class="go">Ver análisis →</span>
-    </a>`;
+      <div class="pk-lines">
+        <span class="chip pick">Gana <b>${esc(s.win.team)}</b> ${pct(s.win.p, 0)} ${res ? mark(res.win) : ""}</span>
+        ${s.cover ? `<span class="chip">Spread <b>${esc(s.cover.team)} ${fmtLine(s.cover.line)}</b> ${pct(s.cover.p, 0)} ${res ? mark(res.cover) : ""}</span>` : ""}
+        ${s.ou ? `<span class="chip"><b>${s.ou.side} ${g.total}</b> ${pct(s.ou.p, 0)} ${res ? mark(res.ou) : ""}</span>` : ""}
+        ${edge !== null ? `<span class="chip">vs mercado <b class="${Math.abs(edge) >= 0.05 ? (edge > 0 ? "pos" : "negv") : ""}">${signed(edge * 100, 1)} pp</b></span>` : '<span class="chip">sin línea del mercado aún</span>'}
+      </div>
+      <div class="pk-foot">
+        <span class="muted">${played ? `Final: ${esc(g.away)} ${g.as} – ${g.hs} ${esc(g.home)}` : `Proyección: ${esc(g.away)} ${((pk.total - pk.margin) / 2).toFixed(1)} – ${((pk.total + pk.margin) / 2).toFixed(1)} ${esc(g.home)}`}</span>
+        ${ANALYZED_SET.has(g.id) ? `<a href="#p-${esc(g.id)}">Análisis →</a>` : played ? `<a href="#g-${esc(g.id)}">Jugadas →</a>` : ""}
+      </div>
+    </article>`;
 }
 
-function renderFocusTeam() {
-  renderToken++;
-  const games = focusGames();
-  const team = CORE.teams[FOCUS.team];
-  const first = FOCUS.analyzed[0];
-  const priorSeason = first ? PRE[first].data.priorSeasonGames : 0;
-  const rows = games.map((g) => {
-    const isHome = g.home === FOCUS.team;
-    const opp = isHome ? g.away : g.home;
-    const ready = FOCUS.analyzed.includes(g.id);
-    const played = g.hs !== null && g.as !== null;
-    const own = isHome ? g.hs : g.as, their = isHome ? g.as : g.hs;
-    const res = played ? `${own > their ? "G" : own < their ? "P" : "E"} ${own}–${their}` : "—";
-    const before = CORE.games.filter((x) => x.date && g.date && x.date < g.date && x.hs !== null).length;
-    return `
-      <tr class="${ready ? "focus-row" : ""}">
-        <td class="muted num" style="white-space:nowrap">${esc(weekLabel(g.week, true))}</td>
-        <td class="muted" style="white-space:nowrap">${esc(fmtDate(g.date))}</td>
-        <td style="white-space:nowrap">${isHome ? "vs" : "@"} ${esc(opp)}</td>
-        <td class="num" style="white-space:nowrap">${esc(res)}</td>
-        <td class="r num muted">${numFmt.format(priorSeason)} + ${before}</td>
-        <td>${ready ? `<a class="pill ok" href="#p-${esc(g.id)}">Análisis listo →</a>` : `<span class="pill muted">Próximamente</span>`}</td>
-      </tr>`;
-  }).join("");
+function recordCard(title, r, note) {
+  if (!r || !r.n) return `<div class="rec-card"><span class="eyebrow">${esc(title)}</span><span class="big">—</span><span class="muted">${note}</span></div>`;
+  const ats = r.ats.w + r.ats.l ? `${r.ats.w}–${r.ats.l}${r.ats.p ? `–${r.ats.p}` : ""}` : "—";
+  const ou = r.ou.w + r.ou.l ? `${r.ou.w}–${r.ou.l}${r.ou.p ? `–${r.ou.p}` : ""}` : "—";
+  return `<div class="rec-card">
+    <span class="eyebrow">${esc(title)}</span>
+    <span class="big num">${numFmt.format(r.model.hits)}/${r.n} <span class="muted" style="font-size:15px">${pct(r.model.accuracy)}</span></span>
+    <div class="vs"><span>Mercado</span><b class="num">${numFmt.format(r.market.hits)}/${r.market.n} · ${pct(r.market.accuracy)}</b></div>
+    <div class="vs"><span>${annotate("Log-loss")} modelo / mercado</span><b class="num">${r.model.logLoss.toFixed(3)} / ${r.market.logLoss.toFixed(3)}</b></div>
+    <div class="vs"><span>Brier modelo / mercado</span><b class="num">${r.model.brier.toFixed(3)} / ${r.market.brier.toFixed(3)}</b></div>
+    <div class="vs"><span>Spread · Over/Under</span><b class="num">${ats} · ${ou}</b></div>
+    <span class="muted" style="font-size:12px">${note}</span>
+  </div>`;
+}
 
+let picksWeek = null;
+function renderPicks(week) {
+  renderToken++;
+  picksWeek = week ?? picksWeek ?? currentWeek();
+  const rec = CORE.record ?? {};
+  const cur = currentWeek();
+  const liveFrom = fmtDay(LIVE_FROM);
   view.innerHTML = `
     <section class="intro">
-      <p class="eyebrow">Equipo en seguimiento · temporada ${CORE.season}</p>
-      <h1>${esc(team?.name ?? FOCUS.team)}</h1>
-      <p class="lede">Antes de cada partido de los ${esc(team?.name ?? FOCUS.team)} construimos el modelo <strong>solo con los datos que existían hasta ese día</strong>, y al final lo comparamos con lo que pasó. En la semana 1 todo sale de la temporada ${CORE.season - 1}; cada partido nuevo entra al siguiente modelo con el doble de peso que un partido del año anterior, así que el modelo debería mejorar conforme avanza la temporada.</p>
+      <p class="eyebrow">Picks NFL ${CORE.season} · todos los partidos, antes de jugarse</p>
+      <h1>Picks de la ${esc(weekLabel(picksWeek).toLowerCase())}</h1>
+      <p class="lede">Para cada partido el modelo da su probabilidad de victoria, el lado del ${annotate("spread")} y el del total, con solo la información publicada antes de la patada inicial. Los modelos aprendieron con la temporada ${CORE.season - 1} completa y se eligieron con las semanas 1–3 de ${CORE.season}. Desde el ${esc(liveFrom)} cada pick queda fijo y se compara con el resultado cuando se juega. La línea negra en cada barra es la probabilidad del mercado.</p>
     </section>
 
     <section class="stack" style="gap:10px">
-      <div class="section-head" style="margin-bottom:0"><h2>Partidos analizados</h2></div>
-      ${FOCUS.analyzed.slice().reverse().map((id) => focusCard(id)).join("")}
+      <div class="section-head" style="margin-bottom:0"><h2>Marcador de la temporada</h2></div>
+      <div class="record">
+        ${recordCard(`En vivo · desde el ${liveFrom}`, rec.live, rec.live?.n ? "Picks fijados antes de cada partido: la medición honesta." : "Empieza con los partidos que aún no se juegan: aquí se suma cada resultado.")}
+        ${recordCard(`Validación · semanas 1–3`, rec.valid, "Partidos con los que se eligió cómo combinar los modelos: no es una prueba independiente.")}
+      </div>
+      ${cloud("explain", "Cómo leer los picks", `<p><b>Fuerte</b> = el modelo da 70% o más al ganador, <b>Moderado</b> = 60–70%, <b>Volado</b> = menos de 60%. "vs mercado" es la diferencia entre la probabilidad del modelo y la implícita en los momios sin margen: con una sola temporada de historia el mercado todavía acierta más, así que una diferencia grande es más una señal para revisar el análisis que una apuesta.</p>`, "i")}
     </section>
 
-    ${evolutionPanel()}
-
-    <section class="panel">
-      <div class="section-head">
-        <h2>Calendario y datos disponibles</h2>
-        <p class="lede">La columna de datos muestra cuántos partidos conoce el modelo antes de cada juego: los de ${CORE.season - 1} más los de ${CORE.season} ya jugados.</p>
+    <section>
+      <div class="weeks" role="group" aria-label="Semana">
+        ${weeks.map((w) => `<button type="button" data-week="${w}" id="pweek-${w}" aria-pressed="${w === picksWeek}">${esc(weekLabel(w, true))}${w === cur ? " ·" : ""}</button>`).join("")}
       </div>
-      <div class="table-scroll">
-        <table class="schedule">
-          <thead><tr><th>Sem</th><th>Fecha</th><th>Rival</th><th>Resultado</th><th class="r">Partidos conocidos</th><th>Modelo previo</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <div class="picks" id="picks-grid"></div>
     </section>`;
+  const draw = () => {
+    const list = CORE.games.filter((g) => g.week === picksWeek);
+    const done = list.filter(isPlayed).length;
+    const hits = list.filter((g) => PICKS.has(g.id) && pickResult(g, PICKS.get(g.id))?.win === "hit").length;
+    const h1 = view.querySelector("h1");
+    if (h1) h1.textContent = `Picks de la ${weekLabel(picksWeek).toLowerCase()}`;
+    document.getElementById("picks-grid").innerHTML =
+      `<p class="note" style="grid-column:1/-1">${list.length} partidos · ${done ? `${done} ${done === 1 ? "jugado" : "jugados"}, ganador acertado en ${hits}` : "ninguno jugado todavía"}${list.some((g) => g.spread === null) ? " · algunas líneas del mercado aún no se publican" : ""}.</p>` +
+      list.map((g) => pickCard(g)).join("");
+  };
+  draw();
+  view.querySelectorAll(".weeks button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      picksWeek = Number(btn.dataset.week);
+      view.querySelectorAll(".weeks button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      draw();
+    });
+  });
+  const strip = view.querySelector(".weeks");
+  const active = view.querySelector(`#pweek-${picksWeek}`);
+  if (strip && active) strip.scrollLeft = active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2;
 }
 
 function probabilityChart(a, marketHome) {
@@ -2872,7 +3030,7 @@ function tournamentBlock(a) {
   const qbText = q ? (q.changeHome || q.changeAway ? `${q.changeHome ? `${esc(a.home)} arranca con ${esc(q.homeQb)} (habitual: ${esc(q.usualHome)})` : ""}${q.changeHome && q.changeAway ? " y " : ""}${q.changeAway ? `${esc(a.away)} arranca con ${esc(q.awayQb)} (habitual: ${esc(q.usualAway)})` : ""}: corrimiento de ${signed(q.shift, 2)} puntos. Ojo: la capa trata cualquier cambio como el promedio histórico (casi siempre un suplente); si el QB nuevo es un fichaje titular, la corrección exagera.` : `Ambos arrancan con su QB habitual (${esc(q.homeQb ?? "—")} y ${esc(q.awayQb ?? "—")}): la capa no mueve nada.`) : "Sin datos de QB.";
   const f = a.final;
   return `
-    ${cloud("explain", "Un modelo nuevo para cada partido", `<p>Para este partido se reconstruyeron desde cero 5 modelos con todos los resultados anteriores a la fecha (desde 2018). El ${annotate("ensamble")} los combina con pesos que suben para el que más acertó y bajan para el que falló (log-loss${info("logloss")} con olvido). Después se corrige por el QB titular y por los ajustes 5.3 con información nueva.</p>`, "?")}
+    ${cloud("explain", "Un modelo nuevo para cada partido", `<p>Para este partido se reconstruyeron desde cero 5 modelos con todos los resultados anteriores a la fecha (desde ${CORE.season - 1}; esta edición no usa temporadas anteriores). El ${annotate("ensamble")} los combina con pesos que suben para el que más acertó y bajan para el que falló (log-loss${info("logloss")} con olvido). Después se corrige por el QB titular y por los ajustes 5.3 con información nueva.</p>`, "?")}
     <div class="table-scroll"><table class="compact tourney">
       <thead><tr><th>Modelo</th><th class="r">P(gana ${esc(a.home)})</th><th class="r">Margen ${esc(a.home)}</th><th class="r">Total</th><th class="r">Peso en el ensamble</th><th class="r">Log-loss · acierto</th></tr></thead>
       <tbody>${keys.map((k) => row(k)).join("")}${row("ensemble", "sep")}${row("qv")}${row("qb")}${row("final", "strong-row")}${row("market", "muted-row")}</tbody>
@@ -2906,9 +3064,11 @@ function renderPregame(gameId) {
   const marketHome = marketImpliedHome(a);
   const pg = a.postgame;
   const favTeam = c.spread >= 0 ? a.home : a.away;
-  const order = FOCUS.analyzed.indexOf(gameId);
-  const prevId = order > 0 ? FOCUS.analyzed[order - 1] : null;
-  const nextId = order >= 0 && order < FOCUS.analyzed.length - 1 ? FOCUS.analyzed[order + 1] : null;
+  const sameWeek = ANALYZED.filter((id) => gamesById.get(id)?.week === a.week);
+  const order = sameWeek.indexOf(gameId);
+  const prevId = order > 0 ? sameWeek[order - 1] : null;
+  const nextId = order >= 0 && order < sameWeek.length - 1 ? sameWeek[order + 1] : null;
+  const navLabel = (id) => { const x = gamesById.get(id); return x ? `${x.away} @ ${x.home}` : id; };
   const sec = (id) => FW_SECTIONS.find((d) => d.id === id);
   const itemsOf = (id) => a.items.filter((it) => it.section === id);
   const grouped = (id) => {
@@ -2939,12 +3099,12 @@ function renderPregame(gameId) {
 
   view.innerHTML = `
     <section class="scoreboard">
-      <div class="crumbs crumbs-row"><a href="#chiefs">← ${esc(CORE.teams[FOCUS.team]?.name ?? "Equipo")}</a>${prevId || nextId ? `<span class="crumb-nav">${prevId ? `<a href="#p-${esc(prevId)}">‹ ${esc(weekLabel(PRE[prevId].week, true))}</a>` : ""}${nextId ? `<a href="#p-${esc(nextId)}">${esc(weekLabel(PRE[nextId].week, true))} ›</a>` : ""}</span>` : ""}</div>
+      <div class="crumbs crumbs-row"><a href="#picks-w${a.week}">← Picks de la ${esc(weekLabel(a.week).toLowerCase())}</a>${prevId || nextId ? `<span class="crumb-nav">${prevId ? `<a href="#p-${esc(prevId)}">‹ ${esc(navLabel(prevId))}</a>` : ""}${nextId ? `<a href="#p-${esc(nextId)}">${esc(navLabel(nextId))} ›</a>` : ""}</span>` : ""}</div>
       <div class="sb-meta">${esc(weekLabel(a.week))} · ${esc(fmtDate(a.date))} · ${esc(c.stadium ?? "")}</div>
       <h1>${esc(CORE.teams[a.away]?.name ?? a.away)} @ ${esc(CORE.teams[a.home]?.name ?? a.home)}</h1>
       ${cloud("explain", "Cómo leer esta página", `<p>Es el análisis <strong>antes del partido</strong>, con solo lo publicado hasta el ${esc(fmtDate(a.data.cutoff))}: ${numFmt.format(a.data.priorSeasonGames)} partidos de ${a.season - 1}${a.data.currentSeasonGames ? ` y ${a.data.currentSeasonGames} de ${a.season} (pesan el doble)` : ""}, ${numFmt.format(a.data.plays)} jugadas, ${a.data.injuryRows} registros del reporte de lesiones y ${a.data.depthRows} del depth chart. Cada sección se abre con su flecha; los círculos ${info("epa").replace('data-term="epa"', 'data-term="epa" tabindex="-1"')} explican siglas. El resultado real está al final.</p>`, "i")}
       ${flow}
-      ${prevId ? cloud("take", `Qué aprendió el modelo desde la ${weekLabel(PRE[prevId].week, true)}`, `<p>${annotate(changesSummary(PRE[prevId], a))} <a href="#fw-5" class="jump-5">Ver el detalle en la sección 5 →</a></p>`, "↻") : ""}
+
     </section>
 
     <div class="summary-cards">
@@ -2996,7 +3156,7 @@ function renderPregame(gameId) {
 
     ${sectionBlock(a, sec("5"), `
       ${a.models ? group("Torneo de modelos: un modelo nuevo para este partido", tournamentBlock(a), { icon: "⚑" }) : ""}
-      ${prevId ? group(`Qué cambió desde el análisis de la ${weekLabel(PRE[prevId].week, true)}`, changesTable(PRE[prevId], a), { icon: "↻" }) : ""}
+
       ${grouped("5")}
       ${group("Proyección de puntos", `
         <div class="proj-flow">
@@ -3028,7 +3188,7 @@ function renderPregame(gameId) {
         <div class="legend"><span><i class="dot" style="background:var(--s1)"></i>Gana ${esc(a.home)}</span><span><i class="dot" style="background:var(--s2)"></i>Gana ${esc(a.away)}</span></div>
         <div class="chart-wrap">${marginChart(a)}</div>
         <p class="readout" id="margin-readout">Pasa el cursor (o toca) sobre la distribución para ver la probabilidad de cada margen.</p>
-        ${a.models?.discrete ? cloud("take", "Números clave incluidos", `<p>Las barras son la distribución discreta del modelo final: cada margen entero pesa según qué tan seguido ocurrió en 2019–2023 frente a lo que predice una curva normal (el 3 pasa ~2.7 veces más, el 7 ~1.8). Por eso sobresalen 3, 7 y 10, y el ${annotate("Push")}${info("push")} sobre una línea entera tiene su propia probabilidad.</p>`, "✓") : cloud("warn", "Limitación", `<p>La distribución es continua y no captura que los márgenes se amontonan en 3 y 7. Con un spread de 3, el ${annotate("Push")}${info("push")} es más probable de lo que el modelo cree.</p>`, "!")}`, { icon: "∿", open: false })}
+        ${a.models?.discrete ? cloud("take", "Números clave incluidos", `<p>Las barras son la distribución discreta del modelo final: cada margen entero pesa según qué tan seguido ocurrió en 2025–2026 (partidos anteriores) frente a lo que predice una curva normal (el 3 y el 7 salen mucho más seguido). Por eso sobresalen 3, 7 y 10, y el ${annotate("Push")}${info("push")} sobre una línea entera tiene su propia probabilidad.</p>`, "✓") : cloud("warn", "Limitación", `<p>La distribución es continua y no captura que los márgenes se amontonan en 3 y 7. Con un spread de 3, el ${annotate("Push")}${info("push")} es más probable de lo que el modelo cree.</p>`, "!")}`, { icon: "∿", open: false })}
       ${formulaCards(a, "5")}`)}
 
     ${sectionBlock(a, sec("6"), `
@@ -3143,17 +3303,18 @@ function route() {
     else el.removeAttribute("aria-current");
   };
   const pre = /^p-(.+)$/.exec(hash);
-  const isFocus = hash === "chiefs" || Boolean(pre && PRE[pre[1]]);
+  const pk = /^picks(?:-w(\d+))?$/.exec(hash);
+  const isPicks = Boolean(pk) || Boolean(pre && ANALYZED_SET.has(pre[1]));
   setCurrent("nav-lab", hash.startsWith("lab"));
-  setCurrent("nav-focus", isFocus);
-  setCurrent("nav-home", !hash.startsWith("lab") && !isFocus);
-  if (pre && PRE[pre[1]]) {
-    renderPregame(pre[1]);
+  setCurrent("nav-picks", isPicks);
+  setCurrent("nav-home", !hash.startsWith("lab") && !isPicks);
+  if (pre && ANALYZED_SET.has(pre[1])) {
+    openPregame(pre[1]);
     const pg = gamesById.get(pre[1]);
-    document.title = `${pg ? `${pg.away} @ ${pg.home}` : "Análisis"} · modelo previo · DATAGSPORTS`;
-  } else if (hash === "chiefs" && FOCUS.team) {
-    renderFocusTeam();
-    document.title = `${CORE.teams[FOCUS.team]?.name ?? FOCUS.team} · DATAGSPORTS`;
+    document.title = `${pg ? `${pg.away} @ ${pg.home}` : "Análisis"} · pick previo · DATAGSPORTS 2026`;
+  } else if (pk) {
+    renderPicks(pk[1] ? Number(pk[1]) : null);
+    document.title = "Picks · DATAGSPORTS 2026";
   } else if (hash === "lab") {
     renderLab();
     document.title = "Laboratorio · DATAGSPORTS";
@@ -3168,7 +3329,7 @@ function route() {
     document.title = `${game.away} @ ${game.home} · DATAGSPORTS`;
   } else {
     renderHome();
-    document.title = "DATAGSPORTS";
+    document.title = "DATAGSPORTS · NFL 2026";
   }
 }
 

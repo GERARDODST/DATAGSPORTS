@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+  // Cliente propio de esta edición: no se comparte con nfl2026/.
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Team {
+  abbr           String  @id
+  name           String
+  nickname       String?
+  conference     String?
+  division       String?
+  primaryColor   String?
+  secondaryColor String?
+  logoUrl        String?
+
+  players   Player[]
+  homeGames Game[]   @relation("HomeTeam")
+  awayGames Game[]   @relation("AwayTeam")
+
+  @@map("teams")
+}
+
+model Player {
+  gsisId       String    @id
+  fullName     String
+  position     String?
+  teamAbbr     String?
+  team         Team?     @relation(fields: [teamAbbr], references: [abbr])
+  birthDate    DateTime?
+  heightIn     Int?
+  weightLb     Int?
+  college      String?
+  jerseyNumber Int?
+  status       String?
+  headshotUrl  String?
+
+  weekStats PlayerWeekStat[]
+
+  @@index([teamAbbr])
+  @@map("players")
+}
+
+model Game {
+  gameId       String    @id
+  season       Int
+  week         Int
+  gameType     String?
+  gameDate     DateTime?
+  homeTeamAbbr String
+  awayTeamAbbr String
+  homeTeam     Team      @relation("HomeTeam", fields: [homeTeamAbbr], references: [abbr])
+  awayTeam     Team      @relation("AwayTeam", fields: [awayTeamAbbr], references: [abbr])
+  homeScore    Int?
+  awayScore    Int?
+  stadium      String?
+  roof         String?
+  surface      String?
+  spreadLine   Float?
+  totalLine    Float?
+
+  // Información disponible antes de la patada inicial (momios de cierre, sede, QBs, descanso, clima).
+  location       String?
+  divGame        Boolean?
+  homeRest       Int?
+  awayRest       Int?
+  homeMoneyline  Int?
+  awayMoneyline  Int?
+  homeSpreadOdds Int?
+  awaySpreadOdds Int?
+  overOdds       Int?
+  underOdds      Int?
+  temp           Int?
+  wind           Int?
+  homeQbName     String?
+  awayQbName     String?
+  homeQbId       String?
+  awayQbId       String?
+
+  weekStats PlayerWeekStat[]
+  drives    Drive[]
+  plays     Play[]
+
+  @@index([season, week])
+  @@index([homeTeamAbbr])
+  @@index([awayTeamAbbr])
+  @@map("games")
+}
+
+model PlayerWeekStat {
+  id           String  @id @default(cuid())
+  playerId     String
+  player       Player  @relation(fields: [playerId], references: [gsisId])
+  gameId       String?
+  game         Game?   @relation(fields: [gameId], references: [gameId])
+  season       Int
+  week         Int
+  seasonType   String?
+  teamAbbr     String?
+  opponentAbbr String?
+
+  completions   Int?
+  attempts      Int?
+  passingYards  Int?
+  passingTds    Int?
+  interceptions Int?
+
+  carries      Int?
+  rushingYards Int?
+  rushingTds   Int?
+
+  receptions     Int?
+  targets        Int?
+  receivingYards Int?
+  receivingTds   Int?
+
+  fantasyPoints    Float?
+  fantasyPointsPpr Float?
+
+  @@unique([playerId, season, week, seasonType])
+  @@index([season, week])
+  @@map("player_week_stats")
+}
+
+// Una posesión ofensiva completa (varias jugadas). Es la unidad natural del
+// modelo de "dos capas" del framework (sección 5.4): cuántas posesiones hay
+// y en qué termina cada una.
+model Drive {
+  id                 String   @id
+  gameId             String
+  game               Game     @relation(fields: [gameId], references: [gameId])
+  driveNumber        Int
+  season             Int
+  possessionTeamAbbr String?
+  quarterStart       Int?
+  playCount          Int?
+  timeOfPossession   String?
+  firstDowns         Int?
+  reachedRedZone     Boolean?
+  endedWithScore     Boolean?
+  startYardLine      String?
+  endYardLine        String?
+  result             String?
+
+  plays Play[]
+
+  @@unique([gameId, driveNumber])
+  @@index([season, possessionTeamAbbr])
+  @@map("drives")
+}
+
+// Una jugada individual. Es el estado atómico de la cadena de Markov:
+// (down, distancia, yardas hasta el touchdown, tiempo restante) -> siguiente
+// estado o resultado absorbente (touchdown, gol de campo, pérdida de balón,
+// punto/despeje, fin de cuarto/mitad). epa/wp vienen precalculados por
+// nflverse sobre su propio modelo público de puntos/probabilidad esperada.
+model Play {
+  id                   String   @id
+  gameId               String
+  game                 Game     @relation(fields: [gameId], references: [gameId])
+  driveId              String?
+  drive                Drive?   @relation(fields: [driveId], references: [id])
+  season               Int
+  week                 Int
+  quarter              Int?
+  down                 Int?
+  yardsToGo            Int?
+  yardLine100          Int?
+  gameSecondsRemaining Int?
+  possessionTeamAbbr   String?
+  defenseTeamAbbr      String?
+  playType             String?
+  yardsGained          Int?
+  epa                  Float?
+  winProbability       Float?
+  homeWinProbability   Float?
+  scoreDifferential    Int?
+  isTouchdown          Boolean  @default(false)
+  isInterception       Boolean  @default(false)
+  isFumbleLost         Boolean  @default(false)
+  isSack               Boolean  @default(false)
+  isSuccess            Boolean?
+  isDropback           Boolean?
+  isPassAttempt        Boolean?
+  isRushAttempt        Boolean?
+  isQbHit              Boolean?
+  thirdDownConverted   Boolean?
+  thirdDownFailed      Boolean?
+  cpoe                 Float?
+  passerPlayerId       String?
+  rusherPlayerId       String?
+  receiverPlayerId     String?
+  description          String?
+
+  @@index([gameId])
+  @@index([season, possessionTeamAbbr])
+  @@index([playType])
+  @@map("plays")
+}
+
+// Reporte oficial de lesiones de la semana (nflverse injuries_{season}.csv).
+model InjuryReport {
+  id             String    @id
+  season         Int
+  week           Int
+  gameType       String?
+  teamAbbr       String
+  gsisId         String?
+  fullName       String
+  position       String?
+  reportStatus   String?
+  practiceStatus String?
+  primaryInjury  String?
+  dateModified   DateTime?
+
+  @@index([season, week, teamAbbr])
+  @@map("injury_reports")
+}
+
+// Depth chart semanal: la alineación proyectada antes del partido (nflverse depth_charts_{season}.csv).
+model DepthChartEntry {
+  id            String  @id
+  season        Int
+  week          Int
+  gameType      String?
+  teamAbbr      String
+  gsisId        String?
+  fullName      String
+  position      String?
+  depthPosition String?
+  depthTeam     Int?
+  formation     String?
+
+  @@index([season, week, teamAbbr])
+  @@map("depth_chart_entries")
+}
+
+// Presión defensiva por equipo y partido, sumando los jugadores (PFR advstats_week_def_{season}.csv).
+model TeamGamePressure {
+  id            String @id
+  gameId        String
+  season        Int
+  week          Int
+  teamAbbr      String
+  pressures     Int
+  hurries       Int
+  qbHits        Int
+  sacks         Float
+  blitzes       Int
+  missedTackles Int    @default(0)
+
+  @@index([season, teamAbbr])
+  @@map("team_game_pressure")
+}
+
+/// QBR de ESPN (nflverse espn_data): week = 0 es el valor de la temporada completa.
+model QbrEntry {
+  id         String @id
+  season     Int
+  seasonType String
+  week       Int
+  teamAbbr   String
+  espnId     String
+  name       String
+  qbrTotal   Float
+  qbPlays    Int
+  epaTotal   Float?
+
+  @@index([season, name])
+  @@map("qbr_entries")
+}
+
+/// Estado de cada jugador en el roster semanal (nflverse weekly_rosters).
+/// INA = inactivo oficial del día del partido (se anuncia 90 minutos antes).
+model RosterStatus {
+  id                String  @id
+  season            Int
+  week              Int
+  teamAbbr          String
+  gsisId            String?
+  fullName          String
+  position          String?
+  status            String
+  statusDescription String?
+
+  @@index([season, week, teamAbbr])
+  @@map("roster_status")
+}

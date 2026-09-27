@@ -47,7 +47,7 @@ function gameKey(season: number, week: string | number, teamA: string, teamB: st
 
 function parseArgs() {
   const seasonArg = process.argv.find((a) => a.startsWith("--season="));
-  const season = seasonArg ? Number(seasonArg.split("=")[1]) : new Date().getFullYear() - 1;
+  const season = seasonArg ? Number(seasonArg.split("=")[1]) : 2026;
   return { season };
 }
 
@@ -208,7 +208,9 @@ async function loadWeeklyStats(
   console.log(`-> Estadísticas semanales de jugadores (temporada ${season})`);
   let rows: CsvRow[];
   try {
-    rows = await fetchCsv(`${RELEASES_BASE}/player_stats/stats_player_week_${season}.csv`);
+    // Desde 2025 nflverse publica las estadísticas semanales en el release stats_player.
+    rows = await fetchCsv(`${RELEASES_BASE}/stats_player/stats_player_week_${season}.csv`).catch(() =>
+      fetchCsv(`${RELEASES_BASE}/player_stats/stats_player_week_${season}.csv`));
   } catch {
     console.log("   (sin archivo por temporada, descargando player_stats.csv completo y filtrando)");
     const all = await fetchCsv(`${RELEASES_BASE}/player_stats/player_stats.csv`);

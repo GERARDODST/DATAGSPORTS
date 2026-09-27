@@ -43,7 +43,7 @@ function toBool(v: string | undefined | null): boolean {
 
 function parseArgs() {
   const seasonArg = process.argv.find((a) => a.startsWith("--season="));
-  const season = seasonArg ? Number(seasonArg.split("=")[1]) : new Date().getFullYear() - 1;
+  const season = seasonArg ? Number(seasonArg.split("=")[1]) : 2026;
   return { season };
 }
 

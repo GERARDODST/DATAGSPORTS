@@ -1,0 +1,22 @@
+{
+  "name": "datagsports-nfl2026",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Edición NFL 2026: picks previos de todos los partidos (historia 2025–2026). Dependencias en el package.json de la raíz.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "data:extract": "tsx scripts/extract-nflverse.ts",
+    "data:extract-pbp": "tsx scripts/extract-pbp.ts",
+    "data:extract-context": "tsx scripts/extract-context.ts",
+    "snapshot:export": "tsx scripts/export-snapshot.ts",
+    "models:optimize": "tsx scripts/optimize-models.ts",
+    "models:report": "tsx scripts/model-report.ts"
+  }
+}

@@ -1,5 +1,7 @@
 generator client {
   provider = "prisma-client-js"
+  // Cliente propio de esta edición: no se comparte con nfl2026/.
+  output   = "../src/generated/prisma"
 }
 
 datasource db {

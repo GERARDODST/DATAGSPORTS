@@ -3,19 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "data:extract": "tsx scripts/extract-nflverse.ts",
-    "data:extract-pbp": "tsx scripts/extract-pbp.ts",
-    "data:extract-context": "tsx scripts/extract-context.ts",
-    "snapshot:export": "tsx scripts/export-snapshot.ts",
-    "models:optimize": "tsx scripts/optimize-models.ts",
-    "models:report": "tsx scripts/model-report.ts"
+    "2024:export": "npm --prefix nfl2024 run snapshot:export",
+    "2026:export": "npm --prefix nfl2026 run snapshot:export",
+    "2026:update": "npm --prefix nfl2026 run data:extract -- --season=2026 && npm --prefix nfl2026 run data:extract-pbp -- --season=2026 && npm --prefix nfl2026 run data:extract-context -- --season=2026 && npm --prefix nfl2026 run snapshot:export",
+    "site:build": "node scripts/build-site.mjs",
+    "db:generate": "npm --prefix nfl2024 run db:generate && npm --prefix nfl2026 run db:generate",
+    "typecheck": "npm --prefix nfl2024 run typecheck && npm --prefix nfl2026 run typecheck"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -39,5 +32,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
-  }
+  },
+  "description": "DATAGSPORTS: dos ediciones independientes (nfl2024/ y nfl2026/) que comparten solo las dependencias instaladas aquí."
 }

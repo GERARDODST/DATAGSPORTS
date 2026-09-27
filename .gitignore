@@ -14,7 +14,7 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -40,5 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# snapshot estático generado (npm run snapshot:export)
-/snapshot/dist/
+# snapshot estático generado por edición (npm run snapshot:export) y sitio combinado
+/nfl*/snapshot/dist/
+/site/dist/
+
+# cliente de Prisma generado por edición (npm run db:generate)
+/nfl*/src/generated/
