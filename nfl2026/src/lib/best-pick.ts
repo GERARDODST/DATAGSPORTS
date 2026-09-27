@@ -212,16 +212,6 @@ export function buildBestPick(x: BestPickInput) {
   const best = playable[0] ?? null;
 
   // 5.7.10: correlación con el mejor pick (mismo supuesto causal).
-  const correlated = best
-    ? playable.filter((c) => c !== best && (
-        (c.team !== null && c.team === best.team) ||
-        (best.side === "under" && c.market === "Spread" && c.team === favTeam) ||
-        (c.side === "under" && best.market === "Spread" && best.team === favTeam) ||
-        (best.side === "over" && c.market === "Spread" && c.team === favTeam) ||
-        (c.side === "over" && best.market === "Spread" && best.team === favTeam)
-      )).map((c) => ({ pick: `${c.market}: ${c.pick}`, reason: c.team !== null && c.team === best.team ? `Mismo supuesto: que ${c.team} rinda por encima del mercado.` : "El total y el spread del favorito dependen del mismo guion de puntos." }))
-    : [];
-
   // 8.2: dependencia de supuestos del mejor pick.
   const assumption = (c: Cand) => {
     if (c.market === "Total") return c.side === "under"
@@ -232,6 +222,44 @@ export function buildBestPick(x: BestPickInput) {
       ? { main: `${t} gana el partido (${pct(c.pModel)} según el modelo)`, fails: `${r} gana: se pierde la apuesta completa` }
       : { main: `${t} queda del lado correcto de ${c.line} (proyección ${sgn(c.scriptEdge)} ${c.scriptUnit})`, fails: `Un solo touchdown de diferencia decide el spread: riesgo en números clave (3 y 7)` };
   };
+
+  const correlation = (a: Cand, c: Cand): string | null => {
+    if (c.team !== null && c.team === a.team) return `Mismo supuesto: que ${c.team} rinda por encima del mercado.`;
+    const pair = (t: Cand, sp: Cand) => (t.side === "under" || t.side === "over") && sp.market === "Spread" && sp.team === favTeam;
+    if (pair(a, c) || pair(c, a)) return "El total y el spread del favorito dependen del mismo guion de puntos.";
+    return null;
+  };
+  const correlated = best
+    ? playable.filter((c) => c !== best && correlation(best, c)).map((c) => ({ pick: `${c.market}: ${c.pick}`, reason: correlation(best, c) as string }))
+    : [];
+
+  // Los dos mejores picks del partido: uno por mercado (dos lados del mismo mercado se contradicen).
+  // El segundo prefiere un pick jugable que NO dependa del mismo supuesto que el primero (5.7.10);
+  // si depende, se muestra pero sin stake propio: solo uno de los dos puede llevar stake completo.
+  const ranked = [...candidates].sort(order);
+  const isPlayable = (c: Cand) => c.light === "Verde" || c.light === "Amarillo";
+  const first = ranked[0] ?? null;
+  const rest = first ? ranked.filter((c) => c.market !== first.market) : [];
+  const tier = (c: Cand) => (isPlayable(c) ? (first && correlation(first, c) ? 1 : 0) : 2);
+  const second = [...rest].sort((a, b) => tier(a) - tier(b) || order(a, b))[0] ?? null;
+  const why = (c: Cand) => (c.contradictions.length
+    ? c.contradictions.map((k) => `${k.ref}: ${k.text}`).join(" ")
+    : c.model && c.script && c.price ? "Pasa los tres filtros sin contradicciones." : `Filtros: estadístico ${c.model ? "sí" : "no"}, guion ${c.script ? "sí" : "no"}, cuota ${c.price ? "sí" : "no"}.`);
+  const top2 = [first, second].filter((c): c is Cand => c !== null).map((c, i) => {
+    const corr = i === 1 && first ? correlation(first, c) : null;
+    return {
+      rank: i + 1, market: c.market, pick: c.pick, team: c.team, side: c.side, odds: c.odds,
+      pModel: c.pModel, pImplied: c.pImplied, edge: c.edge, ev: c.ev, fairOdds: c.fairOdds, minOdds: c.minOdds,
+      light: c.light, level: c.level, klass: c.klass, confidence: c.confidence,
+      model: c.model, script: c.script, price: c.price, agree: c.agree, agreeOf: c.agreeOf,
+      playable: isPlayable(c), correlated: corr,
+      stake: isPlayable(c) && !corr ? c.stake : 0,
+      ownStake: isPlayable(c) ? c.stake : 0, // stake si se juega solo (sin el pick 1 del mismo partido)
+      assumption: assumption(c).main, why: why(c),
+      won: c.won, push: c.push, units: c.units,
+    };
+  });
+
 
   // Mercados alternativos (6.10 / 7.6): proyección sin cuota publicada en la fuente.
   const impliedTT = x.spread !== null && x.total !== null ? { home: x.total / 2 + x.spread / 2, away: x.total / 2 - x.spread / 2 } : null;
@@ -267,6 +295,7 @@ export function buildBestPick(x: BestPickInput) {
   return {
     candidates,
     best: best ? { ...best, assumption: assumption(best), correlated } : null,
+    top2,
     noBetReason: best ? null : byEdge[0] && byEdge[0].edge >= EDGE_MIN
       ? `El lado con más valor (${label(byEdge[0])}, ${sgn(byEdge[0].edge * 100)} pp) tiene contradicción ${byEdge[0].level.toLowerCase()}: ${byEdge[0].contradictions.map((k) => k.text).join(" ")}`
       : `Ningún lado llega a ${EDGE_MIN * 100} pp de edge contra la línea de cierre: proteger el bankroll es más importante que forzar una apuesta.`,

@@ -70,6 +70,16 @@ Aplica las secciones 5.5–5.6, 6.11–6.12, 7.2–7.8 y 8.2–8.6 del framework
   final, mayor valor esperado; con dependencia de supuestos (8.2), correlación (5.7.10) y la
   recomendación final 8.5–8.6. Si nada pasa, **No bet** con la razón.
 
+**Los 2 mejores picks de cada partido**: uno por mercado (dos lados del mismo mercado se
+contradicen), en el orden del framework; el segundo prefiere uno que no dependa del mismo supuesto
+que el primero (5.7.10) y, si depende, se muestra sin stake propio. Si ningún lado es jugable, el
+partido es **No bet** y los dos se marcan como no recomendados.
+
+**Top 3 de la semana** (arriba en Inicio y en Picks): de los 2 picks de cada partido, los tres
+jugables con mejor semáforo, primero lo que se puede jugar ya (Pick y Lean antes que "Esperar
+información"), luego menor contradicción y mayor confianza; máximo uno por partido. Semanas 1–2
+de 2026: 2–4, −2.26 unidades (muestra de 6 picks).
+
 El marcador de la página de Picks lleva el récord del mejor pick (1 unidad por pick y con el stake
 de Kelly). Semanas 1–3 de 2026: 7–9, −2.9 unidades, 17 partidos sin pick.
 

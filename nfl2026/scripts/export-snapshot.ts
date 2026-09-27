@@ -346,6 +346,11 @@ async function main() {
     if (pk) pk.best = bp.best
       ? { market: bp.best.market, pick: bp.best.pick, odds: bp.best.odds, light: bp.best.light, klass: bp.best.klass, confidence: bp.best.confidence, edge: bp.best.edge, level: bp.best.level, stake: bp.best.stake, won: bp.best.won, push: bp.best.push, units: bp.best.units }
       : { noBet: true, reason: bp.noBetReason };
+    if (pk) pk.top2 = bp.top2.map((t) => ({
+      rank: t.rank, market: t.market, pick: t.pick, odds: t.odds, pModel: t.pModel, pImplied: t.pImplied, edge: t.edge, ev: t.ev, minOdds: t.minOdds,
+      light: t.light, level: t.level, klass: t.klass, confidence: t.confidence, playable: t.playable, correlated: t.correlated, stake: t.stake, ownStake: t.ownStake,
+      why: t.why, assumption: t.assumption, won: t.won, push: t.push, units: t.units,
+    }));
     process.stdout.write(`\r   análisis previo ${i + 1}/${withLine.length}`);
   }
   // Marcador del mejor pick del framework por periodo: récord, unidades planas (1 u por pick) y con el
@@ -370,6 +375,35 @@ async function main() {
     };
   };
   (core.record as Record<string, unknown>).best = { valid: bestRecord("valid"), live: bestRecord("live") };
+
+  // Top 3 de cada semana: los picks jugables (Verde/Amarillo) de todos los partidos de la semana,
+  // ordenados como en el framework (semáforo → contradicción → confianza → valor esperado) y con
+  // máximo un pick por partido para no juntar dos apuestas que dependen del mismo guion.
+  type Top = { rank: number; light: string; klass: string; level: string; confidence: number; ev: number; playable: boolean; stake: number; won: boolean | null; push: boolean; units: number | null };
+  const lightRank: Record<string, number> = { Verde: 0, Amarillo: 1, Rojo: 2, Gris: 3 };
+  const levelRank: Record<string, number> = { Baja: 0, Media: 1, Alta: 2 };
+  // Primero lo que se puede jugar ya (Pick > Lean) y después lo que espera información (sin stake).
+  const klassRank: Record<string, number> = { "Pick fuerte": 0, "Pick moderado": 1, Lean: 2, "Esperar información": 3, "No bet": 4 };
+  const top3ByWeek: Record<number, (Top & { id: string; period: string })[]> = {};
+  for (const week of [...new Set(games.map((g) => g.week))]) {
+    const pool = core.picks
+      .filter((x) => games.find((g) => g.gameId === x.id)?.week === week && Array.isArray(x.top2))
+      .flatMap((x) => (x.top2 as (Top & { ownStake: number })[]).filter((t) => t.playable).map((t) => ({ ...t, stake: t.ownStake, id: x.id as string, period: x.period as string })))
+      .sort((a, b) => lightRank[a.light] - lightRank[b.light] || klassRank[a.klass] - klassRank[b.klass] || levelRank[a.level] - levelRank[b.level] || b.confidence - a.confidence || b.ev - a.ev);
+    const seen = new Set<string>();
+    const top = pool.filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true))).slice(0, 3);
+    if (top.length) top3ByWeek[week] = top;
+  }
+  (core as Record<string, unknown>).top3ByWeek = top3ByWeek;
+  const top3Record = (period: "valid" | "live") => {
+    const rows = Object.values(top3ByWeek).flat().filter((t) => t.period === period);
+    const done = rows.filter((t) => t.won !== null);
+    const w = done.filter((t) => t.won).length, pu = done.filter((t) => t.push).length;
+    const units = done.reduce((a, t) => a + (t.units ?? 0), 0);
+    return { picks: rows.length, decided: done.length, w, l: done.length - w - pu, p: pu, units: round(units, 2), roi: done.length ? round(units / done.length, 3) : null };
+  };
+  (core.record as Record<string, unknown>).top3 = { valid: top3Record("valid"), live: top3Record("live") };
+  console.log(`   top 3 semanal (validación): ${JSON.stringify((core.record as { top3: { valid: unknown } }).top3.valid)} · semanas: ${Object.entries(top3ByWeek).map(([w, t]) => `S${w}: ${t.length}`).join(", ")}`);
   console.log(`\n   mejor pick (validación): ${JSON.stringify((core.record as { best: { valid: unknown } }).best.valid)}`);
   console.log(`\n   ${withLine.length} análisis previos · ${(preBytes / 1024 / 1024).toFixed(1)} MB en data/pregame/`);
 

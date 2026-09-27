@@ -336,6 +336,28 @@
   .pk-best { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; border-top: 1px dashed var(--border); padding-top: 8px; }
   .pk-best .lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 
+  /* Top 3 de la semana */
+  .top3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .top-card { position: relative; display: flex; flex-direction: column; gap: 10px; text-decoration: none; background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--lt, var(--muted)); border-radius: 14px; padding: 16px 16px 14px; }
+  .top-card:hover { border-color: var(--ink); border-top-color: var(--lt, var(--muted)); }
+  .top-card.l-verde { --lt: var(--accent); } .top-card.l-amarillo { --lt: var(--s4); }
+  .top-rank { position: absolute; top: 12px; right: 14px; font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--lt, var(--muted)); opacity: 0.9; line-height: 1; }
+  .top-card .matchup { font-size: 12px; color: var(--muted); padding-right: 44px; }
+  .top-card .tpick { font-size: 21px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; padding-right: 44px; }
+  .top-card .tpick .odds { font-family: var(--mono); font-size: 15px; color: var(--muted); font-weight: 600; margin-left: 4px; }
+  .top-card .tnums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .top-card .tnums div { display: flex; flex-direction: column; }
+  .top-card .tnums span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .top-card .tnums b { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .top-card .twhy { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .top-card .tfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; margin-top: auto; }
+  .top-card .tfoot .go { font-weight: 600; color: var(--accent-ink); }
+  .top-empty { border: 1px dashed var(--border); border-radius: 14px; padding: 16px; color: var(--muted); font-size: 13px; }
+  .rank-badge { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-family: var(--mono); font-size: 11px; font-weight: 700; background: var(--ink); color: var(--ground); }
+  .rank-badge.off { background: var(--surface-2); color: var(--muted); }
+  .pk-best .rank-badge { width: 18px; height: 18px; font-size: 10px; }
+  .top2-stack { display: flex; flex-direction: column; gap: 12px; }
+
   /* Picks */
   .record { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
   .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
@@ -903,7 +925,6 @@ function renderHome() {
   const featuredTeams = featuredGame ? `${featuredGame.away} @ ${featuredGame.home}` : "";
   const cw = currentWeek();
   const cwGames = CORE.games.filter((g) => g.week === cw && PICKS.has(g.id));
-  const strongest = cwGames.filter((g) => !isPlayed(g)).map((g) => ({ g, s: pickSides(g, PICKS.get(g.id)) })).sort((a, b) => b.s.win.p - a.s.win.p).slice(0, 3);
   const playedCount = CORE.games.filter(isPlayed).length;
   const totalDrives = CORE.driveResults.reduce((s, d) => s + d.n, 0);
   view.innerHTML = `
@@ -919,13 +940,7 @@ function renderHome() {
       </div>
     </section>
 
-    <section class="stack" style="gap:10px">
-      <div class="section-head" style="margin-bottom:0">
-        <h2>${esc(weekLabel(cw))}: los picks más firmes</h2>
-        <p class="lede">${cwGames.length} partidos esta semana${CORE.record?.valid?.n ? ` · en las semanas 1–3 el modelo acertó ${CORE.record.valid.model.hits} de ${CORE.record.valid.n} ganadores (mercado ${CORE.record.valid.market.hits})` : ""}. <a href="#picks">Ver los picks de todos los partidos →</a></p>
-      </div>
-      <div class="picks">${strongest.map(({ g }) => pickCard(g)).join("")}</div>
-    </section>
+    ${top3Section(cw, { more: true })}
 
     <div class="callouts">
       ${featuredGame ? `
@@ -2348,6 +2363,48 @@ const tierOf = (p) => (p >= 0.7 ? ["Fuerte", "ok"] : p >= 0.6 ? ["Moderado", "ne
 const mark = (r) => (r === "hit" ? '<span class="pos">✓</span>' : r === "miss" ? '<span class="negv">✗</span>' : r === "push" ? '<span class="muted">push</span>' : "");
 const fmtLine = (v) => (v === 0 ? "PK" : v > 0 ? `+${v}` : `−${Math.abs(v)}`);
 
+const unitsMark = (t) => (t.won === null ? "" : t.push ? ' <span class="muted">push</span>' : t.won ? ` <span class="pos">✓ ${signed(t.units, 2)} u</span>` : ' <span class="negv">✗ −1 u</span>');
+function topRows(pk) {
+  if (!pk.top2?.length) return pk.best ? `<div class="pk-best"><span class="lbl">Framework</span><span class="muted">sin línea del mercado para valorar</span></div>` : "";
+  return pk.top2.map((t) => `<div class="pk-best"><span class="rank-badge ${t.playable ? "" : "off"}">${t.rank}</span>${t.playable
+    ? `<b>${esc(t.pick)}</b> <span class="muted num">${fmtOdds(t.odds)}</span> ${lightPill(t.light)} <span class="muted">${esc(t.klass)} · ${t.confidence}/10</span>${unitsMark(t)}`
+    : `<span class="muted">${esc(t.pick)} ${fmtOdds(t.odds)} · no recomendado (${esc(t.light)})</span>`}</div>`).join("");
+}
+
+/* Top 3 de la semana: los mejores picks jugables, uno por partido (calculado en la exportación). */
+function top3Section(week, opts = {}) {
+  const list = (CORE.top3ByWeek ?? {})[week] ?? [];
+  const cards = list.map((t, i) => {
+    const g = gamesById.get(t.id);
+    if (!g) return "";
+    const href = ANALYZED_SET.has(g.id) ? `#p-${g.id}` : `#picks-w${week}`;
+    return `<a class="top-card l-${String(t.light).toLowerCase()}" href="${esc(href)}">
+      <span class="top-rank">#${i + 1}</span>
+      <span class="matchup">${esc(fmtDay(g.date))} · ${esc(g.away)} @ ${esc(g.home)} · ${esc(t.market)}</span>
+      <span class="tpick">${esc(t.pick)}<span class="odds">${fmtOdds(t.odds)}</span></span>
+      <div class="best-tags">${lightPill(t.light)} ${klassPill(t.klass)} ${confMeter(t.confidence)}</div>
+      <div class="tnums">
+        <div><span>Modelo / mercado</span><b>${pct(t.pModel, 0)} / ${pct(t.pImplied, 0)}</b></div>
+        <div><span>Edge</span><b class="${t.edge > 0 ? "pos" : "negv"}">${signed(t.edge * 100, 1)} pp</b></div>
+        <div><span>Stake</span><b>${t.stake ? `${(t.stake * 100).toFixed(2)}%` : "0%"}</b></div>
+      </div>
+      <span class="twhy">${esc(t.why)}</span>
+      <div class="tfoot">${t.won === null ? `<span class="muted">Momio mínimo ${fmtOdds(t.minOdds)}</span>` : `<span>${t.push ? '<span class="pill muted">= Push</span>' : t.won ? `<span class="pill ok">✓ Ganó ${signed(t.units, 2)} u</span>` : '<span class="pill no">✗ Perdió −1 u</span>'}</span>`}<span class="go">${ANALYZED_SET.has(g.id) ? "Análisis →" : "Picks →"}</span></div>
+    </a>`;
+  }).join("");
+  const done = list.filter((t) => t.won !== null);
+  const summary = done.length ? ` · resultado: ${done.filter((t) => t.won).length}–${done.filter((t) => !t.won && !t.push).length}, ${signed(done.reduce((acc, t) => acc + (t.units ?? 0), 0), 2)} u` : "";
+  return `
+    <section class="stack" style="gap:10px" id="top3">
+      <div class="section-head" style="margin-bottom:0">
+        <span class="eyebrow">Top 3 · ${esc(weekLabel(week))}</span>
+        <h2>${opts.title ?? "Los 3 mejores picks de la semana"}</h2>
+        <p class="lede">De los 2 mejores picks de cada partido, los tres con mejor semáforo, que se pueden jugar ya (Pick y Lean antes que "Esperar información"), con menor contradicción y mayor confianza; máximo uno por partido${summary}.${opts.more ? ` <a href="#picks-w${week}">Ver los picks de todos los partidos →</a>` : ""}</p>
+      </div>
+      ${list.length ? `<div class="top3">${cards}</div>` : `<div class="top-empty">Esta semana ningún pick pasa los filtros del framework${(CORE.games.some((g) => g.week === week && g.spread === null)) ? " (o todavía no hay líneas del mercado)" : ""}: no bet.</div>`}
+    </section>`;
+}
+
 function pickCard(g) {
   const pk = PICKS.get(g.id);
   if (!pk) return "";
@@ -2380,7 +2437,7 @@ function pickCard(g) {
         ${s.ou ? `<span class="chip"><b>${s.ou.side} ${g.total}</b> ${pct(s.ou.p, 0)} ${res ? mark(res.ou) : ""}</span>` : ""}
         ${edge !== null ? `<span class="chip">vs mercado <b class="${Math.abs(edge) >= 0.05 ? (edge > 0 ? "pos" : "negv") : ""}">${signed(edge * 100, 1)} pp</b></span>` : '<span class="chip">sin línea del mercado aún</span>'}
       </div>
-      ${pk.best ? `<div class="pk-best"><span class="lbl">Mejor pick</span>${pk.best.noBet ? '<span class="pill muted">No bet</span><span class="muted">ningún lado pasa los filtros</span>' : `<b>${esc(pk.best.pick)}</b> <span class="muted num">${fmtOdds(pk.best.odds)}</span> ${lightPill(pk.best.light)} <span class="muted">${esc(pk.best.klass)} · ${pk.best.confidence}/10</span>${pk.best.won === null ? "" : pk.best.push ? ' <span class="muted">push</span>' : pk.best.won ? ` <span class="pos">✓ ${signed(pk.best.units, 2)} u</span>` : ' <span class="negv">✗ −1 u</span>'}`}</div>` : ""}
+      ${topRows(pk)}
       <div class="pk-foot">
         <span class="muted">${played ? `Final: ${esc(g.away)} ${g.as} – ${g.hs} ${esc(g.home)}` : `Proyección: ${esc(g.away)} ${((pk.total - pk.margin) / 2).toFixed(1)} – ${((pk.total + pk.margin) / 2).toFixed(1)} ${esc(g.home)}`}</span>
         ${ANALYZED_SET.has(g.id) ? `<a href="#p-${esc(g.id)}">Análisis →</a>` : played ? `<a href="#g-${esc(g.id)}">Jugadas →</a>` : ""}
@@ -2388,6 +2445,16 @@ function pickCard(g) {
     </article>`;
 }
 
+function top3RecordCard(title, r) {
+  if (!r || !r.decided) return `<div class="rec-card"><span class="eyebrow">${esc(title)}</span><span class="big">—</span><span class="muted">Todavía no se juega ningún pick del top 3.</span></div>`;
+  return `<div class="rec-card">
+    <span class="eyebrow">${esc(title)}</span>
+    <span class="big num">${r.w}–${r.l}${r.p ? `–${r.p}` : ""} <span class="muted" style="font-size:15px">${signed(r.units, 2)} u</span></span>
+    <div class="vs"><span>ROI a 1 unidad por pick</span><b class="num ${r.roi > 0 ? "pos" : "negv"}">${signed(r.roi * 100, 1)}%</b></div>
+    <div class="vs"><span>Picks del top 3 jugados</span><b class="num">${r.decided} de ${r.picks}</b></div>
+    <span class="muted" style="font-size:12px">Los tres mejores picks de cada semana, uno por partido, a 1 unidad cada uno y al momio real.</span>
+  </div>`;
+}
 function bestRecordCard(title, r, note) {
   if (!r || !r.decided) return `<div class="rec-card"><span class="eyebrow">${esc(title)}</span><span class="big">—</span><span class="muted">${r ? `${r.picks} picks jugables y ${r.noBets} no bet, ninguno jugado todavía.` : ""} ${note}</span></div>`;
   return `<div class="rec-card">
@@ -2429,11 +2496,14 @@ function renderPicks(week) {
       <p class="lede">Para cada partido el modelo da su probabilidad de victoria, el lado del ${annotate("spread")} y el del total, con solo la información publicada antes de la patada inicial. Los modelos aprendieron con la temporada ${CORE.season - 1} completa y se eligieron con las semanas 1–3 de ${CORE.season}. Desde el ${esc(liveFrom)} cada pick queda fijo y se compara con el resultado cuando se juega. La línea negra en cada barra es la probabilidad del mercado.</p>
     </section>
 
+    <div id="top3-slot"></div>
+
     <section class="stack" style="gap:10px">
       <div class="section-head" style="margin-bottom:0"><h2>Marcador de la temporada</h2></div>
       <div class="record">
         ${recordCard(`En vivo · desde el ${liveFrom}`, rec.live, rec.live?.n ? "Picks fijados antes de cada partido: la medición honesta." : "Empieza con los partidos que aún no se juegan: aquí se suma cada resultado.")}
         ${recordCard(`Validación · semanas 1–3`, rec.valid, "Partidos con los que se eligió cómo combinar los modelos: no es una prueba independiente.")}
+        ${top3RecordCard(rec.top3?.live?.decided ? "Top 3 semanal · en vivo" : "Top 3 semanal · semanas 1–3", rec.top3?.live?.decided ? rec.top3.live : rec.top3?.valid)}
         ${bestRecordCard(rec.best?.live?.decided ? "Mejor pick del framework · en vivo" : "Mejor pick del framework · semanas 1–3", rec.best?.live?.decided ? rec.best.live : rec.best?.valid, "Un pick por partido con los tres filtros y la auditoría del framework (momio real, el push devuelve la apuesta). Muestra chica: no concluir todavía.")}
       </div>
       ${cloud("explain", "Cómo leer los picks", `<p><b>Fuerte</b> = el modelo da 70% o más al ganador, <b>Moderado</b> = 60–70%, <b>Volado</b> = menos de 60%. "vs mercado" es la diferencia entre la probabilidad del modelo y la implícita en los momios sin margen: con una sola temporada de historia el mercado todavía acierta más, así que una diferencia grande es más una señal para revisar el análisis que una apuesta.</p>`, "i")}
@@ -2451,6 +2521,8 @@ function renderPicks(week) {
     const hits = list.filter((g) => PICKS.has(g.id) && pickResult(g, PICKS.get(g.id))?.win === "hit").length;
     const h1 = view.querySelector("h1");
     if (h1) h1.textContent = `Picks de la ${weekLabel(picksWeek).toLowerCase()}`;
+    const slot = document.getElementById("top3-slot");
+    if (slot) slot.innerHTML = top3Section(picksWeek);
     document.getElementById("picks-grid").innerHTML =
       `<p class="note" style="grid-column:1/-1">${list.length} partidos · ${done ? `${done} ${done === 1 ? "jugado" : "jugados"}, ganador acertado en ${hits}` : "ninguno jugado todavía"}${list.some((g) => g.spread === null) ? " · algunas líneas del mercado aún no se publican" : ""}.</p>` +
       list.map((g) => pickCard(g)).join("");
@@ -3120,60 +3192,64 @@ function bestPickPanel(a) {
   const ltCls = (l) => `l-${String(l).toLowerCase()}`;
   const R = B.recommendation;
   const recRow = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
-  const hero = b ? `
-    <div class="best ${ltCls(b.light)}">
+  const tops = (B.top2 ?? []).map((t) => ({ t, c: B.candidates.find((x) => x.market === t.market && x.pick === t.pick) }));
+  const pickCardFull = ({ t, c }) => `
+    <div class="best ${ltCls(t.light)}">
       <div class="best-head">
         <div>
-          <span class="eyebrow">Mejor pick del partido · ${esc(b.market)}</span>
-          <div class="best-pick">${esc(b.pick)}<span class="odds">${fmtOdds(b.odds)}</span></div>
+          <span class="eyebrow"><span class="rank-badge ${t.playable ? "" : "off"}">${t.rank}</span> Pick ${t.rank} del partido · ${esc(t.market)}${t.playable ? "" : " · no recomendado"}</span>
+          <div class="best-pick">${esc(t.pick)}<span class="odds">${fmtOdds(t.odds)}</span></div>
         </div>
-        <div class="best-tags">${lightPill(b.light)} ${klassPill(b.klass)} ${confMeter(b.confidence)} ${a.postgame ? resultPill(b) : ""}</div>
+        <div class="best-tags">${lightPill(t.light)} ${klassPill(t.klass)} ${confMeter(t.confidence)} ${a.postgame ? resultPill(t) : ""}</div>
       </div>
       <div class="best-nums">
-        <div><span>P modelo</span><b>${pct(b.pModel)}</b></div>
-        <div><span>P mercado ${info("implied")}</span><b>${pct(b.pImplied)}</b></div>
-        <div><span>Edge ${info("edge")}</span><b class="${b.edge > 0 ? "pos" : "negv"}">${signed(b.edge * 100, 1)} pp</b></div>
-        <div><span>Valor esperado</span><b>${signed(b.ev * 100, 1)}%</b></div>
-        <div><span>Momio justo ${info("fair")}</span><b>${fmtOdds(b.fairOdds)}</b></div>
-        <div><span>Momio mínimo</span><b>${fmtOdds(b.minOdds)}</b></div>
-        <div><span>Stake ${info("kelly")}</span><b>${b.stake ? `${(b.stake * 100).toFixed(2)}%` : "0%"}</b></div>
+        <div><span>P modelo</span><b>${pct(t.pModel)}</b></div>
+        <div><span>P mercado ${info("implied")}</span><b>${pct(t.pImplied)}</b></div>
+        <div><span>Edge ${info("edge")}</span><b class="${t.edge > 0 ? "pos" : "negv"}">${signed(t.edge * 100, 1)} pp</b></div>
+        <div><span>Valor esperado</span><b>${signed(t.ev * 100, 1)}%</b></div>
+        <div><span>Momio justo ${info("fair")}</span><b>${fmtOdds(t.fairOdds)}</b></div>
+        <div><span>Momio mínimo</span><b>${fmtOdds(t.minOdds)}</b></div>
+        <div><span>Stake ${info("kelly")}</span><b>${t.stake ? `${(t.stake * 100).toFixed(2)}%` : "0%"}</b></div>
       </div>
-      <div class="filters3">
-        <div><div class="fh">1 · Estadístico ${yesNo(b.model)}</div><span class="muted">Edge ${signed(b.edge * 100, 1)} pp (mínimo ${B.rules.edgeMin * 100} pp). ${b.agree} de ${b.agreeOf} modelos del torneo en este lado${b.agreeList.length ? ` (${esc(b.agreeList.join(", "))})` : ""}.</span></div>
-        <div><div class="fh">2 · Guion ${yesNo(b.script)}</div><span class="muted">Proyección ${signed(b.scriptEdge, 1)} ${esc(b.scriptUnit)} (se pide ${B.rules.scriptMin[b.market]}): ${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}.</span></div>
-        <div><div class="fh">3 · Cuota ${yesNo(b.price)}</div><span class="muted">${fmtOdds(b.odds)} contra un justo de ${fmtOdds(b.fairOdds)}: valor esperado ${signed(b.ev * 100, 1)}% por unidad, con el margen de la casa incluido.</span></div>
+      ${c ? `<div class="filters3">
+        <div><div class="fh">1 · Estadístico ${yesNo(c.model)}</div><span class="muted">Edge ${signed(c.edge * 100, 1)} pp (mínimo ${B.rules.edgeMin * 100} pp). ${c.agree} de ${c.agreeOf} modelos del torneo en este lado${c.agreeList.length ? ` (${esc(c.agreeList.join(", "))})` : ""}.</span></div>
+        <div><div class="fh">2 · Guion ${yesNo(c.script)}</div><span class="muted">Proyección ${signed(c.scriptEdge, 1)} ${esc(c.scriptUnit)} (se pide ${B.rules.scriptMin[c.market]}): ${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}.</span></div>
+        <div><div class="fh">3 · Cuota ${yesNo(c.price)}</div><span class="muted">${fmtOdds(c.odds)} contra un justo de ${fmtOdds(c.fairOdds)}: valor esperado ${signed(c.ev * 100, 1)}% por unidad, con el margen de la casa incluido.</span></div>
       </div>
       <div class="two-col">
         <div class="stack" style="gap:8px">
-          <h4>Contradicción ${esc(b.level.toLowerCase())} (${b.contradictions.length})</h4>
-          ${b.contradictions.length ? `<ul class="contra">${b.contradictions.map((k) => `<li><span class="ref">${esc(k.ref)}</span><span>${annotate(k.text)}</span></li>`).join("")}</ul>` : '<p class="note">Ninguna regla de las secciones 5.6, 6.11, 7.5, 7.7 y 8.3 se activa para este pick.</p>'}
+          <h4>Contradicción ${esc(c.level.toLowerCase())} (${c.contradictions.length})</h4>
+          ${c.contradictions.length ? `<ul class="contra">${c.contradictions.map((k) => `<li><span class="ref">${esc(k.ref)}</span><span>${annotate(k.text)}</span></li>`).join("")}</ul>` : '<p class="note">Ninguna regla de las secciones 5.6, 6.11, 7.5, 7.7 y 8.3 se activa para este pick.</p>'}
         </div>
         <div class="stack" style="gap:8px">
           <h4>Dependencia de supuestos (8.2)</h4>
-          <p class="note"><b>Supuesto principal:</b> ${esc(b.assumption.main)}.<br><b>Si falla:</b> ${esc(b.assumption.fails)}.</p>
-          ${b.correlated.length ? `<p class="note"><b>Correlación (5.7.10):</b> ${b.correlated.map((c) => `${esc(c.pick)} — ${esc(c.reason)}`).join(" ")} Solo uno puede llevar stake completo.</p>` : '<p class="note"><b>Correlación (5.7.10):</b> ningún otro pick jugable del partido depende del mismo supuesto.</p>'}
+          <p class="note"><b>Supuesto principal:</b> ${esc(t.rank === 1 && b ? b.assumption.main : t.assumption)}.${t.rank === 1 && b ? `<br><b>Si falla:</b> ${esc(b.assumption.fails)}.` : ""}</p>
+          ${t.rank === 2 ? `<p class="note"><b>Correlación con el pick 1 (5.7.10):</b> ${t.correlated ? `${esc(t.correlated)} Sin stake propio: solo uno de los dos puede llevar stake completo.` : "no dependen del mismo supuesto; se pueden jugar los dos."}</p>` : ""}
         </div>
-      </div>
-    </div>` : `
-    <div class="best l-gris">
+      </div>` : ""}
+    </div>`;
+  const hero = `
+    ${b ? "" : `<div class="best l-gris">
       <div class="best-head">
-        <div><span class="eyebrow">Mejor pick del partido</span><div class="best-pick">No bet</div></div>
+        <div><span class="eyebrow">Veredicto del partido</span><div class="best-pick">No bet</div></div>
         <div class="best-tags">${klassPill("No bet")}</div>
       </div>
       <p>${annotate(B.noBetReason)}</p>
-      <p class="note">Regla final del framework: proteger el bankroll es más importante que forzar una apuesta.</p>
-    </div>`;
-  const rows = [...B.candidates].sort((x, y) => (x === b ? -1 : y === b ? 1 : 0) || ["Verde", "Amarillo", "Rojo", "Gris"].indexOf(x.light) - ["Verde", "Amarillo", "Rojo", "Gris"].indexOf(y.light) || y.edge - x.edge);
+      <p class="note">Abajo están los dos lados mejor ubicados según el framework, marcados como no recomendados. Regla final: proteger el bankroll es más importante que forzar una apuesta.</p>
+    </div>`}
+    <div class="top2-stack">${tops.map(pickCardFull).join("")}</div>`;
+  const rankOf2 = (c) => tops.find((x) => x.c === c)?.t.rank ?? 9;
+  const rows = [...B.candidates].sort((x, y) => rankOf2(x) - rankOf2(y) || ["Verde", "Amarillo", "Rojo", "Gris"].indexOf(x.light) - ["Verde", "Amarillo", "Rojo", "Gris"].indexOf(y.light) || y.edge - x.edge);
   const table = `<div class="table-scroll"><table class="compact">
-    <thead><tr><th>Mercado</th><th>Pick</th><th class="r">Momio</th><th class="r">Modelo</th><th class="r">Mercado</th><th class="r">Edge</th><th>Estad.</th><th>Guion</th><th>Cuota</th><th>Contradicción</th><th>Semáforo</th><th>Decisión</th><th class="r">Conf.</th><th class="r">Stake</th>${a.postgame ? "<th>Resultado</th>" : ""}</tr></thead>
-    <tbody>${rows.map((c) => `<tr class="${c === b ? "best-row" : ""}">
-      <td>${esc(c.market)}</td><td><b>${esc(c.pick)}</b></td><td class="r num">${fmtOdds(c.odds)}</td><td class="r num">${pct(c.pModel)}</td><td class="r num">${pct(c.pImplied)}</td>
+    <thead><tr><th></th><th>Mercado</th><th>Pick</th><th class="r">Momio</th><th class="r">Modelo</th><th class="r">Mercado</th><th class="r">Edge</th><th>Estad.</th><th>Guion</th><th>Cuota</th><th>Contradicción</th><th>Semáforo</th><th>Decisión</th><th class="r">Conf.</th><th class="r">Stake</th>${a.postgame ? "<th>Resultado</th>" : ""}</tr></thead>
+    <tbody>${rows.map((c) => { const tr = tops.find((x) => x.c === c); return `<tr class="${tr && tr.t.playable ? "best-row" : ""}">
+      <td>${tr ? `<span class="rank-badge ${tr.t.playable ? "" : "off"}">${tr.t.rank}</span>` : ""}</td><td>${esc(c.market)}</td><td><b>${esc(c.pick)}</b></td><td class="r num">${fmtOdds(c.odds)}</td><td class="r num">${pct(c.pModel)}</td><td class="r num">${pct(c.pImplied)}</td>
       <td class="r num ${c.edge >= 0.03 ? "pos" : c.edge < 0 ? "negv" : ""}">${signed(c.edge * 100, 1)}</td>
       <td>${c.model ? "✓" : "✗"}</td><td>${c.script ? "✓" : "✗"}</td><td>${c.price ? "✓" : "✗"}</td>
       <td title="${esc(c.contradictions.map((k) => `${k.ref}: ${k.text}`).join("\n"))}">${esc(c.level)}${c.contradictions.length ? ` <span class="muted">(${[...new Set(c.contradictions.map((k) => k.ref))].map(esc).join(", ")})</span>` : ""}</td>
       <td>${lightPill(c.light)}</td><td>${klassPill(c.klass)}</td><td class="r num">${c.confidence}</td><td class="r num">${c.stake ? `${(c.stake * 100).toFixed(2)}%` : "—"}</td>
       ${a.postgame ? `<td>${resultPill(c)}</td>` : ""}
-    </tr>`).join("")}</tbody></table></div>`;
+    </tr>`; }).join("")}</tbody></table></div>`;
   const rec = `<dl class="rec-list">
     ${recRow("Mejor pick por valor", R.bestValue ? `${esc(R.bestValue.pick)} · ${signed(R.bestValue.edge * 100, 1)} pp · ${lightPill(R.bestValue.light)}` : "—")}
     ${recRow("Mejor total", R.bestTotal ? `${esc(R.bestTotal.pick)} · ${signed(R.bestTotal.edge * 100, 1)} pp · ${lightPill(R.bestTotal.light)}` : "—")}
@@ -3190,8 +3266,8 @@ function bestPickPanel(a) {
   return `
     <section class="stack" id="mejor-pick" style="gap:12px">
       <div class="section-head" style="margin-bottom:0">
-        <h2>El mejor pick del partido</h2>
-        <p class="lede">El framework no elige al que más probablemente gana: elige el mercado que mejor representa el guion del partido con menor contradicción. Cada uno de los 6 lados con cuota pasa por los tres filtros (8.3.13) y por las reglas de cancelación de las secciones 5.6, 6.11, 7.5, 7.7 y 8.3.</p>
+        <h2>Los 2 mejores picks del partido</h2>
+        <p class="lede">El framework no elige al que más probablemente gana: elige el mercado que mejor representa el guion del partido con menor contradicción. Se muestran los dos mejores (uno por mercado); el segundo evita, si puede, depender del mismo supuesto que el primero. Cada uno de los 6 lados con cuota pasa por los tres filtros (8.3.13) y por las reglas de cancelación de las secciones 5.6, 6.11, 7.5, 7.7 y 8.3.</p>
       </div>
       ${hero}
       ${group("Decisión corregida (8.4): los 6 lados", table, { icon: "⚖", count: B.candidates.length })}
@@ -3248,7 +3324,7 @@ function renderPregame(gameId) {
     <div class="summary-cards">
       <div class="sum-card" style="--cat:var(--c8)"><span class="eyebrow">Proyección</span><span class="num big">${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}</span><span class="muted">total ${a.projection.total.toFixed(1)} · línea ${c.total ?? "—"}</span></div>
       <div class="sum-card" style="--cat:var(--c1)"><span class="eyebrow">P(gana ${esc(a.home)}) ${info("triang")}</span><span class="num big">${pct(a.pHome)}</span><span class="muted">mercado ${pct(marketHome)} · confianza ${esc(a.confidence)}</span></div>
-      <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Mejor pick ${info("light")}</span><span class="num big">${a.bestPick?.best ? esc(a.bestPick.best.pick) : "No bet"}</span><span class="muted">${a.bestPick?.best ? `${signed(a.bestPick.best.edge * 100, 1)} pp · ${lightPill(a.bestPick.best.light)} · ${esc(a.bestPick.best.klass)}` : "sin pick que pase los filtros"} · <a href="#mejor-pick" class="jump-best">ver →</a></span></div>
+      <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Picks 1 y 2 ${info("light")}</span><span class="num big">${a.bestPick?.best ? esc(a.bestPick.best.pick) : "No bet"}</span><span class="muted">${a.bestPick?.best ? `${signed(a.bestPick.best.edge * 100, 1)} pp · ${lightPill(a.bestPick.best.light)}${a.bestPick.top2?.[1] ? ` · 2: ${esc(a.bestPick.top2[1].pick)}${a.bestPick.top2[1].playable ? "" : " (no rec.)"}` : ""}` : "sin pick que pase los filtros"} · <a href="#mejor-pick" class="jump-best">ver →</a></span></div>
       <div class="sum-card" style="--cat:var(--c5)"><span class="eyebrow">Datos ${info("gate")}</span><span class="num big">${a.inventory.byStatus.disponible + a.inventory.byStatus.derivado}/${a.inventory.total}</span><span class="muted">${a.inventory.byStatus.faltante} faltan · ${a.inventory.byStatus.parcial} parciales</span></div>
     </div>
 
