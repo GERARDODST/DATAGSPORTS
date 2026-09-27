@@ -307,6 +307,35 @@
   #view[data-filter="parcial"] .metric[data-status]:not([data-status="parcial"]),
   #view[data-filter="faltante"] .metric[data-status]:not([data-status="faltante"]),
   #view[data-filter="no_aplica"] .metric[data-status]:not([data-status="no_aplica"]) { display: none; }
+  /* Mejor pick del partido */
+  .best { border: 1px solid var(--border); border-left: 4px solid var(--lt, var(--muted)); border-radius: 14px; background: var(--surface); padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .best.l-verde { --lt: var(--accent); } .best.l-amarillo { --lt: var(--s4); } .best.l-rojo { --lt: var(--neg); } .best.l-gris { --lt: var(--muted); }
+  .best-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  .best-pick { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  .best-pick .odds { font-family: var(--mono); font-size: 20px; color: var(--muted); font-weight: 600; margin-left: 6px; }
+  .best-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .conf { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .conf-bar { display: inline-grid; grid-template-columns: repeat(10, 8px); gap: 2px; }
+  .conf-bar i { height: 10px; border-radius: 2px; background: var(--surface-2); }
+  .conf-bar i.on { background: var(--lt, var(--accent)); }
+  .best-nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px 16px; }
+  .best-nums div { display: flex; flex-direction: column; gap: 2px; }
+  .best-nums span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .best-nums b { font-family: var(--mono); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .filters3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+  .filters3 > div { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .filters3 .fh { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+  .contra { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .contra li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline; }
+  .contra .ref { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  tr.best-row td { background: var(--accent-soft); }
+  .rec-list { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 6px 16px; font-size: 13px; margin: 0; }
+  .rec-list dt { color: var(--muted); }
+  .rec-list dd { margin: 0; }
+  @media (max-width: 560px) { .rec-list { grid-template-columns: 1fr; } .rec-list dd { margin-bottom: 6px; } .best-pick { font-size: 23px; } }
+  .pk-best { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .pk-best .lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
   /* Picks */
   .record { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
   .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
@@ -2351,6 +2380,7 @@ function pickCard(g) {
         ${s.ou ? `<span class="chip"><b>${s.ou.side} ${g.total}</b> ${pct(s.ou.p, 0)} ${res ? mark(res.ou) : ""}</span>` : ""}
         ${edge !== null ? `<span class="chip">vs mercado <b class="${Math.abs(edge) >= 0.05 ? (edge > 0 ? "pos" : "negv") : ""}">${signed(edge * 100, 1)} pp</b></span>` : '<span class="chip">sin línea del mercado aún</span>'}
       </div>
+      ${pk.best ? `<div class="pk-best"><span class="lbl">Mejor pick</span>${pk.best.noBet ? '<span class="pill muted">No bet</span><span class="muted">ningún lado pasa los filtros</span>' : `<b>${esc(pk.best.pick)}</b> <span class="muted num">${fmtOdds(pk.best.odds)}</span> ${lightPill(pk.best.light)} <span class="muted">${esc(pk.best.klass)} · ${pk.best.confidence}/10</span>${pk.best.won === null ? "" : pk.best.push ? ' <span class="muted">push</span>' : pk.best.won ? ` <span class="pos">✓ ${signed(pk.best.units, 2)} u</span>` : ' <span class="negv">✗ −1 u</span>'}`}</div>` : ""}
       <div class="pk-foot">
         <span class="muted">${played ? `Final: ${esc(g.away)} ${g.as} – ${g.hs} ${esc(g.home)}` : `Proyección: ${esc(g.away)} ${((pk.total - pk.margin) / 2).toFixed(1)} – ${((pk.total + pk.margin) / 2).toFixed(1)} ${esc(g.home)}`}</span>
         ${ANALYZED_SET.has(g.id) ? `<a href="#p-${esc(g.id)}">Análisis →</a>` : played ? `<a href="#g-${esc(g.id)}">Jugadas →</a>` : ""}
@@ -2358,6 +2388,18 @@ function pickCard(g) {
     </article>`;
 }
 
+function bestRecordCard(title, r, note) {
+  if (!r || !r.decided) return `<div class="rec-card"><span class="eyebrow">${esc(title)}</span><span class="big">—</span><span class="muted">${r ? `${r.picks} picks jugables y ${r.noBets} no bet, ninguno jugado todavía.` : ""} ${note}</span></div>`;
+  return `<div class="rec-card">
+    <span class="eyebrow">${esc(title)}</span>
+    <span class="big num">${r.w}–${r.l}${r.p ? `–${r.p}` : ""} <span class="muted" style="font-size:15px">${signed(r.flatUnits, 2)} u</span></span>
+    <div class="vs"><span>ROI a 1 unidad por pick</span><b class="num ${r.flatRoi > 0 ? "pos" : "negv"}">${signed(r.flatRoi * 100, 1)}%</b></div>
+    <div class="vs"><span>Con el stake de Kelly (${r.staked} picks)</span><b class="num">${signed(r.kellyUnits, 2)}% del bankroll</b></div>
+    <div class="vs"><span>Lean · Esperar información</span><b class="num">${r.byKlass.Lean.w}/${r.byKlass.Lean.n} · ${r.byKlass["Esperar información"].w}/${r.byKlass["Esperar información"].n}</b></div>
+    <div class="vs"><span>Partidos sin pick (no bet)</span><b class="num">${r.noBets}</b></div>
+    <span class="muted" style="font-size:12px">${note}</span>
+  </div>`;
+}
 function recordCard(title, r, note) {
   if (!r || !r.n) return `<div class="rec-card"><span class="eyebrow">${esc(title)}</span><span class="big">—</span><span class="muted">${note}</span></div>`;
   const ats = r.ats.w + r.ats.l ? `${r.ats.w}–${r.ats.l}${r.ats.p ? `–${r.ats.p}` : ""}` : "—";
@@ -2392,6 +2434,7 @@ function renderPicks(week) {
       <div class="record">
         ${recordCard(`En vivo · desde el ${liveFrom}`, rec.live, rec.live?.n ? "Picks fijados antes de cada partido: la medición honesta." : "Empieza con los partidos que aún no se juegan: aquí se suma cada resultado.")}
         ${recordCard(`Validación · semanas 1–3`, rec.valid, "Partidos con los que se eligió cómo combinar los modelos: no es una prueba independiente.")}
+        ${bestRecordCard(rec.best?.live?.decided ? "Mejor pick del framework · en vivo" : "Mejor pick del framework · semanas 1–3", rec.best?.live?.decided ? rec.best.live : rec.best?.valid, "Un pick por partido con los tres filtros y la auditoría del framework (momio real, el push devuelve la apuesta). Muestra chica: no concluir todavía.")}
       </div>
       ${cloud("explain", "Cómo leer los picks", `<p><b>Fuerte</b> = el modelo da 70% o más al ganador, <b>Moderado</b> = 60–70%, <b>Volado</b> = menos de 60%. "vs mercado" es la diferencia entre la probabilidad del modelo y la implícita en los momios sin margen: con una sola temporada de historia el mercado todavía acierta más, así que una diferencia grande es más una señal para revisar el análisis que una apuesta.</p>`, "i")}
     </section>
@@ -2531,8 +2574,8 @@ function marketImpliedHome(a) {
 }
 
 function lightPill(light) {
-  const cls = light === "Verde" ? "ok" : light === "Amarillo" ? "warn" : "muted";
-  const icon = light === "Verde" ? "●" : light === "Amarillo" ? "▲" : "○";
+  const cls = light === "Verde" ? "ok" : light === "Amarillo" ? "warn" : light === "Rojo" ? "no" : "muted";
+  const icon = light === "Verde" ? "●" : light === "Amarillo" ? "▲" : light === "Rojo" ? "■" : "○";
   return `<span class="pill ${cls}">${icon} ${esc(light)}</span>`;
 }
 function outcomePill(m) {
@@ -3056,6 +3099,108 @@ function tournamentBlock(a) {
     <p class="note">${f && Math.abs(f.adjMargin) > 0.01 ? "Quedan ajustes 5.3 de la tabla del framework sin medir con datos." : "Los factores fijos de la tabla 5.3 para bajas y clima ya no se usan: los reemplazan los efectos medidos."}</p>`;
 }
 
+/* ---------- Mejor pick del partido (framework 8.4–8.6) ---------- */
+const yesNo = (v) => (v ? '<span class="pill ok">✓ Sí</span>' : '<span class="pill no">✗ No</span>');
+function confMeter(n) {
+  return `<span class="conf" title="Confianza ${n} de 10"><span class="conf-bar" aria-hidden="true">${Array.from({ length: 10 }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span><b class="num">${n}/10</b></span>`;
+}
+function klassPill(k) {
+  const cls = k === "Pick fuerte" || k === "Pick moderado" ? "ok" : k === "Lean" ? "warn" : k === "Esperar información" ? "next" : "muted";
+  return `<span class="pill ${cls}">${esc(k)}</span>`;
+}
+function resultPill(c) {
+  if (c.won === null) return `<span class="pill muted">Pendiente</span>`;
+  if (c.push) return `<span class="pill muted">= Push</span>`;
+  return c.won ? `<span class="pill ok">✓ Ganó ${signed(c.units, 2)} u</span>` : `<span class="pill no">✗ Perdió −1 u</span>`;
+}
+function bestPickPanel(a) {
+  const B = a.bestPick;
+  if (!B) return "";
+  const b = B.best;
+  const ltCls = (l) => `l-${String(l).toLowerCase()}`;
+  const R = B.recommendation;
+  const recRow = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
+  const hero = b ? `
+    <div class="best ${ltCls(b.light)}">
+      <div class="best-head">
+        <div>
+          <span class="eyebrow">Mejor pick del partido · ${esc(b.market)}</span>
+          <div class="best-pick">${esc(b.pick)}<span class="odds">${fmtOdds(b.odds)}</span></div>
+        </div>
+        <div class="best-tags">${lightPill(b.light)} ${klassPill(b.klass)} ${confMeter(b.confidence)} ${a.postgame ? resultPill(b) : ""}</div>
+      </div>
+      <div class="best-nums">
+        <div><span>P modelo</span><b>${pct(b.pModel)}</b></div>
+        <div><span>P mercado ${info("implied")}</span><b>${pct(b.pImplied)}</b></div>
+        <div><span>Edge ${info("edge")}</span><b class="${b.edge > 0 ? "pos" : "negv"}">${signed(b.edge * 100, 1)} pp</b></div>
+        <div><span>Valor esperado</span><b>${signed(b.ev * 100, 1)}%</b></div>
+        <div><span>Momio justo ${info("fair")}</span><b>${fmtOdds(b.fairOdds)}</b></div>
+        <div><span>Momio mínimo</span><b>${fmtOdds(b.minOdds)}</b></div>
+        <div><span>Stake ${info("kelly")}</span><b>${b.stake ? `${(b.stake * 100).toFixed(2)}%` : "0%"}</b></div>
+      </div>
+      <div class="filters3">
+        <div><div class="fh">1 · Estadístico ${yesNo(b.model)}</div><span class="muted">Edge ${signed(b.edge * 100, 1)} pp (mínimo ${B.rules.edgeMin * 100} pp). ${b.agree} de ${b.agreeOf} modelos del torneo en este lado${b.agreeList.length ? ` (${esc(b.agreeList.join(", "))})` : ""}.</span></div>
+        <div><div class="fh">2 · Guion ${yesNo(b.script)}</div><span class="muted">Proyección ${signed(b.scriptEdge, 1)} ${esc(b.scriptUnit)} (se pide ${B.rules.scriptMin[b.market]}): ${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}.</span></div>
+        <div><div class="fh">3 · Cuota ${yesNo(b.price)}</div><span class="muted">${fmtOdds(b.odds)} contra un justo de ${fmtOdds(b.fairOdds)}: valor esperado ${signed(b.ev * 100, 1)}% por unidad, con el margen de la casa incluido.</span></div>
+      </div>
+      <div class="two-col">
+        <div class="stack" style="gap:8px">
+          <h4>Contradicción ${esc(b.level.toLowerCase())} (${b.contradictions.length})</h4>
+          ${b.contradictions.length ? `<ul class="contra">${b.contradictions.map((k) => `<li><span class="ref">${esc(k.ref)}</span><span>${annotate(k.text)}</span></li>`).join("")}</ul>` : '<p class="note">Ninguna regla de las secciones 5.6, 6.11, 7.5, 7.7 y 8.3 se activa para este pick.</p>'}
+        </div>
+        <div class="stack" style="gap:8px">
+          <h4>Dependencia de supuestos (8.2)</h4>
+          <p class="note"><b>Supuesto principal:</b> ${esc(b.assumption.main)}.<br><b>Si falla:</b> ${esc(b.assumption.fails)}.</p>
+          ${b.correlated.length ? `<p class="note"><b>Correlación (5.7.10):</b> ${b.correlated.map((c) => `${esc(c.pick)} — ${esc(c.reason)}`).join(" ")} Solo uno puede llevar stake completo.</p>` : '<p class="note"><b>Correlación (5.7.10):</b> ningún otro pick jugable del partido depende del mismo supuesto.</p>'}
+        </div>
+      </div>
+    </div>` : `
+    <div class="best l-gris">
+      <div class="best-head">
+        <div><span class="eyebrow">Mejor pick del partido</span><div class="best-pick">No bet</div></div>
+        <div class="best-tags">${klassPill("No bet")}</div>
+      </div>
+      <p>${annotate(B.noBetReason)}</p>
+      <p class="note">Regla final del framework: proteger el bankroll es más importante que forzar una apuesta.</p>
+    </div>`;
+  const rows = [...B.candidates].sort((x, y) => (x === b ? -1 : y === b ? 1 : 0) || ["Verde", "Amarillo", "Rojo", "Gris"].indexOf(x.light) - ["Verde", "Amarillo", "Rojo", "Gris"].indexOf(y.light) || y.edge - x.edge);
+  const table = `<div class="table-scroll"><table class="compact">
+    <thead><tr><th>Mercado</th><th>Pick</th><th class="r">Momio</th><th class="r">Modelo</th><th class="r">Mercado</th><th class="r">Edge</th><th>Estad.</th><th>Guion</th><th>Cuota</th><th>Contradicción</th><th>Semáforo</th><th>Decisión</th><th class="r">Conf.</th><th class="r">Stake</th>${a.postgame ? "<th>Resultado</th>" : ""}</tr></thead>
+    <tbody>${rows.map((c) => `<tr class="${c === b ? "best-row" : ""}">
+      <td>${esc(c.market)}</td><td><b>${esc(c.pick)}</b></td><td class="r num">${fmtOdds(c.odds)}</td><td class="r num">${pct(c.pModel)}</td><td class="r num">${pct(c.pImplied)}</td>
+      <td class="r num ${c.edge >= 0.03 ? "pos" : c.edge < 0 ? "negv" : ""}">${signed(c.edge * 100, 1)}</td>
+      <td>${c.model ? "✓" : "✗"}</td><td>${c.script ? "✓" : "✗"}</td><td>${c.price ? "✓" : "✗"}</td>
+      <td title="${esc(c.contradictions.map((k) => `${k.ref}: ${k.text}`).join("\n"))}">${esc(c.level)}${c.contradictions.length ? ` <span class="muted">(${[...new Set(c.contradictions.map((k) => k.ref))].map(esc).join(", ")})</span>` : ""}</td>
+      <td>${lightPill(c.light)}</td><td>${klassPill(c.klass)}</td><td class="r num">${c.confidence}</td><td class="r num">${c.stake ? `${(c.stake * 100).toFixed(2)}%` : "—"}</td>
+      ${a.postgame ? `<td>${resultPill(c)}</td>` : ""}
+    </tr>`).join("")}</tbody></table></div>`;
+  const rec = `<dl class="rec-list">
+    ${recRow("Mejor pick por valor", R.bestValue ? `${esc(R.bestValue.pick)} · ${signed(R.bestValue.edge * 100, 1)} pp · ${lightPill(R.bestValue.light)}` : "—")}
+    ${recRow("Mejor total", R.bestTotal ? `${esc(R.bestTotal.pick)} · ${signed(R.bestTotal.edge * 100, 1)} pp · ${lightPill(R.bestTotal.light)}` : "—")}
+    ${recRow("Primera mitad", esc(R.best1H))}
+    ${recRow("Con valor pero alto riesgo", R.valueHighRisk.length ? R.valueHighRisk.map((v) => `${esc(v.pick)} (${signed(v.edge * 100, 1)} pp; ${esc(v.why)})`).join("<br>") : "Ninguno")}
+    ${recRow("Probable pero sin valor", R.probableNoValue ? `${esc(R.probableNoValue.pick)}: el modelo le da ${pct(R.probableNoValue.pModel)} y el mercado ya cobra ${pct(R.probableNoValue.pImplied)}` : "Ninguno")}
+    ${recRow("Evitar", R.avoid.length ? R.avoid.map(esc).join("<br>") : "Nada en particular")}
+    ${recRow("Esperar mejor cuota", R.waitForOdds ? `${esc(R.waitForOdds.pick)}: con guion a favor, pero se necesita ${fmtOdds(R.waitForOdds.minOdds)} o mejor` : "—")}
+    ${recRow("Stake sugerido", R.stake ? `${(R.stake * 100).toFixed(2)}% del bankroll (${esc(B.rules.stake)})` : "0% — no hay pick para apostar todavía")}
+    ${recRow("Falta antes de apostar", [...R.pending, ...R.missing.map((m) => `${m} (campo obligatorio incompleto, 9.3)`)].map(esc).join("<br>") || "Nada")}
+  </dl>`;
+  const alt = `<div class="table-scroll"><table class="compact"><thead><tr><th>Mercado</th><th class="r">Proyección</th><th class="r">Línea</th><th>Lectura</th><th>Nota</th></tr></thead>
+    <tbody>${B.alternatives.map((x) => `<tr><td>${esc(x.market)}</td><td class="r num">${x.projection.toFixed(1)}</td><td class="r num">${x.marketLine === null ? "—" : x.marketLine.toFixed(1)}</td><td>${esc(x.lean)}</td><td class="muted">${esc(x.note)}</td></tr>`).join("")}</tbody></table></div>`;
+  return `
+    <section class="stack" id="mejor-pick" style="gap:12px">
+      <div class="section-head" style="margin-bottom:0">
+        <h2>El mejor pick del partido</h2>
+        <p class="lede">El framework no elige al que más probablemente gana: elige el mercado que mejor representa el guion del partido con menor contradicción. Cada uno de los 6 lados con cuota pasa por los tres filtros (8.3.13) y por las reglas de cancelación de las secciones 5.6, 6.11, 7.5, 7.7 y 8.3.</p>
+      </div>
+      ${hero}
+      ${group("Decisión corregida (8.4): los 6 lados", table, { icon: "⚖", count: B.candidates.length })}
+      ${group("Recomendación final (8.5–8.6)", rec, { icon: "★", open: true })}
+      ${group("Mercados alternativos (6.10 · 7.6): proyección sin cuota", alt, { icon: "⇅", open: false })}
+      ${cloud("explain", "Cómo se ordena y se decide", `<p><b>Semáforo:</b> Verde = los tres filtros y contradicción baja, sin campos obligatorios vacíos (8.3.12 y 8.3.17: como nflverse da una sola casa de apuestas, hoy ningún pick puede ser Verde). Amarillo = edge de 3 pp o más con contradicción baja o media. Rojo = edge, pero contradicción alta o guion en contra: evitar. Gris = sin edge.</p><p><b>Orden:</b> semáforo, luego menor contradicción, luego confianza y al final valor esperado. <b>Confianza:</b> ${esc(B.rules.confidence)}. <b>Stake:</b> ${esc(B.rules.stake)}. <b>Momio mínimo:</b> el momio con el que el edge sería de ${B.rules.edgeMin * 100} pp.</p>`, "?")}
+    </section>`;
+}
+
 function renderPregame(gameId) {
   renderToken++;
   const a = PRE[gameId];
@@ -3083,13 +3228,6 @@ function renderPregame(gameId) {
     return `<h4>${esc(q.name)}</h4><div class="table-scroll"><table class="compact"><thead><tr><th>Temp · sem</th><th>Rival</th><th class="r">Cmp/Att</th><th class="r">Yds</th><th class="r">TD</th><th class="r">INT</th></tr></thead>
       <tbody>${q.last5.map((g) => `<tr><td class="muted">${g.season} · S${g.week}</td><td>${esc(g.opp ?? "—")}</td><td class="r num">${g.cmp}/${g.att}</td><td class="r num">${g.yds}</td><td class="r num">${g.td}</td><td class="r num">${g.int}</td></tr>`).join("")}</tbody></table></div>`;
   };
-  const alertsCount = a.checks.filter((x) => x.status === "alerta").length;
-  const decision = a.markets.map((m) => {
-    const level = alertsCount >= 3 ? "Alta" : alertsCount >= 1 ? "Media" : "Baja";
-    const d = m.light === "Verde" ? "Pick" : m.light === "Amarillo" ? "Lean" : "No bet";
-    const yn = (v) => (v ? '<span class="pos">Sí</span>' : '<span class="negv">No</span>');
-    return `<tr><td>${esc(m.market)}</td><td>${esc(marketPickLabel(m))}</td><td>${yn(m.model)}</td><td>${yn(m.script)}</td><td>${yn(m.price)}</td><td>${level}</td><td>${lightPill(m.light)}</td><td><strong>${d}</strong></td></tr>`;
-  }).join("");
   const sources = {};
   a.items.forEach((it) => { const key = it.source.split(" · ").slice(0, 2).join(" · "); sources[key] = (sources[key] ?? 0) + 1; });
   const flow = `
@@ -3110,9 +3248,11 @@ function renderPregame(gameId) {
     <div class="summary-cards">
       <div class="sum-card" style="--cat:var(--c8)"><span class="eyebrow">Proyección</span><span class="num big">${esc(a.away)} ${a.projection.away.toFixed(1)} – ${a.projection.home.toFixed(1)} ${esc(a.home)}</span><span class="muted">total ${a.projection.total.toFixed(1)} · línea ${c.total ?? "—"}</span></div>
       <div class="sum-card" style="--cat:var(--c1)"><span class="eyebrow">P(gana ${esc(a.home)}) ${info("triang")}</span><span class="num big">${pct(a.pHome)}</span><span class="muted">mercado ${pct(marketHome)} · confianza ${esc(a.confidence)}</span></div>
-      <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Mejor edge ${info("edge")}</span><span class="num big">${esc(marketPickLabel([...a.markets].sort((x, y) => y.edge - x.edge)[0] ?? { market: "", pick: "—", line: "" }))}</span><span class="muted">${signed(([...a.markets].sort((x, y) => y.edge - x.edge)[0]?.edge ?? 0) * 100, 1)} pp · ${lightPill(([...a.markets].sort((x, y) => y.edge - x.edge)[0]?.light) ?? "Gris")}</span></div>
+      <div class="sum-card" style="--cat:var(--c7)"><span class="eyebrow">Mejor pick ${info("light")}</span><span class="num big">${a.bestPick?.best ? esc(a.bestPick.best.pick) : "No bet"}</span><span class="muted">${a.bestPick?.best ? `${signed(a.bestPick.best.edge * 100, 1)} pp · ${lightPill(a.bestPick.best.light)} · ${esc(a.bestPick.best.klass)}` : "sin pick que pase los filtros"} · <a href="#mejor-pick" class="jump-best">ver →</a></span></div>
       <div class="sum-card" style="--cat:var(--c5)"><span class="eyebrow">Datos ${info("gate")}</span><span class="num big">${a.inventory.byStatus.disponible + a.inventory.byStatus.derivado}/${a.inventory.total}</span><span class="muted">${a.inventory.byStatus.faltante} faltan · ${a.inventory.byStatus.parcial} parciales</span></div>
     </div>
+
+    ${bestPickPanel(a)}
 
     ${inventoryPanel(a)}
 
@@ -3226,8 +3366,7 @@ function renderPregame(gameId) {
       ${group(`Los ${a.checks.length} filtros de la sección 8.3`, `<ul class="checklist">${a.checks.map((x) => `<li>${checkPill(x.status)}<span><strong>${esc(x.id)} ${annotate(x.rule)}.</strong> ${annotate(x.detail)}</span></li>`).join("")}</ul>`, { icon: "✓", count: a.checks.length })}
       ${group("Dependencia de supuestos (8.2)", `<div class="table-scroll"><table class="compact"><thead><tr><th>Pick</th><th>Supuesto principal</th><th>Si falla</th><th>Riesgo</th></tr></thead>
         <tbody>${a.dependencies.map((d) => `<tr><td>${esc(d.pick)}</td><td>${esc(d.assumption)}</td><td>${esc(d.ifFails)}</td><td>${esc(d.risk)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Sin picks.</td></tr>`}</tbody></table></div>`, { icon: "⛓", open: false })}
-      ${group("Decisión corregida (8.4)", `<div class="table-scroll"><table class="compact"><thead><tr><th>Mercado</th><th>Pick</th><th>Modelo</th><th>Guion</th><th>Cuota</th><th>Contradicción</th><th>Semáforo ${info("light")}</th><th>Decisión</th></tr></thead><tbody>${decision}</tbody></table></div>
-        ${cloud("explain", "Cómo se decide", "<p>Modelo = edge de al menos 3 pp. Guion = el pick va en la misma dirección que la proyección. Cuota = el momio ofrecido es mejor que el justo. Contradicción = alertas de la auditoría.</p>", "?")}`, { icon: "⚖" })}`)}
+      ${cloud("take", "Decisión corregida (8.4)", `<p>La tabla de los 6 lados, con la contradicción evaluada pick por pick, está en <a href="#mejor-pick" class="jump-best">El mejor pick del partido</a>.${a.bestPick?.best ? ` Resultado: <b>${esc(a.bestPick.best.pick)}</b> (${esc(a.bestPick.best.klass)}).` : " Resultado: no bet."}</p>`, "⚖")}`)}
 
     ${sectionBlock(a, sec("9"), `
       ${group("Regla de completitud (9.3)", `<div class="table-scroll"><table class="compact"><thead><tr><th>Sección</th><th>Campos obligatorios</th><th>Estado</th><th>Si falta →</th></tr></thead>
@@ -3265,6 +3404,10 @@ function renderPregame(gameId) {
     d.open = true;
     d.scrollIntoView({ behavior: "smooth", block: "start" });
   });
+  view.querySelectorAll(".jump-best").forEach((el) => el.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    document.getElementById("mejor-pick")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
   view.dataset.filter = pregameFilter;
   const applyFilterOpen = () => {
     if (pregameFilter === "todos") return;

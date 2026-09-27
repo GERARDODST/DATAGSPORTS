@@ -333,6 +333,7 @@ export function gameModels(run: FinalRun, gameId: string) {
     qb: qb ? { ...qb, delta: r4(qb.delta, 2), shift: r4(shiftQb, 2), homeQb: r.g.homeQb, awayQb: r.g.awayQb } : null,
     context: contextForGame(run, gameId),
     qbValue: qv ? { homeQb: qv.homeQb, awayQb: qv.awayQb, vHome: r4(qv.vHome) as number, vAway: r4(qv.vAway) as number, baseHome: r4(qv.baseHome) as number, baseAway: r4(qv.baseAway) as number, nHome: qv.nHome, nAway: qv.nAway, prior: r4(qv.prior) as number, x: r4(qv.x) as number, beta: r4(qv.beta, 1) as number, shiftMargin: r4(qv.shiftMargin, 2) as number, shiftTotal: r4(qv.shiftTotal, 2) as number, n: qv.n } : null,
+    qbProjected: r.g.qbProjected,
     overLines: r.g.total === null ? [] : [-3, -1.5, 0, 1.5, 3].map((dl) => ({ line: (r.g.total as number) + dl, pOver: lineProb((r.g.total as number) + dl, "total") as number })),
     discrete: discreteForGame(run, r),
   };

@@ -1032,6 +1032,10 @@ Modelo estadístico + Guion del partido + Cuota con edge
 
 ### 8.5–8.6 Recomendación final
 
+> **Implementado en la edición 2026** (`nfl2026/src/lib/best-pick.ts`): los 6 lados con cuota,
+> contradicción evaluada pick por pick, semáforo con Rojo (evitar), clasificación de 6.12,
+> confianza 1–10, momio mínimo, stake de Kelly fraccional y el mejor pick del partido.
+
 - Mejor pick por valor / Mejor pick 1H / Mejor total / Mejor prop
 - Pick con valor pero alto riesgo / Pick que parece probable pero no tiene valor
 - Pick que se debe evitar / Mercado donde conviene esperar mejor cuota

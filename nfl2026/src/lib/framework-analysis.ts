@@ -8,6 +8,7 @@
  *    datos, y si no se pudo evaluar, por qué
  */
 import { prisma } from "./prisma";
+import { buildBestPick } from "./best-pick";
 import type { GameModels } from "./models/lab";
 import { normalInv } from "./models/core";
 
@@ -831,7 +832,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   // ============================================================ SECCIÓN 7
   const markets: {
     market: string; pick: string; line: string; odds: number; pImplied: number; pModel: number; edge: number; fairOdds: number;
-    kellyFull: number; kellyQuarter: number; b: number; model: boolean; script: boolean; price: boolean; light: "Verde" | "Amarillo" | "Gris"; won: boolean | null; push: boolean; pPush: number;
+    kellyFull: number; kellyQuarter: number; b: number; model: boolean; script: boolean; price: boolean; light: "Verde" | "Amarillo" | "Rojo" | "Gris"; won: boolean | null; push: boolean; pPush: number;
     sides: { pick: string; odds: number; pRaw: number; pImplied: number; pModel: number; edge: number }[]; overround: number;
   }[] = [];
   const played = target.homeScore !== null && target.awayScore !== null;
@@ -932,6 +933,42 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     risk: m.market === "Total" ? "Medio" : "Alto",
   }));
 
+  // ============================================================ SECCIÓN 8.4–8.6 — mejor pick del partido
+  const BASE_KEYS: [string, string][] = [["framework", "Framework"], ["elo", "Elo"], ["kalman", "Kalman"], ["ridge", "Ridge"], ["epa", "EPA"]];
+  const byTeam = <T,>(f: (t: string) => T) => ({ [home]: f(home), [away]: f(away) });
+  const qbProjected = Boolean((models as { qbProjected?: boolean } | null)?.qbProjected);
+  const bestPick = buildBestPick({
+    home, away, spread, total,
+    odds: { homeMl: target.homeMoneyline, awayMl: target.awayMoneyline, homeSpread: target.homeSpreadOdds, awaySpread: target.awaySpreadOdds, over: target.overOdds, under: target.underOdds },
+    pHome, pCoverHome: spread !== null ? pCover : null, pOver: total !== null ? pOver : null,
+    pushSpread: spreadDisc?.push ?? 0, pushTotal: totalDisc?.push ?? 0,
+    margin: finalMargin0, totalProj: finalTotal0, teamProj: { home: finHome, away: finAway }, proj1H,
+    divergence,
+    baseModels: models ? BASE_KEYS.filter(([k]) => models.preds[k]).map(([k, label]) => ({ key: k, label, p: models.preds[k].p as number, margin: models.preds[k].margin, total: models.preds[k].total })) : [],
+    qbProjected, qbs: { home: target.homeQbName, away: target.awayQbName },
+    playingHurt: byTeam((t) => playingHurt.filter((i) => i.teamAbbr === t).map((i) => `${i.fullName} (${i.position})`)),
+    offOut: byTeam((t) => offStarterOut(t).map((i) => `${i.name} (${i.position})`)),
+    defOut: byTeam((t) => defStarterOut(t).map((i) => `${i.name} (${i.position})`)),
+    weather: { outdoors: target.roof === "outdoors" || target.roof === "open", wind: windMph, temp: tempF },
+    pressureTop10: byTeam((t) => top10(M.pressureRate, t, true)),
+    defTop10: byTeam((t) => top10(M.defEpa, t, false)),
+    protectionBottom10: byTeam((t) => rankOf(M.sackRateTaken, t, false) > 22),
+    divGame: Boolean(target.divGame),
+    campoFaltante,
+    missing: gateFields.filter((g) => !g.ok).map((g) => g.label),
+    pending: played ? [] : [
+      ...(haveInactives ? [] : ["Inactivos oficiales (se publican 90 minutos antes de la patada)"]),
+      ...(injPre.length ? [] : ["Reporte oficial de lesiones de la semana"]),
+      ...(qbProjected ? ["QB titular confirmado"] : []),
+    ],
+    result: played ? { margin: finalMargin as number, total: finalTotal as number } : null,
+  });
+  // El semáforo de cada mercado (sección 7) es el de la decisión corregida del lado con más valor.
+  for (const m of markets) {
+    const c = bestPick.candidates.find((x) => x.market === m.market && (m.market === "Total" ? x.pick.startsWith(m.pick) : x.team === m.pick));
+    if (c) { m.light = c.light as typeof m.light; if (c.light === "Rojo" || c.light === "Gris") m.kellyQuarter = 0; }
+  }
+
   // ============================================================ SECCIÓN 10 — algoritmo maestro
   const algorithm = [
     { phase: "Fase 0 · Ingesta con gate", step: "Resultados, calendario, momios, QBs, clima", status: "hecho" },
@@ -948,6 +985,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     { phase: "Fase 4 · Valor", step: "Probabilidad implícita, edge, momio justo, ¼ Kelly", status: "hecho" },
     { phase: "Fase 5 · Auditoría", step: "18 filtros de la sección 8.3 (17 del framework + edge grande) y dependencia de supuestos", status: "hecho" },
     { phase: "Fase 6 · Salida", step: "Semáforo por mercado con razón y dato faltante", status: "hecho" },
+    { phase: "Fase 6 · Salida", step: "Mejor pick del partido: contradicción por pick, confianza 1–10, momio mínimo y stake (8.4–8.6)", status: "hecho" },
   ];
 
   // Inventario resumido
@@ -1125,7 +1163,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     pHome: r3(pHome), pTriangulated: r3(pTriangulated), divergence: r3(divergence), confidence,
     models,
     final: fin ? { pHome: r3(pHome), margin: r3(finalMargin0, 1), total: r3(finalTotal0, 1), sdMargin: r3(fin.sdMargin, 2), sdTotal: r3(fin.sdTotal, 2), adjMargin: r3(adjMargin, 2), adjTotal: r3(adjTotal, 2) } : null,
-    markets, checks, dependencies, algorithm,
+    markets, checks, dependencies, algorithm, bestPick,
     marginBins: Object.entries(bins).map(([k, v]) => [Number(k), v]).sort((a, b) => a[0] - b[0]),
     simulations: SIMULATIONS,
     postgame,

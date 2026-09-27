@@ -90,6 +90,13 @@
    "what": "Stacking logístico de los 5 modelos.",
    "result": "Validación 2026: 0.6886 (peor que 0.6733).",
    "decision": "No se usa."
+  },
+  {
+   "step": "Mejor pick del partido",
+   "source": "Framework 5.6, 6.12, 7.5–7.8, 8.2–8.6",
+   "what": "Los 6 lados con cuota pasan por los tres filtros y por las reglas de cancelación evaluadas pick por pick; se elige el de menor contradicción, no el más probable. Nueva regla medida: dispersión de los modelos del torneo (totales con rango > 10 pts, márgenes > 8).",
+   "result": "Semanas 1–3 de 2026: 16 picks jugables, 7–9 (−2.9 u); 17 partidos sin pick.",
+   "decision": "Implementado; se mide en vivo desde el domingo de la semana 3."
   }
  ],
  "sections": [

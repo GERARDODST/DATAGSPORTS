@@ -51,6 +51,28 @@ final acierta 20 ganadores (mercado 23), log-loss 0.673 (mercado 0.653). La vali
 capa binaria de QB y la de bajas y clima (con una sola temporada no mejoran), y mantuvo el valor
 por QB y los números clave.
 
+## Mejor pick del partido (`src/lib/best-pick.ts`)
+
+Aplica las secciones 5.5–5.6, 6.11–6.12, 7.2–7.8 y 8.2–8.6 del framework a los 6 lados con cuota
+(moneyline, spread y total, ambos lados) de cada partido:
+
+- **Tres filtros (8.3.13)**: estadístico (edge ≥ 3 pp contra la implícita sin margen), guion (la
+  proyección pasa la línea por 3 pts en moneyline, 1.5 en spread y 2 en total) y cuota (valor esperado
+  positivo al momio real, con el margen de la casa).
+- **Contradicciones por pick**: cada regla se evalúa contra ese lado en particular (modelos del torneo
+  que lo respaldan y su dispersión, divergencia de la triangulación, edge > 10 pp, QB sin confirmar,
+  titulares en duda o fuera, favorito caro, spread grande con total bajo, presión y defensas top-10
+  contra el Over, viento y frío, divisional, Under + favorito). 0 = Baja, 1 = Media, 2+ = Alta.
+- **Semáforo y decisión (8.4, 6.12)**: Verde / Amarillo / Rojo (evitar) / Gris, clasificación Pick
+  fuerte / Pick moderado / Lean / Esperar información / No bet, confianza 1–10, momio justo y
+  momio mínimo aceptable, stake de Kelly fraccional (¼ Verde, ⅛ Lean).
+- **Mejor pick**: el lado jugable con mejor semáforo, menor contradicción, mayor confianza y, al
+  final, mayor valor esperado; con dependencia de supuestos (8.2), correlación (5.7.10) y la
+  recomendación final 8.5–8.6. Si nada pasa, **No bet** con la razón.
+
+El marcador de la página de Picks lleva el récord del mejor pick (1 unidad por pick y con el stake
+de Kelly). Semanas 1–3 de 2026: 7–9, −2.9 unidades, 17 partidos sin pick.
+
 ## Visor
 
 `snapshot/viewer.html` → `snapshot/dist/`:

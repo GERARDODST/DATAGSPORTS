@@ -340,8 +340,37 @@ async function main() {
     preBytes += json.length;
     await writeFile(path.join(DIST, "data", "pregame", `${g.gameId}.json`), json);
     core.analyzed.push(g.gameId);
+    // Mejor pick del framework (8.4–8.6) en la tarjeta del partido.
+    const pk = core.picks.find((x) => x.id === g.gameId);
+    const bp = analysis.bestPick;
+    if (pk) pk.best = bp.best
+      ? { market: bp.best.market, pick: bp.best.pick, odds: bp.best.odds, light: bp.best.light, klass: bp.best.klass, confidence: bp.best.confidence, edge: bp.best.edge, level: bp.best.level, stake: bp.best.stake, won: bp.best.won, push: bp.best.push, units: bp.best.units }
+      : { noBet: true, reason: bp.noBetReason };
     process.stdout.write(`\r   análisis previo ${i + 1}/${withLine.length}`);
   }
+  // Marcador del mejor pick del framework por periodo: récord, unidades planas (1 u por pick) y con el
+  // stake de Kelly fraccional que el framework asigna (en % del bankroll).
+  const bestRecord = (period: "valid" | "live") => {
+    const rows = core.picks.filter((x) => x.period === period && x.best && !(x.best as { noBet?: boolean }).noBet) as { best: { won: boolean | null; push: boolean; units: number | null; stake: number; light: string; klass: string } }[];
+    const done = rows.filter((x) => x.best.won !== null);
+    const w = done.filter((x) => x.best.won).length, pu = done.filter((x) => x.best.push).length, l = done.length - w - pu;
+    const flat = done.reduce((acc, x) => acc + (x.best.units ?? 0), 0);
+    const staked = done.filter((x) => x.best.stake > 0);
+    const kellyUnits = staked.reduce((acc, x) => acc + (x.best.units ?? 0) * x.best.stake * 100, 0);
+    const kellyRisk = staked.reduce((acc, x) => acc + x.best.stake * 100, 0);
+    const noBets = core.picks.filter((x) => x.period === period && (x.best as { noBet?: boolean } | undefined)?.noBet).length;
+    return {
+      picks: rows.length, decided: done.length, w, l, p: pu, noBets,
+      flatUnits: round(flat, 2), flatRoi: done.length ? round(flat / done.length, 3) : null,
+      staked: staked.length, kellyUnits: round(kellyUnits, 2), kellyRisk: round(kellyRisk, 2), kellyRoi: kellyRisk ? round(kellyUnits / kellyRisk, 3) : null,
+      byKlass: Object.fromEntries(["Pick fuerte", "Pick moderado", "Lean", "Esperar información"].map((k) => {
+        const d = done.filter((x) => x.best.klass === k);
+        return [k, { n: d.length, w: d.filter((x) => x.best.won).length, units: round(d.reduce((a, x) => a + (x.best.units ?? 0), 0), 2) }];
+      })),
+    };
+  };
+  (core.record as Record<string, unknown>).best = { valid: bestRecord("valid"), live: bestRecord("live") };
+  console.log(`\n   mejor pick (validación): ${JSON.stringify((core.record as { best: { valid: unknown } }).best.valid)}`);
   console.log(`\n   ${withLine.length} análisis previos · ${(preBytes / 1024 / 1024).toFixed(1)} MB en data/pregame/`);
 
   core.epCompare = {
