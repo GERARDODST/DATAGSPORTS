@@ -8,6 +8,7 @@
 import "dotenv/config";
 import { parse } from "csv-parse/sync";
 import { prisma } from "../src/lib/prisma";
+import { Prisma } from "../src/generated/prisma";
 
 const RELEASES_BASE = "https://github.com/nflverse/nflverse-data/releases/download";
 
@@ -149,6 +150,13 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
   const lookup = new Map<string, string>();
   let loaded = 0;
   let skipped = 0;
+  // Lo que ya hay en la base y es más nuevo que nflverse (marcador final de ESPN, momios de varias
+  // casas) no se pisa con un hueco ni con una línea más vieja.
+  const existing = new Map((await prisma.game.findMany({
+    where: { season },
+    select: { gameId: true, homeScore: true, awayScore: true, scoreSource: true, oddsSource: true, oddsUpdatedAt: true, gameDate: true },
+  })).map((g) => [g.gameId, g]));
+  const ODDS_FIELDS = ["spreadLine", "totalLine", "homeMoneyline", "awayMoneyline", "homeSpreadOdds", "awaySpreadOdds", "overOdds", "underOdds"] as const;
   for (const raw of seasonRows) {
     // Franquicias que cambiaron de ciudad: se guardan con su abreviatura actual para que el Elo y el historial sigan al mismo equipo.
     const row: CsvRow = { ...raw, home_team: FRANCHISE[raw.home_team] ?? raw.home_team, away_team: FRANCHISE[raw.away_team] ?? raw.away_team };
@@ -187,10 +195,24 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
       homeQbId: row.home_qb_id && row.home_qb_id !== "NA" ? row.home_qb_id : null,
       awayQbId: row.away_qb_id && row.away_qb_id !== "NA" ? row.away_qb_id : null,
     };
+    const prev = existing.get(row.game_id);
+    const update: Record<string, unknown> = { ...fields };
+    if (prev) {
+      if (fields.homeScore === null && prev.homeScore !== null) { delete update.homeScore; delete update.awayScore; }
+      // El marcador de nflverse es el oficial: si ya lo tiene, manda (y corrige un final de ESPN si difiere).
+      else if (fields.homeScore !== null && (prev.scoreSource !== "nflverse" || prev.homeScore !== fields.homeScore || prev.awayScore !== fields.awayScore)) Object.assign(update, { status: "post", scoreSource: "nflverse", scoreUpdatedAt: new Date() });
+      if (prev.oddsSource && prev.oddsSource !== "nflverse") {
+        const played = fields.homeScore !== null || prev.homeScore !== null;
+        // Partido jugado: se queda nuestra línea solo si se tomó el mismo día del partido; si no, la de cierre de nflverse es mejor.
+        const sameDay = prev.oddsUpdatedAt && prev.gameDate && prev.oddsUpdatedAt.toISOString().slice(0, 10) >= prev.gameDate.toISOString().slice(0, 10);
+        if (!played || sameDay) for (const f of ODDS_FIELDS) delete update[f];
+        else Object.assign(update, { oddsSource: "nflverse", oddsBooks: null, bestOdds: Prisma.DbNull });
+      }
+    }
     await prisma.game.upsert({
       where: { gameId: row.game_id },
-      update: fields,
-      create: { gameId: row.game_id, ...fields },
+      update,
+      create: { gameId: row.game_id, ...fields, ...(fields.homeScore !== null ? { status: "post", scoreSource: "nflverse" } : {}) },
     });
     lookup.set(gameKey(season, row.week, row.home_team, row.away_team), row.game_id);
     loaded++;

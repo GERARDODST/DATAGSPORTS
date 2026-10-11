@@ -336,6 +336,16 @@
   .pk-best { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; border-top: 1px dashed var(--border); padding-top: 8px; }
   .pk-best .lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 
+  /* Estado en vivo y procedencia de datos */
+  .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--neg); margin-right: 5px; vertical-align: 1px; }
+  .status-tag { font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .status-tag.in { color: var(--neg); }
+  .status-tag.post { color: var(--muted); }
+  .team-row .num.live { color: var(--neg); }
+  .src-line { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+  .src-line b { color: var(--ink); font-weight: 600; }
+  .pk-best .book { font-size: 11px; color: var(--muted); }
+
   /* Top 3 de la semana */
   .top3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
   .top-card { position: relative; display: flex; flex-direction: column; gap: 10px; text-decoration: none; background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--lt, var(--muted)); border-radius: 14px; padding: 16px 16px 14px; }
@@ -882,19 +892,20 @@ function gameCard(g) {
   const pk = PICKS.get(g.id);
   const side = pk ? pickSides(g, pk) : null;
   const res = pk ? pickResult(g, pk) : null;
-  const href = played ? `#g-${g.id}` : ANALYZED_SET.has(g.id) ? `#p-${g.id}` : `#picks`;
+  const href = played && g.hasPlays ? `#g-${g.id}` : ANALYZED_SET.has(g.id) ? `#p-${g.id}` : `#picks`;
+  const live = g.status === "in";
   const row = (abbr, score, color, won, lost) => `
     <div class="team-row ${won ? "win" : ""} ${lost ? "loss" : ""}">
       <span class="dot" style="background:${esc(color)}"></span>
       <span class="abbr">${esc(abbr)}</span>
       <span class="name">${esc(CORE.teams[abbr]?.name ?? abbr)}</span>
-      <span class="num">${score ?? "–"}</span>
+      <span class="num ${live ? "live" : ""}">${score ?? "–"}</span>
     </div>`;
   return `
     <a class="game" href="${esc(href)}">
-      <div class="game-meta"><span>${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span><span>${played ? "Ver jugadas →" : ANALYZED_SET.has(g.id) ? "Ver análisis →" : "Programado"}</span></div>
-      ${row(g.away, g.as, colors.away, awayWon, homeWon)}
-      ${row(g.home, g.hs, colors.home, homeWon, awayWon)}
+      <div class="game-meta"><span>${esc(weekLabel(g.week))} · ${esc(fmtDate(g.date))}</span>${statusTag(g) || `<span>${ANALYZED_SET.has(g.id) ? "Ver análisis →" : "Programado"}</span>`}</div>
+      ${row(g.away, live ? g.liveAs : g.as, colors.away, awayWon, homeWon)}
+      ${row(g.home, live ? g.liveHs : g.hs, colors.home, homeWon, awayWon)}
       <div class="chips">
         ${side ? `<span class="chip">Pick <b>${esc(side.win.team)} ${pct(side.win.p, 0)}</b>${res ? ` ${mark(res.win)}` : ""}</span>` : ""}
         ${sp ? `<span class="chip">${esc(sp.line)}${sp.cover ? ` · <b>${esc(sp.cover)}</b>` : ""}</span>` : ""}
@@ -940,6 +951,7 @@ function renderHome() {
       </div>
     </section>
 
+    ${sourcesLine()}
     ${top3Section(cw, { more: true })}
 
     <div class="callouts">
@@ -2364,10 +2376,23 @@ const mark = (r) => (r === "hit" ? '<span class="pos">✓</span>' : r === "miss"
 const fmtLine = (v) => (v === 0 ? "PK" : v > 0 ? `+${v}` : `−${Math.abs(v)}`);
 
 const unitsMark = (t) => (t.won === null ? "" : t.push ? ' <span class="muted">push</span>' : t.won ? ` <span class="pos">✓ ${signed(t.units, 2)} u</span>` : ' <span class="negv">✗ −1 u</span>');
+/** Estado del partido para la cabecera de las tarjetas. */
+function statusTag(g) {
+  if (g.status === "in") return `<span class="status-tag in"><span class="live-dot"></span>En juego${g.statusDetail ? ` · ${esc(g.statusDetail)}` : ""}</span>`;
+  if (isPlayed(g)) return `<span class="status-tag post">Final${g.scoreSource === "ESPN" ? " · ESPN" : ""}</span>`;
+  return "";
+}
+const fmtStamp = (iso) => (iso ? new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" }).format(new Date(iso)) + " (CDMX)" : "—");
+const oddsLabel = (g) => (g.oddsSource && g.oddsSource !== "nflverse" ? `${g.oddsSource}${g.oddsBooks > 1 ? ` · ${g.oddsBooks} casas` : ""}` : g.spread !== null ? "cierre nflverse" : "sin línea");
+function sourcesLine() {
+  const S = CORE.sources ?? {};
+  return `<div class="src-line"><span>Momios: <b>${S.oddsAt ? `consenso de hasta ${S.oddsBooksMax} casas` : "línea de nflverse"}</b>${S.oddsAt ? ` · actualizados ${esc(fmtStamp(S.oddsAt))}` : ""}</span><span>Resultados: <b>${S.scoresAt ? "ESPN" : "nflverse"}</b>${S.scoresAt ? ` · ${esc(fmtStamp(S.scoresAt))}` : ""}</span><span>Foto del sitio: ${esc(fmtStamp(CORE.generatedAt))}</span></div>`;
+}
+
 function topRows(pk) {
   if (!pk.top2?.length) return pk.best ? `<div class="pk-best"><span class="lbl">Framework</span><span class="muted">sin línea del mercado para valorar</span></div>` : "";
   return pk.top2.map((t) => `<div class="pk-best"><span class="rank-badge ${t.playable ? "" : "off"}">${t.rank}</span>${t.playable
-    ? `<b>${esc(t.pick)}</b> <span class="muted num">${fmtOdds(t.odds)}</span> ${lightPill(t.light)} <span class="muted">${esc(t.klass)} · ${t.confidence}/10</span>${unitsMark(t)}`
+    ? `<b>${esc(t.pick)}</b> <span class="muted num">${fmtOdds(t.odds)}</span>${t.book ? ` <span class="book">${esc(t.book)}</span>` : ""} ${lightPill(t.light)} <span class="muted">${esc(t.klass)} · ${t.confidence}/10</span>${unitsMark(t)}`
     : `<span class="muted">${esc(t.pick)} ${fmtOdds(t.odds)} · no recomendado (${esc(t.light)})</span>`}</div>`).join("");
 }
 
@@ -2381,7 +2406,7 @@ function top3Section(week, opts = {}) {
     return `<a class="top-card l-${String(t.light).toLowerCase()}" href="${esc(href)}">
       <span class="top-rank">#${i + 1}</span>
       <span class="matchup">${esc(fmtDay(g.date))} · ${esc(g.away)} @ ${esc(g.home)} · ${esc(t.market)}</span>
-      <span class="tpick">${esc(t.pick)}<span class="odds">${fmtOdds(t.odds)}</span></span>
+      <span class="tpick">${esc(t.pick)}<span class="odds">${fmtOdds(t.odds)}</span></span>${t.book ? `<span class="matchup">Mejor momio en ${esc(t.book)}</span>` : ""}
       <div class="best-tags">${lightPill(t.light)} ${klassPill(t.klass)} ${confMeter(t.confidence)}</div>
       <div class="tnums">
         <div><span>Modelo / mercado</span><b>${pct(t.pModel, 0)} / ${pct(t.pImplied, 0)}</b></div>
@@ -2389,7 +2414,7 @@ function top3Section(week, opts = {}) {
         <div><span>Stake</span><b>${t.stake ? `${(t.stake * 100).toFixed(2)}%` : "0%"}</b></div>
       </div>
       <span class="twhy">${esc(t.why)}</span>
-      <div class="tfoot">${t.won === null ? `<span class="muted">Momio mínimo ${fmtOdds(t.minOdds)}</span>` : `<span>${t.push ? '<span class="pill muted">= Push</span>' : t.won ? `<span class="pill ok">✓ Ganó ${signed(t.units, 2)} u</span>` : '<span class="pill no">✗ Perdió −1 u</span>'}</span>`}<span class="go">${ANALYZED_SET.has(g.id) ? "Análisis →" : "Picks →"}</span></div>
+      <div class="tfoot">${t.won === null ? (g.status === "in" ? statusTag(g) + ` <span class="muted">${esc(g.away)} ${g.liveAs ?? 0} – ${g.liveHs ?? 0} ${esc(g.home)}</span>` : `<span class="muted">Momio mínimo ${fmtOdds(t.minOdds)}</span>`) : `<span>${t.push ? '<span class="pill muted">= Push</span>' : t.won ? `<span class="pill ok">✓ Ganó ${signed(t.units, 2)} u</span>` : '<span class="pill no">✗ Perdió −1 u</span>'}</span>`}<span class="go">${ANALYZED_SET.has(g.id) ? "Análisis →" : "Picks →"}</span></div>
     </a>`;
   }).join("");
   const done = list.filter((t) => t.won !== null);
@@ -2424,7 +2449,7 @@ function pickCard(g) {
   const pa = 1 - pk.p;
   return `
     <article class="pick-card ${res ? (res.win === "hit" ? "hit" : res.win === "miss" ? "miss" : "") : ""}">
-      <div class="pk-meta"><span>${esc(fmtDay(g.date))} · ${esc(weekLabel(g.week, true))}</span><span class="tier pill ${tierCls}">${tier}</span></div>
+      <div class="pk-meta"><span>${esc(fmtDay(g.date))} · ${esc(weekLabel(g.week, true))} · <span title="Procedencia de los momios">${esc(oddsLabel(g))}</span></span>${statusTag(g) || `<span class="tier pill ${tierCls}">${tier}</span>`}</div>
       ${row(g.away, pk.awayQb, pa, colors.away, g.as, played && g.as > g.hs, played && g.as < g.hs)}
       ${row(g.home, pk.homeQb, pk.p, colors.home, g.hs, played && g.hs > g.as, played && g.hs < g.as)}
       <div class="pbar2" title="Modelo: ${esc(g.away)} ${pct(pa)} · ${esc(g.home)} ${pct(pk.p)}${pk.pMkt !== null ? ` · mercado ${esc(g.home)} ${pct(pk.pMkt)}` : ""}">
@@ -2439,7 +2464,7 @@ function pickCard(g) {
       </div>
       ${topRows(pk)}
       <div class="pk-foot">
-        <span class="muted">${played ? `Final: ${esc(g.away)} ${g.as} – ${g.hs} ${esc(g.home)}` : `Proyección: ${esc(g.away)} ${((pk.total - pk.margin) / 2).toFixed(1)} – ${((pk.total + pk.margin) / 2).toFixed(1)} ${esc(g.home)}`}</span>
+        <span class="muted">${played ? `Final: ${esc(g.away)} ${g.as} – ${g.hs} ${esc(g.home)}` : g.status === "in" ? `En juego: ${esc(g.away)} ${g.liveAs ?? 0} – ${g.liveHs ?? 0} ${esc(g.home)}` : `Proyección: ${esc(g.away)} ${((pk.total - pk.margin) / 2).toFixed(1)} – ${((pk.total + pk.margin) / 2).toFixed(1)} ${esc(g.home)}`}</span>
         ${ANALYZED_SET.has(g.id) ? `<a href="#p-${esc(g.id)}">Análisis →</a>` : played ? `<a href="#g-${esc(g.id)}">Jugadas →</a>` : ""}
       </div>
     </article>`;
@@ -2510,7 +2535,8 @@ function renderPicks(week) {
     </section>
 
     <section>
-      <div class="weeks" role="group" aria-label="Semana">
+      ${sourcesLine()}
+      <div class="weeks" role="group" aria-label="Semana" style="margin-top:10px">
         ${weeks.map((w) => `<button type="button" data-week="${w}" id="pweek-${w}" aria-pressed="${w === picksWeek}">${esc(weekLabel(w, true))}${w === cur ? " ·" : ""}</button>`).join("")}
       </div>
       <div class="picks" id="picks-grid"></div>
@@ -3205,6 +3231,7 @@ function bestPickPanel(a) {
       <div class="best-nums">
         <div><span>P modelo</span><b>${pct(t.pModel)}</b></div>
         <div><span>P mercado ${info("implied")}</span><b>${pct(t.pImplied)}</b></div>
+        <div><span>Momio${t.book ? " (mejor casa)" : ""}</span><b>${fmtOdds(t.odds)}${t.book ? ` <span class="muted" style="font-size:11px">${esc(t.book)}</span>` : ""}</b></div>
         <div><span>Edge ${info("edge")}</span><b class="${t.edge > 0 ? "pos" : "negv"}">${signed(t.edge * 100, 1)} pp</b></div>
         <div><span>Valor esperado</span><b>${signed(t.ev * 100, 1)}%</b></div>
         <div><span>Momio justo ${info("fair")}</span><b>${fmtOdds(t.fairOdds)}</b></div>

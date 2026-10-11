@@ -5,10 +5,11 @@
   "scripts": {
     "2024:export": "npm --prefix nfl2024 run snapshot:export",
     "2026:export": "npm --prefix nfl2026 run snapshot:export",
-    "2026:update": "npm --prefix nfl2026 run data:extract -- --season=2026 && npm --prefix nfl2026 run data:extract-pbp -- --season=2026 && npm --prefix nfl2026 run data:extract-context -- --season=2026 && npm --prefix nfl2026 run snapshot:export",
+    "2026:update": "npm --prefix nfl2026 run data:extract -- --season=2026; npm --prefix nfl2026 run data:extract-pbp -- --season=2026; npm --prefix nfl2026 run data:extract-context -- --season=2026; npm --prefix nfl2026 run data:scores; npm --prefix nfl2026 run data:odds; npm --prefix nfl2026 run snapshot:export && node scripts/build-site.mjs",
     "site:build": "node scripts/build-site.mjs",
     "db:generate": "npm --prefix nfl2024 run db:generate && npm --prefix nfl2026 run db:generate",
-    "typecheck": "npm --prefix nfl2024 run typecheck && npm --prefix nfl2026 run typecheck"
+    "typecheck": "npm --prefix nfl2024 run typecheck && npm --prefix nfl2026 run typecheck",
+    "2026:refresh": "npm --prefix nfl2026 run data:scores; npm --prefix nfl2026 run data:odds; npm --prefix nfl2026 run snapshot:export && node scripts/build-site.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

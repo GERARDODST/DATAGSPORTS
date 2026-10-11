@@ -28,6 +28,10 @@ export type BestPickInput = {
   spread: number | null; // positivo = local favorito (nflverse)
   total: number | null;
   odds: { homeMl: number | null; awayMl: number | null; homeSpread: number | null; awaySpread: number | null; over: number | null; under: number | null };
+  /** Mejor momio disponible por lado entre las casas (7.1): con él se calcula el valor y el stake. */
+  bestOdds?: Partial<Record<"homeMl" | "awayMl" | "homeSpread" | "awaySpread" | "over" | "under", { price: number; book: string } | null>> | null;
+  /** Movimiento desde la primera línea registrada (actual − apertura, convención nflverse). */
+  movement?: { spread: number | null; total: number | null; since: string | null } | null;
   pHome: number; // P(gana local) del modelo final
   pCoverHome: number | null; // P(local cubre | sin push)
   pOver: number | null; // P(Over | sin push)
@@ -70,20 +74,21 @@ export function buildBestPick(x: BestPickInput) {
   type Side = {
     market: "Moneyline" | "Spread" | "Total"; pick: string; team: string | null; line: string; odds: number; oddsOther: number;
     p: number; pPush: number; scriptEdge: number; scriptUnit: string; side: "home" | "away" | "over" | "under";
+    key: "homeMl" | "awayMl" | "homeSpread" | "awaySpread" | "over" | "under";
   };
   const sides: Side[] = [];
   const o = x.odds;
   if (o.homeMl !== null && o.awayMl !== null) {
-    sides.push({ market: "Moneyline", pick: `${home} gana`, team: home, line: "ML", odds: o.homeMl, oddsOther: o.awayMl, p: x.pHome, pPush: 0, scriptEdge: x.margin, scriptUnit: "pts de margen", side: "home" });
-    sides.push({ market: "Moneyline", pick: `${away} gana`, team: away, line: "ML", odds: o.awayMl, oddsOther: o.homeMl, p: 1 - x.pHome, pPush: 0, scriptEdge: -x.margin, scriptUnit: "pts de margen", side: "away" });
+    sides.push({ market: "Moneyline", pick: `${home} gana`, team: home, line: "ML", odds: o.homeMl, oddsOther: o.awayMl, p: x.pHome, pPush: 0, scriptEdge: x.margin, scriptUnit: "pts de margen", side: "home", key: "homeMl" });
+    sides.push({ market: "Moneyline", pick: `${away} gana`, team: away, line: "ML", odds: o.awayMl, oddsOther: o.homeMl, p: 1 - x.pHome, pPush: 0, scriptEdge: -x.margin, scriptUnit: "pts de margen", side: "away", key: "awayMl" });
   }
   if (x.spread !== null && x.pCoverHome !== null && o.homeSpread !== null && o.awaySpread !== null) {
-    sides.push({ market: "Spread", pick: `${home} ${fmtLine(-x.spread)}`, team: home, line: fmtLine(-x.spread), odds: o.homeSpread, oddsOther: o.awaySpread, p: x.pCoverHome, pPush: x.pushSpread, scriptEdge: x.margin - x.spread, scriptUnit: "pts sobre la línea", side: "home" });
-    sides.push({ market: "Spread", pick: `${away} ${fmtLine(x.spread)}`, team: away, line: fmtLine(x.spread), odds: o.awaySpread, oddsOther: o.homeSpread, p: 1 - x.pCoverHome, pPush: x.pushSpread, scriptEdge: x.spread - x.margin, scriptUnit: "pts sobre la línea", side: "away" });
+    sides.push({ market: "Spread", pick: `${home} ${fmtLine(-x.spread)}`, team: home, line: fmtLine(-x.spread), odds: o.homeSpread, oddsOther: o.awaySpread, p: x.pCoverHome, pPush: x.pushSpread, scriptEdge: x.margin - x.spread, scriptUnit: "pts sobre la línea", side: "home", key: "homeSpread" });
+    sides.push({ market: "Spread", pick: `${away} ${fmtLine(x.spread)}`, team: away, line: fmtLine(x.spread), odds: o.awaySpread, oddsOther: o.homeSpread, p: 1 - x.pCoverHome, pPush: x.pushSpread, scriptEdge: x.spread - x.margin, scriptUnit: "pts sobre la línea", side: "away", key: "awaySpread" });
   }
   if (x.total !== null && x.pOver !== null && o.over !== null && o.under !== null) {
-    sides.push({ market: "Total", pick: `Over ${x.total}`, team: null, line: `${x.total}`, odds: o.over, oddsOther: o.under, p: x.pOver, pPush: x.pushTotal, scriptEdge: x.totalProj - x.total, scriptUnit: "pts sobre el total", side: "over" });
-    sides.push({ market: "Total", pick: `Under ${x.total}`, team: null, line: `${x.total}`, odds: o.under, oddsOther: o.over, p: 1 - x.pOver, pPush: x.pushTotal, scriptEdge: x.total - x.totalProj, scriptUnit: "pts bajo el total", side: "under" });
+    sides.push({ market: "Total", pick: `Over ${x.total}`, team: null, line: `${x.total}`, odds: o.over, oddsOther: o.under, p: x.pOver, pPush: x.pushTotal, scriptEdge: x.totalProj - x.total, scriptUnit: "pts sobre el total", side: "over", key: "over" });
+    sides.push({ market: "Total", pick: `Under ${x.total}`, team: null, line: `${x.total}`, odds: o.under, oddsOther: o.over, p: 1 - x.pOver, pPush: x.pushTotal, scriptEdge: x.total - x.totalProj, scriptUnit: "pts bajo el total", side: "under", key: "under" });
   }
   // Umbral del guion: la proyección debe pasar la línea por al menos un gol de campo en el moneyline,
   // 1.5 pts en el spread y 2 pts en el total (regla final de 6.12: si cae muy cerca, no forzar pick).
@@ -93,9 +98,13 @@ export function buildBestPick(x: BestPickInput) {
   const hurtAll = [...(x.playingHurt[home] ?? []), ...(x.playingHurt[away] ?? [])];
 
   const scored = sides.map((s) => {
+    // Implícita sin margen con el consenso; valor esperado y stake con el mejor momio disponible.
     const pImp = implied(s.odds) / (implied(s.odds) + implied(s.oddsOther));
+    const bestQ = x.bestOdds?.[s.key] ?? null;
+    const price = bestQ && payout(bestQ.price) > payout(s.odds) ? bestQ.price : s.odds;
+    const book = bestQ && price === bestQ.price ? bestQ.book : null;
     const edge = s.p - pImp;
-    const b = payout(s.odds);
+    const b = payout(price);
     const ev = s.p * b - (1 - s.p); // por unidad apostada; el push devuelve la apuesta
     const kelly = (b * s.p - (1 - s.p)) / b;
     const agreeList = x.baseModels.filter((m) => {
@@ -121,6 +130,15 @@ export function buildBestPick(x: BestPickInput) {
     if (proj.length >= 3 && spreadOf > dispMax) c.push({ ref: "Torneo", kind: "dato", text: `Los modelos del torneo no se ponen de acuerdo: ${s.market === "Total" ? "totales" : "márgenes"} entre ${Math.min(...proj).toFixed(1)} y ${Math.max(...proj).toFixed(1)} (rango ${spreadOf.toFixed(1)} > ${dispMax} pts).` });
     // Fase 2: triangulación
     if (s.market !== "Total" && x.divergence > 0.1) c.push({ ref: "10 · fase 2", kind: "dato", text: `Los tres métodos del framework divergen ${pct(x.divergence, 0)} (> 10 pp): confianza baja en el ganador.` });
+    // 7.7: el mercado se movió en contra de este lado desde la primera línea registrada.
+    const mv = x.movement;
+    if (mv) {
+      const against = s.market === "Spread" && mv.spread !== null ? (s.side === "home" ? -mv.spread : mv.spread)
+        : s.market === "Total" && mv.total !== null ? (s.side === "over" ? -mv.total : mv.total)
+        : s.market === "Moneyline" && mv.spread !== null ? (s.side === "home" ? -mv.spread : mv.spread) : 0;
+      const lim = s.market === "Total" ? 1.5 : 1;
+      if (against >= lim) c.push({ ref: "7.7", kind: "info", text: `La línea se movió ${against.toFixed(1)} pts en contra de este lado${mv.since ? ` desde el ${mv.since}` : ""}: el mercado recibió información o dinero del otro lado.` });
+    }
     // 8.3.18: edge enorme contra el cierre
     if (edge > 0.1) c.push({ ref: "8.3.18", kind: "info", text: `Edge de ${sgn(edge * 100)} pp contra la línea de cierre: suele ser información que el modelo no tiene${hurtAll.length ? ` (titulares en duda que juegan: ${hurtAll.join(", ")})` : ""}.` });
     // 5.6 / 7.7: titular no confirmado
@@ -150,7 +168,7 @@ export function buildBestPick(x: BestPickInput) {
         if (defOutAll.length) c.push({ ref: "6.11", kind: "dato", text: `El Under depende de las defensas y hay titulares defensivos fuera: ${defOutAll.join(", ")}.` });
       }
     }
-    return { s, pImp, edge, b, ev, kelly, agree, agreeList: agreeList.map((m) => m.label), scriptStrong, scriptAgainst, c };
+    return { s, price, book, pImp, edge, b, ev, kelly, agree, agreeList: agreeList.map((m) => m.label), scriptStrong, scriptAgainst, c };
   });
 
   // 8.3.14: Under y favorito del spread a la vez (cruzada entre dos picks con valor).
@@ -193,13 +211,13 @@ export function buildBestPick(x: BestPickInput) {
       push = v === 0; won = v > 0;
     }
     return {
-      market: z.s.market, pick: z.s.pick, team: z.s.team, side: z.s.side, line: z.s.line, odds: z.s.odds,
+      market: z.s.market, pick: z.s.pick, team: z.s.team, side: z.s.side, line: z.s.line, odds: z.price, book: z.book, consensusOdds: z.s.odds,
       pModel: r3(z.s.p), pImplied: r3(z.pImp), edge: r3(z.edge), ev: r3(z.ev), pPush: r3(z.s.pPush),
       fairOdds: fairAmericanOf(z.s.p), minOdds, kelly: r3(Math.max(0, z.kelly)), fraction, stake: r3(stake, 4),
       model, script, price, scriptEdge: r3(z.s.scriptEdge, 1), scriptUnit: z.s.scriptUnit,
       agree: z.agree, agreeOf: x.baseModels.length, agreeList: z.agreeList,
       contradictions: z.c, level, light, confidence, klass, won, push,
-      units: won === null ? null : push ? 0 : won ? r3(payout(z.s.odds), 3) : -1,
+      units: won === null ? null : push ? 0 : won ? r3(payout(z.price), 3) : -1,
     };
   });
   type Cand = (typeof candidates)[number];
@@ -248,7 +266,7 @@ export function buildBestPick(x: BestPickInput) {
   const top2 = [first, second].filter((c): c is Cand => c !== null).map((c, i) => {
     const corr = i === 1 && first ? correlation(first, c) : null;
     return {
-      rank: i + 1, market: c.market, pick: c.pick, team: c.team, side: c.side, odds: c.odds,
+      rank: i + 1, market: c.market, pick: c.pick, team: c.team, side: c.side, odds: c.odds, book: c.book,
       pModel: c.pModel, pImplied: c.pImplied, edge: c.edge, ev: c.ev, fairOdds: c.fairOdds, minOdds: c.minOdds,
       light: c.light, level: c.level, klass: c.klass, confidence: c.confidence,
       model: c.model, script: c.script, price: c.price, agree: c.agree, agreeOf: c.agreeOf,

@@ -869,11 +869,24 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     { pick: "Under", line: `${total}`, odds: target.underOdds, p: 1 - pOver, won: played ? (finalTotal as number) < total : null, push: played && finalTotal === total, scriptOk: finalTotal0 < total },
   ], totalDisc?.push ?? 0);
   const mk = (name: string) => markets.find((m) => m.market === name);
-  add({ id: "ml", section: "7", category: "Mercado", label: "Moneyline de cierre", home: `${target.homeMoneyline ?? "—"}`, away: `${target.awayMoneyline ?? "—"}`, source: `${SRC.games} · home_moneyline / away_moneyline`, status: target.homeMoneyline !== null ? "disponible" : "faltante", note: "Momio de cierre: el último antes del partido. No hay historial de movimiento de línea." });
-  add({ id: "sp", section: "7", category: "Mercado", label: "Spread de cierre (momios)", value: spread !== null ? `${spread >= 0 ? home : away} −${Math.abs(spread)} (${target.homeSpreadOdds ?? "—"} / ${target.awaySpreadOdds ?? "—"})` : "—", source: `${SRC.games} · spread_line, home/away_spread_odds`, status: spread !== null ? "disponible" : "faltante" });
-  add({ id: "tot", section: "7", category: "Mercado", label: "Total de cierre (momios)", value: total !== null ? `${total} (O ${target.overOdds ?? "—"} / U ${target.underOdds ?? "—"})` : "—", source: `${SRC.games} · total_line, over_odds, under_odds`, status: total !== null ? "disponible" : "faltante" });
-  add({ id: "books", section: "7", category: "Mercado", label: "Momios de 2 o más casas", value: "1 línea de consenso", source: SRC.games, status: "parcial", note: "La sección 9.3 pide al menos 2 casas para verificar el precio. nflverse da una sola línea de cierre.", impact: "No se puede buscar el mejor precio ni detectar diferencias entre casas (7.1)." });
-  add({ id: "mv", section: "7", category: "Mercado", label: "Movimiento de línea (apertura → cierre)", value: "—", source: SRC.none, status: "faltante", note: "Fuente sugerida: The Odds API con histórico (sección 9.2).", impact: "No se puede evaluar si el movimiento ya consumió el valor (7.7)." });
+  // Procedencia de los momios: consenso de varias casas (The Odds API), línea de ESPN o cierre de nflverse.
+  const oddsSrc = target.oddsSource && target.oddsSource !== "nflverse" ? target.oddsSource : null;
+  const books = target.oddsBooks ?? (oddsSrc ? 1 : 0);
+  const oddsAt = target.oddsUpdatedAt ? target.oddsUpdatedAt.toISOString().replace("T", " ").slice(0, 16) + " UTC" : null;
+  const oddsLabel = oddsSrc ? `${oddsSrc}${books > 1 ? ` · consenso de ${books} casas` : ""}${oddsAt ? ` · ${oddsAt}` : ""}` : `${SRC.games} (línea de cierre)`;
+  const bestOdds = (target.bestOdds ?? null) as Record<string, { price: number; book: string } | null> | null;
+  const open = (target.oddsOpen ?? null) as { spread: number | null; total: number | null; at: string | null; source?: string } | null;
+  const movement = open ? {
+    spread: spread !== null && open.spread !== null ? Math.round((spread - open.spread) * 10) / 10 : null,
+    total: total !== null && open.total !== null ? Math.round((total - open.total) * 10) / 10 : null,
+    since: open.at ? open.at.slice(0, 10) : null,
+  } : null;
+  const bestTxt = (k: string) => (bestOdds?.[k] ? ` · mejor ${bestOdds[k]!.price > 0 ? "+" : ""}${bestOdds[k]!.price} (${bestOdds[k]!.book})` : "");
+  add({ id: "ml", section: "7", category: "Mercado", label: oddsSrc ? "Moneyline actual (consenso)" : "Moneyline de cierre", home: `${target.homeMoneyline ?? "—"}${bestTxt("homeMl")}`, away: `${target.awayMoneyline ?? "—"}${bestTxt("awayMl")}`, source: oddsLabel, status: target.homeMoneyline !== null ? "disponible" : "faltante", note: oddsSrc ? "Mediana de las casas; el valor y el stake se calculan con el mejor momio disponible." : "Momio de cierre: el último antes del partido." });
+  add({ id: "sp", section: "7", category: "Mercado", label: oddsSrc ? "Spread actual (consenso)" : "Spread de cierre (momios)", value: spread !== null ? `${spread >= 0 ? home : away} −${Math.abs(spread)} (${target.homeSpreadOdds ?? "—"} / ${target.awaySpreadOdds ?? "—"})${bestTxt("homeSpread")}${bestTxt("awaySpread")}` : "—", source: oddsLabel, status: spread !== null ? "disponible" : "faltante" });
+  add({ id: "tot", section: "7", category: "Mercado", label: oddsSrc ? "Total actual (consenso)" : "Total de cierre (momios)", value: total !== null ? `${total} (O ${target.overOdds ?? "—"} / U ${target.underOdds ?? "—"})${bestTxt("over")}${bestTxt("under")}` : "—", source: oddsLabel, status: total !== null ? "disponible" : "faltante" });
+  add({ id: "books", section: "7", category: "Mercado", label: "Momios de 2 o más casas", value: books >= 2 ? `${books} casas` : "1 línea", source: oddsLabel, status: books >= 2 ? "disponible" : "parcial", note: books >= 2 ? "Se usa la mediana como precio de mercado y el mejor momio por lado para el valor." : "La sección 9.3 pide al menos 2 casas para verificar el precio.", impact: books >= 2 ? undefined : "No se puede buscar el mejor precio ni detectar diferencias entre casas (7.1)." });
+  add({ id: "mv", section: "7", category: "Mercado", label: "Movimiento de línea (primera registrada → actual)", value: movement ? `spread ${movement.spread === null ? "—" : `${movement.spread > 0 ? "+" : ""}${movement.spread}`} · total ${movement.total === null ? "—" : `${movement.total > 0 ? "+" : ""}${movement.total}`}${movement.since ? ` desde el ${movement.since}` : ""}` : "—", source: oddsLabel, status: movement ? "derivado" : "faltante", note: movement ? "Spread en convención nflverse (positivo = el local más favorito). Es el movimiento desde la primera línea que registró DATAGSPORTS, no necesariamente la apertura de las casas." : "Se registra desde la primera consulta de momios (npm run data:odds).", impact: movement ? undefined : "No se puede evaluar si el movimiento ya consumió el valor (7.7)." });
   add({ id: "alt", section: "7", category: "Mercado", label: "Líneas de 1Q, 1H, team totals y props", value: "—", source: SRC.none, status: "faltante", note: "Solo hay líneas de partido completo.", impact: "Los mercados alternativos de 7.6 se proyectan (sección 6) pero no se pueden valorar." });
   for (const m of markets) {
     const s0 = m.sides[0], s1 = m.sides[1];
@@ -890,7 +903,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
     { section: "5", label: "Ajustes multiplicativos con dato real", ok: adjustments.every((a) => a.met !== null), ids: [], blocks: "Bloquea Verde en total" },
     { section: "4–6", label: "Alineación confirmada (inactivos oficiales)", ok: haveInactives, ids: ["inactive", "depth"], blocks: "Ningún pick puede ser Verde (8.3.12)" },
     { section: "6", label: "Clima completo (lluvia)", ok: false, ids: ["rain"], blocks: "Bloquea Verde en total" },
-    { section: "7", label: "Momios de al menos 2 casas", ok: false, ids: ["books"], blocks: "Sin verificación de precio" },
+    { section: "7", label: "Momios de al menos 2 casas", ok: books >= 2, ids: ["books"], blocks: "Sin verificación de precio" },
   ];
   const campoFaltante = gateFields.some((g) => !g.ok);
 
@@ -940,6 +953,7 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   const bestPick = buildBestPick({
     home, away, spread, total,
     odds: { homeMl: target.homeMoneyline, awayMl: target.awayMoneyline, homeSpread: target.homeSpreadOdds, awaySpread: target.awaySpreadOdds, over: target.overOdds, under: target.underOdds },
+    bestOdds: played ? null : bestOdds, movement: played ? null : movement,
     pHome, pCoverHome: spread !== null ? pCover : null, pOver: total !== null ? pOver : null,
     pushSpread: spreadDisc?.push ?? 0, pushTotal: totalDisc?.push ?? 0,
     margin: finalMargin0, totalProj: finalTotal0, teamProj: { home: finHome, away: finAway }, proj1H,
@@ -1135,6 +1149,8 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
       stadium: target.stadium, location: target.location, roof: target.roof, surface: target.surface, temp: tempF, wind: windMph,
       divGame: target.divGame, homeRest: target.homeRest, awayRest: target.awayRest, homeQb: target.homeQbName, awayQb: target.awayQbName,
       spread, total, homeMoneyline: target.homeMoneyline, awayMoneyline: target.awayMoneyline,
+      odds: { source: oddsSrc ?? "nflverse", books, updatedAt: target.oddsUpdatedAt?.toISOString() ?? null, best: bestOdds, movement },
+      status: target.status, statusDetail: target.statusDetail, kickoff: target.kickoff?.toISOString() ?? null, scoreSource: target.scoreSource,
     },
     data: { priorSeasonGames, currentSeasonGames, cutoff: cutoff.toISOString().slice(0, 10), plays: plays.length, drives: drives.length, pressureRows: pressureRows.length, injuryRows: injPre.length, depthRows: depthNow.length },
     league: { mean: r3(leagueMean, 2), hfa: r3(hfa, 2), hfaObserved: r3(hfaObserved, 2), sigmaMargin: r3(sigmaMargin, 2), sigmaTotal: r3(sigmaTotal, 2) },

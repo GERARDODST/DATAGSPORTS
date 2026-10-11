@@ -83,6 +83,31 @@ de 2026: 2–4, −2.26 unidades (muestra de 6 picks).
 El marcador de la página de Picks lleva el récord del mejor pick (1 unidad por pick y con el stake
 de Kelly). Semanas 1–3 de 2026: 7–9, −2.9 unidades, 17 partidos sin pick.
 
+## Resultados en vivo y momios actuales
+
+| Fuente | Script | Qué trae | Requisito |
+| --- | --- | --- | --- |
+| ESPN (`site.api.espn.com`) | `npm run data:scores` | Estado (por jugar / en juego / final), marcador en vivo, marcador final apenas termina y la línea de ESPN | Dominio permitido en la red |
+| The Odds API (`api.the-odds-api.com`) | `npm run data:odds` | Moneyline, spread y total de varias casas | `ODDS_API_KEY` en `.env` (gratis 500 créditos/mes; 3 por consulta) y dominio permitido |
+| nflverse (GitHub) | `npm run data:extract` | Calendario, cierre oficial, marcador oficial, jugadas | — |
+
+- **Marcador**: un final de ESPN cuenta como resultado de inmediato (el modelo aprende de él); un
+  partido en juego solo muestra su marcador en vivo y no cuenta. Cuando nflverse publica el marcador
+  oficial, manda.
+- **Momios**: cada consulta guarda los momios por casa (`odds_snapshots`). El partido usa el
+  **consenso** (mediana de las casas; los precios, de las casas que ofrecen esa línea) como mercado y
+  el **mejor momio por lado** para el valor esperado y el stake. Con 2 o más casas se cumple el campo
+  obligatorio de la sección 9.3. La primera línea registrada permite medir el **movimiento** (regla 7.7:
+  si la línea se movió en contra del pick, cuenta como contradicción).
+- Solo se guardan momios de partidos que no han empezado. nflverse no pisa los momios de varias casas
+  de un partido por jugar; ya jugado, se queda nuestra línea si se tomó el mismo día y si no, el cierre
+  de nflverse.
+- Sin red o sin clave, cada script avisa y el proceso sigue con los datos que ya hay.
+- `--file=respuesta.json` carga una respuesta guardada (prueba o carga manual).
+
+Desde la raíz: `npm run 2026:refresh` (ESPN + momios + exportar + sitio, rápido, para el día de
+partido) y `npm run 2026:update` (además vuelve a bajar nflverse completo).
+
 ## Visor
 
 `snapshot/viewer.html` → `snapshot/dist/`:

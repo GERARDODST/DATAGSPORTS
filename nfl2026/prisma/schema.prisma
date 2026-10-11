@@ -81,7 +81,22 @@ model Game {
   homeQbId       String?
   awayQbId       String?
 
+  // Estado en tiempo real (ESPN) y procedencia de marcador y momios.
+  kickoff        DateTime? // hora exacta de la patada (ESPN)
+  status         String? // pre | in | post
+  statusDetail   String? // "Final", "2nd 4:12", "Sun 10/11 - 1:00 PM EDT"…
+  liveHomeScore  Int? // marcador mientras se juega (no cuenta como resultado)
+  liveAwayScore  Int?
+  scoreSource    String? // nflverse | ESPN
+  scoreUpdatedAt DateTime?
+  oddsSource     String? // nflverse | The Odds API | ESPN
+  oddsUpdatedAt  DateTime?
+  oddsBooks      Int? // casas en el consenso
+  bestOdds       Json? // mejor momio por lado: { homeMl: { price, book }, … }
+  oddsOpen       Json? // primera línea registrada: { spread, total, homeMl, awayMl, at }
+
   weekStats PlayerWeekStat[]
+  odds      OddsSnapshot[]
   drives    Drive[]
   plays     Play[]
 
@@ -289,4 +304,27 @@ model RosterStatus {
 
   @@index([season, week, teamAbbr])
   @@map("roster_status")
+}
+
+/// Momios por casa en cada consulta (historial para consenso, mejor precio y movimiento de línea).
+/// spreadHome usa la convención de las casas: −3.5 = el local da 3.5 puntos.
+model OddsSnapshot {
+  id             Int       @id @default(autoincrement())
+  gameId         String
+  game           Game      @relation(fields: [gameId], references: [gameId])
+  source         String // The Odds API | ESPN
+  book           String
+  fetchedAt      DateTime
+  lastUpdate     DateTime?
+  homeMl         Int?
+  awayMl         Int?
+  spreadHome     Float?
+  homeSpreadOdds Int?
+  awaySpreadOdds Int?
+  total          Float?
+  overOdds       Int?
+  underOdds      Int?
+
+  @@index([gameId, fetchedAt])
+  @@map("odds_snapshots")
 }

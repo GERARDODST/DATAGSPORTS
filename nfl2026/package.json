@@ -17,6 +17,8 @@
     "data:extract-context": "tsx scripts/extract-context.ts",
     "snapshot:export": "tsx scripts/export-snapshot.ts",
     "models:optimize": "tsx scripts/optimize-models.ts",
-    "models:report": "tsx scripts/model-report.ts"
+    "models:report": "tsx scripts/model-report.ts",
+    "data:scores": "tsx scripts/update-scores.ts",
+    "data:odds": "tsx scripts/update-odds.ts"
   }
 }

@@ -81,6 +81,8 @@ async function main() {
     where: { gsisId: { in: leadersRaw.map((l) => l.playerId) } },
   });
   const playerById = new Map(leaderPlayers.map((p) => [p.gsisId, p]));
+  // Partidos con jugadas cargadas (nflverse): un final de ESPN sin play-by-play todavía no tiene curva de victoria.
+  const playsByGame = new Set((await prisma.play.groupBy({ by: ["gameId"], where: { season } })).map((x) => x.gameId));
 
   const usedTeams = new Set(games.flatMap((g) => [g.homeTeamAbbr, g.awayTeamAbbr]));
   const core = {
@@ -116,7 +118,21 @@ async function main() {
       total: g.totalLine,
       stadium: g.stadium,
       roof: g.roof,
+      // Estado en vivo (ESPN) y procedencia de marcador y momios.
+      status: g.status ?? (g.homeScore !== null ? "post" : "pre"),
+      statusDetail: g.statusDetail,
+      kickoff: g.kickoff?.toISOString() ?? null,
+      liveHs: g.liveHomeScore, liveAs: g.liveAwayScore,
+      scoreSource: g.scoreSource ?? (g.homeScore !== null ? "nflverse" : null),
+      oddsSource: g.oddsSource ?? (g.spreadLine !== null ? "nflverse" : null),
+      oddsBooks: g.oddsBooks, oddsAt: g.oddsUpdatedAt?.toISOString() ?? null,
+      hasPlays: playsByGame.has(g.gameId),
     })),
+    sources: {
+      scoresAt: games.reduce<string | null>((m, g) => (g.scoreUpdatedAt && (!m || g.scoreUpdatedAt.toISOString() > m) ? g.scoreUpdatedAt.toISOString() : m), null),
+      oddsAt: games.reduce<string | null>((m, g) => (g.oddsUpdatedAt && (!m || g.oddsUpdatedAt.toISOString() > m) ? g.oddsUpdatedAt.toISOString() : m), null),
+      oddsBooksMax: games.reduce((m, g) => Math.max(m, g.oddsBooks ?? 0), 0),
+    },
     leaders: leadersRaw.map((l) => {
       const p = playerById.get(l.playerId);
       return {
@@ -160,10 +176,10 @@ async function main() {
   await mkdir(path.join(DIST, "data"), { recursive: true });
 
   // Solo semanas con jugadas (partidos ya jugados).
-  const weeks = [...new Set(games.filter((g) => g.homeScore !== null).map((g) => g.week))].sort((a, b) => a - b);
+  const weeks = [...new Set(games.filter((g) => playsByGame.has(g.gameId)).map((g) => g.week))].sort((a, b) => a - b);
   let totalBytes = 0;
   for (const week of weeks) {
-    const weekGames = games.filter((g) => g.week === week && g.homeScore !== null);
+    const weekGames = games.filter((g) => g.week === week && playsByGame.has(g.gameId));
     const payload: Record<string, unknown> = {};
     for (const g of weekGames) {
       const [plays, drives] = await Promise.all([
@@ -347,7 +363,7 @@ async function main() {
       ? { market: bp.best.market, pick: bp.best.pick, odds: bp.best.odds, light: bp.best.light, klass: bp.best.klass, confidence: bp.best.confidence, edge: bp.best.edge, level: bp.best.level, stake: bp.best.stake, won: bp.best.won, push: bp.best.push, units: bp.best.units }
       : { noBet: true, reason: bp.noBetReason };
     if (pk) pk.top2 = bp.top2.map((t) => ({
-      rank: t.rank, market: t.market, pick: t.pick, odds: t.odds, pModel: t.pModel, pImplied: t.pImplied, edge: t.edge, ev: t.ev, minOdds: t.minOdds,
+      rank: t.rank, market: t.market, pick: t.pick, odds: t.odds, book: t.book, pModel: t.pModel, pImplied: t.pImplied, edge: t.edge, ev: t.ev, minOdds: t.minOdds,
       light: t.light, level: t.level, klass: t.klass, confidence: t.confidence, playable: t.playable, correlated: t.correlated, stake: t.stake, ownStake: t.ownStake,
       why: t.why, assumption: t.assumption, won: t.won, push: t.push, units: t.units,
     }));

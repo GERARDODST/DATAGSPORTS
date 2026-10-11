@@ -41,7 +41,8 @@ selector **NFL 2024 | NFL 2026**; cambiar de edición recarga el sitio con la ot
 Para actualizar la edición 2026 cada semana (datos nuevos de nflverse y nuevos picks):
 
 ```bash
-npm run 2026:update && npm run site:build
+npm run 2026:refresh   # día de partido: resultados y momios (requiere los dominios y la clave, ver nfl2026/README.md)
+npm run 2026:update    # además vuelve a bajar nflverse
 ```
 
 ## Scripts de la raíz
@@ -50,7 +51,8 @@ npm run 2026:update && npm run site:build
 | --- | --- |
 | `npm run 2024:export` | Exporta el snapshot de la edición 2024 |
 | `npm run 2026:export` | Exporta el snapshot de la edición 2026 |
-| `npm run 2026:update` | Descarga lo nuevo de 2026 (calendario, jugadas, contexto) y exporta |
+| `npm run 2026:refresh` | Marcadores en vivo/finales (ESPN) y momios actuales (The Odds API), exporta y arma el sitio |
+| `npm run 2026:update` | Todo lo anterior más nflverse completo (calendario, jugadas, contexto) |
 | `npm run site:build` | Arma el sitio combinado en `site/dist/` |
 | `npm run db:generate` | Genera el cliente de Prisma de ambas ediciones |
 | `npm run typecheck` | Revisa los tipos de ambas ediciones |
