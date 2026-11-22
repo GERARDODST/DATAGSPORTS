@@ -367,6 +367,11 @@ async function main() {
       light: t.light, level: t.level, klass: t.klass, confidence: t.confidence, playable: t.playable, correlated: t.correlated, stake: t.stake, ownStake: t.ownStake,
       why: t.why, assumption: t.assumption, won: t.won, push: t.push, units: t.units,
     }));
+    // Piezas de parlay (las 2 más probables del partido) para la sección Parlay, "Hoy" y el constructor.
+    if (pk) pk.parlay = bp.parlay.map((l) => ({
+      rank: l.rank, market: l.market, pick: l.pick, team: l.team, odds: l.odds, book: l.book, dec: l.dec, pModel: l.pModel, pImplied: l.pImplied,
+      edge: l.edge, ev: l.ev, status: l.status, usable: l.usable, wait: l.wait, note: l.note, correlated: l.correlated, won: l.won, push: l.push,
+    }));
     process.stdout.write(`\r   análisis previo ${i + 1}/${withLine.length}`);
   }
   // Marcador del mejor pick del framework por periodo: récord, unidades planas (1 u por pick) y con el

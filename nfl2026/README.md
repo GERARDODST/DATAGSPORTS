@@ -125,6 +125,28 @@ partido) y `npm run 2026:update` (además vuelve a bajar nflverse completo).
   La hora de patada sale de `gametime` de nflverse (hora del Este, convertida con horario de verano)
   y ESPN la corrige cuando está disponible. Si la hora ya pasó y la foto del sitio no trae el
   marcador, el partido dice "Ya empezó" en vez de fingir que sigue por jugar.
+- **Parlay** (`#parlay`, `#parlay-AAAAMMDD`): cada partido aporta sus 2 piezas más probables
+  (`buildBestPick().parlay`). La segunda es de otro mercado y nunca del rival de la primera. Cada
+  pieza lleva una etiqueta:
+
+  | Etiqueta | Regla |
+  |---|---|
+  | Ancla | Modelo ≥ 65% y EV ≥ 0 al mejor momio |
+  | Sólida | 55–65% y EV ≥ 0 |
+  | Cara | Probable, pero el precio no la paga |
+  | Contradicción alta | El framework ve un dato fuerte en contra |
+  | Poco probable | Menos de 55% |
+
+  Solo Ancla y Sólida entran a los boletos sugeridos; si el framework manda ese lado a "Esperar
+  información", la pieza se marca "Confirmar info". La sección trae:
+  - boletos sugeridos de 2, 3 y 4 piezas: la más probable que pasa el filtro de cada partido;
+  - un constructor ("Arma tu parlay") con probabilidad, momio, cobro por $100, valor esperado y
+    stake (⅛ de Kelly, tope 1%), más avisos si juntas dos piezas del mismo partido o una que resta
+    valor;
+  - el récord en vivo de los boletos y la calibración de las piezas por etiqueta.
+
+  Las piezas también aparecen en el análisis de cada partido (`#piezas-parlay`) y en las tarjetas
+  de "Hoy". La probabilidad del boleto trata como independientes a los partidos distintos.
 - **Partidos**: los picks más firmes de la semana y todos los partidos con su pick.
 - **Picks** (`#picks`): marcador de la temporada (en vivo y validación, modelo contra mercado,
   spread y over/under) y una tarjeta por partido con el pick de ganador, spread y total.

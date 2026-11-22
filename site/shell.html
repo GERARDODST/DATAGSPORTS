@@ -22,8 +22,8 @@
   const EDITIONS = ["2024", "2026"];
   const hash = location.hash.slice(1);
   let ed = /^ed-(\d{4})$/.exec(hash)?.[1] ?? /(?:^|-)(\d{4})_\d{2}_/.exec(hash)?.[1] ?? null;
-  // "Hoy" (los picks del día) solo existe en la edición 2026.
-  if (!ed && /^hoy(?:-\d{8})?$/.test(hash)) ed = "2026";
+  // "Hoy" y "Parlay" solo existen en la edición 2026.
+  if (!ed && /^(?:hoy|parlay)(?:-\d{8})?$/.test(hash)) ed = "2026";
   if (!EDITIONS.includes(ed)) { try { ed = sessionStorage.getItem("dg-edition"); } catch (e) { ed = null; } }
   if (!EDITIONS.includes(ed)) ed = "2026";
   try { sessionStorage.setItem("dg-edition", ed); } catch (e) {}

@@ -760,6 +760,61 @@
   .today-link strong { display: block; font-size: 15px; }
   .today-link .go { font-weight: 600; color: var(--accent-ink); white-space: nowrap; }
 
+  /* ---------- Parlay ---------- */
+  .pl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+  .pl-card { background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--plc, var(--accent)); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .pl-card.won { --plc: var(--accent); } .pl-card.lost { --plc: var(--neg); } .pl-card.push { --plc: var(--bar); }
+  .pl-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .pl-head h3 { font-size: 16px; margin-top: 2px; }
+  .pl-odds { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+  .pl-odds b { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--accent-ink); line-height: 1.1; }
+  .pl-odds span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  .pl-legs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .pl-legs li { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto auto; gap: 2px 10px; align-items: baseline; padding: 7px 0; border-top: 1px dashed var(--border); font-size: 13px; }
+  .pl-legs li:first-child { border-top: 0; padding-top: 0; }
+  .pl-time { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .pl-pick b { font-weight: 600; }
+  .pl-pick small { display: block; font-size: 11px; color: var(--muted); }
+  .pl-legs .num { font-size: 12px; text-align: right; }
+  .pl-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px; }
+  .builder { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+  .pieces { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .pc-slot { display: flex; flex-direction: column; gap: 8px; }
+  .pc-slot > h3 { font-family: var(--mono); font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .pc-game { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .pc-game-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+  .pc-game-head .muted { font-weight: 500; font-size: 12px; }
+  .pc { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+  .pc:hover { border-color: var(--muted); }
+  .pc.on { border-color: var(--accent); background: var(--accent-soft); }
+  .pc input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+  .pc-main { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; min-width: 0; }
+  .pc-main b { font-size: 15px; }
+  .pc-p { font-family: var(--mono); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .pc-p small { display: block; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .pc-note { grid-column: 2 / -1; font-size: 11.5px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .slip { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--ink); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .slip-odds { font-family: var(--mono); font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .slip-legs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .slip-legs li { display: flex; justify-content: space-between; gap: 8px; }
+  .slip-warn { font-size: 12px; color: var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 6px 9px; }
+  .slip-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .slip .tk-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 860px) {
+    .builder { grid-template-columns: 1fr; }
+    .slip { top: auto; bottom: env(safe-area-inset-bottom, 0px); order: 2; box-shadow: 0 -6px 18px color-mix(in oklab, var(--ink) 12%, transparent); }
+    .slip-legs, .slip .slip-help { display: none; }
+  }
+  .tk-parlay { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+  .tk-parlay .lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .pl-chip { display: inline-flex; gap: 4px; align-items: baseline; border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; color: var(--muted); }
+  .pl-chip b { font-weight: 600; }
+  .pl-chip.on { color: var(--ink); border-color: color-mix(in oklab, var(--accent) 55%, var(--border)); background: var(--accent-soft); }
+  .pl-card .tk-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .leg-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 10px; }
+  .leg-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--lc, var(--bar)); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .leg-card.use { --lc: var(--accent); } .leg-card.cara { --lc: var(--s4); } .leg-card.contra { --lc: var(--neg); }
+
   @media (prefers-reduced-motion: no-preference) {
     .game, .callout, .weeks button, .tabs a { transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease; }
   }
@@ -778,6 +833,7 @@
       <a href="#hoy" id="nav-today">Hoy</a>
       <a href="#inicio" id="nav-home">Partidos</a>
       <a href="#picks" id="nav-picks">Picks</a>
+      <a href="#parlay" id="nav-parlay">Parlay</a>
       <a href="#lab" id="nav-lab">Laboratorio</a>
     </nav>
     <span class="season-chip" id="season-chip"></span>
@@ -3445,6 +3501,8 @@ function renderPregame(gameId) {
 
     ${bestPickPanel(a)}
 
+    ${parlayPanel(a, gameId)}
+
     ${inventoryPanel(a)}
 
     <div class="fw-toolbar">
@@ -3708,7 +3766,7 @@ function daySummary(games) {
   };
 }
 
-function dayStrip(sel) {
+function dayStrip(sel, base = "hoy") {
   const selWeek = GAME_DAYS.get(sel)?.[0]?.week;
   const t = todayKey();
   const keys = DAY_KEYS.filter((k) => Math.abs(GAME_DAYS.get(k)[0].week - selWeek) <= 1);
@@ -3718,7 +3776,7 @@ function dayStrip(sel) {
     const sep = g0.week !== lastWeek ? `<span class="wk-sep">${esc(weekLabel(g0.week, true))}</span>` : "";
     lastWeek = g0.week;
     const n = GAME_DAYS.get(k).length;
-    return `${sep}<a href="#hoy-${k.replace(/-/g, "")}" id="day-${k}"${k === sel ? ' aria-current="true"' : ""}><span class="${k === t ? "is-today" : ""}">${k === t ? "Hoy" : esc(chipWdFmt.format(dayNoon(k)).replace(".", ""))}</span><b>${esc(chipDFmt.format(dayNoon(k)))}</b><span>${n} ${n === 1 ? "juego" : "juegos"}</span></a>`;
+    return `${sep}<a href="#${base}-${k.replace(/-/g, "")}" id="day-${k}"${k === sel ? ' aria-current="true"' : ""}><span class="${k === t ? "is-today" : ""}">${k === t ? "Hoy" : esc(chipWdFmt.format(dayNoon(k)).replace(".", ""))}</span><b>${esc(chipDFmt.format(dayNoon(k)))}</b><span>${n} ${n === 1 ? "juego" : "juegos"}</span></a>`;
   }).join("")}</nav>`;
 }
 
@@ -3803,6 +3861,7 @@ function ticket(g, now) {
         <span>${pct(pk.p, 0)} <b>${esc(g.home)}</b></span></div>` : ""}
       ${main}
       ${t2 ? altPick(t2) : ""}
+      ${parlayLine(g)}
       <div class="tk-foot"><span>${footLine(g, pk)}</span>${ANALYZED_SET.has(g.id) ? `<a href="#p-${esc(g.id)}">Análisis completo →</a>` : played && g.hasPlays ? `<a href="#g-${esc(g.id)}">Jugadas →</a>` : ""}</div>
     </article>`;
 }
@@ -3895,6 +3954,7 @@ function renderToday(key) {
         <p class="lede">Los tres picks del día con mejor semáforo y que se pueden jugar ya (Lean y Pick antes que "Esperar"), con menor contradicción y mayor confianza; máximo uno por partido${topDone.length ? ` · resultado: ${topDone.filter((t) => t.won).length}–${topDone.filter((t) => !t.won && !t.push).length}, ${signed(topDone.reduce((a, t) => a + (t.units ?? 0), 0), 2)} u` : ""}. <a href="#picks-w${week}">Top 3 de la ${esc(weekLabel(week).toLowerCase())} →</a></p>
       </div>
       ${top.length ? `<div class="top3">${top.map((t, i) => topCard(t, i)).join("")}</div>` : `<div class="top-empty">Ningún pick de este día pasa los filtros del framework${games.some((g) => g.spread === null) ? " (o todavía no hay líneas del mercado)" : ""}: no bet.</div>`}
+      ${parlayLink(sel, games)}
     </section>
 
     <section class="stack" style="gap:14px">
@@ -3958,6 +4018,299 @@ function todayLink() {
     </a>`;
 }
 
+/* ---------- Parlay: piezas probables de cada partido y boletos ---------- */
+const PARLAY_STAKE_CAP = 0.01; // tope del stake de un parlay: 1% del bankroll
+const decOf = (am) => (am > 0 ? 1 + am / 100 : 1 + 100 / -am);
+const amOf = (d) => (d >= 2 ? Math.round((d - 1) * 100) : Math.round(-100 / (d - 1)));
+const LEG_CLS = { Ancla: "ok", "Sólida": "ok", Cara: "warn", "Contradicción alta": "no", "Poco probable": "muted" };
+const legPill = (st) => `<span class="pill ${LEG_CLS[st] ?? "muted"}">${esc(st)}</span>`;
+// Pieza que pasa el filtro pero que el framework manda a esperar información.
+const waitPill = (l) => (l.wait && l.usable ? '<span class="pill next" title="El framework pide confirmar información en este lado antes de jugarlo">Confirmar info</span>' : "");
+const legMark = (l) => (l.won === null || l.won === undefined ? "" : l.push ? '<span class="muted">push</span>' : l.won ? '<span class="pos">✓</span>' : '<span class="negv">✗</span>');
+const legsOf = (g) => (PICKS.get(g.id)?.parlay ?? []).map((l) => ({ ...l, id: g.id, key: `${g.id}:${l.rank}` }));
+/** Boleto: probabilidad (partidos distintos = independientes), momio, valor esperado, stake y resultado. */
+function parlayMath(legs) {
+  const P = legs.reduce((a, l) => a * l.pModel, 1);
+  const D = legs.reduce((a, l) => a * (l.dec ?? decOf(l.odds)), 1);
+  const ev = P * D - 1;
+  const kelly = D > 1 ? ev / (D - 1) : 0;
+  const stake = Math.min(PARLAY_STAKE_CAP, Math.max(0, kelly) / 8);
+  // Una pieza perdida tumba el boleto; un push la quita y el momio baja.
+  let state = "pending", units = null;
+  if (legs.some((l) => l.won === false && !l.push)) { state = "lost"; units = -1; }
+  else if (legs.length && legs.every((l) => l.won !== null)) {
+    const alive = legs.filter((l) => !l.push);
+    state = alive.length ? "won" : "push";
+    units = alive.length ? alive.reduce((a, l) => a * l.dec, 1) - 1 : 0;
+  }
+  return { P, D, ev, american: D > 1 ? amOf(D) : null, fair: P > 0 && P < 1 ? amOf(1 / P) : null, stake, state, units };
+}
+/** La pieza más probable que pasa el filtro en cada partido, de la más probable a la menos. */
+function bestLegs(games) {
+  return games.map((g) => legsOf(g).find((l) => l.usable)).filter(Boolean).sort((a, b) => b.pModel - a.pModel);
+}
+const PARLAY_KINDS = [
+  { n: 2, title: "El más probable", sub: "2 piezas" },
+  { n: 3, title: "Balanceado", sub: "3 piezas" },
+  { n: 4, title: "Momio alto", sub: "4 piezas" },
+];
+function suggestedParlays(games) {
+  const pool = bestLegs(games);
+  return PARLAY_KINDS.filter((k) => pool.length >= k.n).map((k) => ({ ...k, legs: pool.slice(0, k.n) }));
+}
+function parlayResult(m) {
+  if (m.state === "won") return `<span class="pill ok">✓ Ganó ${signed(m.units, 2)} u</span>`;
+  if (m.state === "lost") return `<span class="pill no">✗ Perdió −1 u</span>`;
+  if (m.state === "push") return `<span class="pill muted">= Push</span>`;
+  return "";
+}
+function legRow(l) {
+  const g = gamesById.get(l.id);
+  return `<li><span class="pl-time">${g?.kickoff ? esc(hourFmt.format(new Date(g.kickoff))) : ""}</span><span class="pl-pick"><b>${esc(l.pick)}</b> ${legMark(l)}<small>${esc(g.away)} @ ${esc(g.home)} · ${esc(l.market)} · ${esc(l.status)}${l.wait ? " · confirmar info" : ""}</small></span><span class="num">${fmtOdds(l.odds)}</span><span class="num muted">${pct(l.pModel, 0)}</span></li>`;
+}
+function parlayCard(k) {
+  const m = parlayMath(k.legs);
+  return `<article class="pl-card ${m.state}">
+      <div class="pl-head"><div><span class="eyebrow">${esc(k.sub)}</span><h3>${esc(k.title)}</h3></div><div class="pl-odds"><b>${m.american !== null ? fmtOdds(m.american) : "—"}</b><span>momio del boleto</span></div></div>
+      <ol class="pl-legs">${k.legs.map(legRow).join("")}</ol>
+      <div class="tk-nums">
+        <div><span>Probabilidad</span><b>${pct(m.P, 1)}</b></div>
+        <div><span>Cobras por $100</span><b>$${Math.round(m.D * 100)}</b></div>
+        <div><span>Valor esperado</span><b class="${m.ev >= 0 ? "pos" : "negv"}">${signed(m.ev * 100, 1)}%</b></div>
+        <div><span>Stake</span><b>${fmtStake(m.stake)}</b></div>
+      </div>
+      <div class="pl-foot"><span>Momio justo según el modelo: ${m.fair !== null ? fmtOdds(m.fair) : "—"}</span>${parlayResult(m)}</div>
+    </article>`;
+}
+/** Récord en vivo: un boleto sugerido de 2, 3 y 4 piezas por cada día de partidos ya jugado. */
+function parlayRecord() {
+  const res = Object.fromEntries(PARLAY_KINDS.map((k) => [k.n, { n: 0, w: 0, l: 0, p: 0, units: 0 }]));
+  for (const games of GAME_DAYS.values()) {
+    if (!games.every((g) => PICKS.get(g.id)?.period === "live" && isPlayed(g))) continue;
+    for (const k of suggestedParlays(games)) {
+      const m = parlayMath(k.legs);
+      if (m.state === "pending") continue;
+      const r = res[k.n];
+      r.n++; r.units += m.units;
+      if (m.state === "won") r.w++; else if (m.state === "lost") r.l++; else r.p++;
+    }
+  }
+  return res;
+}
+/** ¿Las piezas probables lo son? Aciertos reales contra la probabilidad del modelo, por etiqueta. */
+function legCalibration() {
+  const rows = {};
+  for (const g of CORE.games) {
+    const pk = PICKS.get(g.id);
+    if (pk?.period !== "live" || !isPlayed(g)) continue;
+    for (const l of pk.parlay ?? []) {
+      if (l.won === null || l.push) continue;
+      const r = (rows[l.status] ??= { n: 0, w: 0, p: 0, u: 0 });
+      r.n++; r.w += l.won ? 1 : 0; r.p += l.pModel; r.u += l.won ? l.dec - 1 : -1;
+    }
+  }
+  return rows;
+}
+function parlayRecordHtml() {
+  const R = parlayRecord();
+  const cards = PARLAY_KINDS.map((k) => {
+    const r = R[k.n];
+    if (!r.n) return `<div class="rec-card"><span class="eyebrow">${esc(k.title)} · ${k.sub}</span><span class="big">—</span><span class="muted">Sin boletos jugados todavía.</span></div>`;
+    return `<div class="rec-card">
+        <span class="eyebrow">${esc(k.title)} · ${k.sub}</span>
+        <span class="big num">${r.w}–${r.l}${r.p ? `–${r.p}` : ""} <span class="muted" style="font-size:15px">${signed(r.units, 2)} u</span></span>
+        <div class="vs"><span>ROI a 1 unidad por boleto</span><b class="num ${r.units > 0 ? "pos" : "negv"}">${signed((r.units / r.n) * 100, 1)}%</b></div>
+        <div class="vs"><span>Días con boleto</span><b class="num">${r.n}</b></div>
+      </div>`;
+  }).join("");
+  const C = legCalibration();
+  const order = ["Ancla", "Sólida", "Cara", "Contradicción alta", "Poco probable"];
+  const table = `<div class="table-scroll"><table>
+      <thead><tr><th>Etiqueta de la pieza</th><th class="r">Piezas</th><th class="r">Ganaron</th><th class="r">P del modelo</th><th class="r">Unidades sueltas</th></tr></thead>
+      <tbody>${order.filter((k) => C[k]).map((k) => { const r = C[k]; return `<tr><td>${legPill(k)}</td><td class="r num">${r.n}</td><td class="r num">${pct(r.w / r.n, 0)}</td><td class="r num muted">${pct(r.p / r.n, 0)}</td><td class="r num ${r.u >= 0 ? "pos" : "negv"}">${signed(r.u, 2)}</td></tr>`; }).join("")}</tbody>
+    </table></div>`;
+  return { cards, table };
+}
+
+/* Constructor: las 2 piezas de cada partido del día, por horario, y el boleto que se va armando. */
+const parlaySel = new Set();
+let parlayDay = null;
+function piecesHtml(games, now) {
+  const slots = new Map();
+  for (const g of games) {
+    const key = g.kickoff ? hourFmt.format(kickoffOf(g)) : "Por confirmar";
+    if (!slots.has(key)) slots.set(key, []);
+    slots.get(key).push(g);
+  }
+  return [...slots.entries()].map(([hour, list]) => `<div class="pc-slot"><h3>${esc(hour)}</h3>${list.map((g) => {
+    const legs = legsOf(g);
+    return `<div class="pc-game">
+        <div class="pc-game-head"><span>${esc(g.away)} @ ${esc(g.home)}${isPlayed(g) ? ` <span class="muted">${g.as}–${g.hs}</span>` : ""}</span><span class="muted">${esc(liveState(g, now).label)}</span></div>
+        ${legs.length ? legs.map((l) => `<label class="pc${parlaySel.has(l.key) ? " on" : ""}">
+            <input type="checkbox" data-leg="${esc(l.key)}"${parlaySel.has(l.key) ? " checked" : ""}>
+            <span class="pc-main"><b>${esc(l.pick)}</b><span class="num muted">${fmtOdds(l.odds)}</span>${legPill(l.status)}${waitPill(l)}${legMark(l)}</span>
+            <span class="pc-p">${pct(l.pModel, 0)}<small>×${l.dec.toFixed(2)}</small></span>
+            <span class="pc-note" title="${esc(l.note)}">${esc(l.note)}${l.correlated ? ` Con la pieza 1: ${esc(l.correlated)}` : ""}</span>
+          </label>`).join("") : `<p class="muted" style="font-size:12px">Sin línea del mercado todavía.</p>`}
+      </div>`;
+  }).join("")}</div>`).join("");
+}
+function slipHtml(games) {
+  const legs = games.flatMap(legsOf).filter((l) => parlaySel.has(l.key));
+  if (!legs.length) return `<span class="eyebrow">Tu boleto</span>
+      <p class="muted" style="font-size:13px">Marca piezas de la lista para armar tu parlay, o carga el boleto más probable del día.</p>
+      <div class="slip-actions"><button type="button" class="btn primary" data-act="best">Cargar el más probable</button></div>`;
+  const m = parlayMath(legs);
+  const warns = [];
+  const perGame = new Map();
+  legs.forEach((l) => perGame.set(l.id, (perGame.get(l.id) ?? 0) + 1));
+  const same = [...perGame.entries()].filter(([, n]) => n > 1).map(([id]) => { const g = gamesById.get(id); return `${g.away} @ ${g.home}`; });
+  if (same.length) warns.push(`Dos piezas del mismo partido (${same.join(", ")}): están correlacionadas, la casa las paga como same-game parlay y la probabilidad real no es el producto.`);
+  const bad = legs.filter((l) => !l.usable);
+  if (bad.length) warns.push(`${bad.length === 1 ? "Una pieza no pasa" : `${bad.length} piezas no pasan`} el filtro (${[...new Set(bad.map((l) => l.status.toLowerCase()))].join(", ")}): le ${bad.length === 1 ? "resta" : "restan"} valor al boleto.`);
+  const wait = legs.filter((l) => l.wait && l.usable);
+  if (wait.length) warns.push(`${wait.map((l) => l.pick).join(", ")}: el framework pide confirmar información (inactivos, QB o un edge demasiado grande contra el cierre) antes de jugar${wait.length === 1 ? "la" : "las"}.`);
+  if (legs.length > 5) warns.push("Más de 5 piezas: la probabilidad cae muy rápido; cada pieza extra es otra moneda al aire.");
+  const now = new Date();
+  if (m.state === "pending" && legs.some((l) => { const g = gamesById.get(l.id); return g && (g.status === "in" || (g.kickoff && new Date(g.kickoff) <= now)); })) warns.push("Incluye partidos que ya empezaron: ya no se pueden apostar antes de la patada.");
+  const resTxt = m.state === "pending" ? "pendiente" : m.state === "won" ? `${signed(m.units, 2)} u` : m.state === "lost" ? "−1 u" : "push";
+  return `<span class="eyebrow">Tu boleto · ${legs.length} ${legs.length === 1 ? "pieza" : "piezas"}</span>
+      <div><div class="slip-odds">${m.american !== null ? fmtOdds(m.american) : "—"}</div><span class="muted" style="font-size:12px">cobras $${Math.round(m.D * 100)} por $100 · momio justo ${m.fair !== null ? fmtOdds(m.fair) : "—"}</span></div>
+      <div class="tk-nums">
+        <div><span>Probabilidad</span><b>${pct(m.P, 1)}</b></div>
+        <div><span>Valor esperado</span><b class="${m.ev >= 0 ? "pos" : "negv"}">${signed(m.ev * 100, 1)}%</b></div>
+        <div><span>Stake sugerido</span><b>${fmtStake(m.stake)}</b></div>
+        <div><span>Resultado</span><b>${resTxt}</b></div>
+      </div>
+      <ul class="slip-legs">${legs.map((l) => `<li><span>${esc(l.pick)} ${legMark(l)}</span><span class="num muted">${fmtOdds(l.odds)} · ${pct(l.pModel, 0)}</span></li>`).join("")}</ul>
+      ${warns.map((w) => `<p class="slip-warn">${esc(w)}</p>`).join("")}
+      <p class="muted slip-help" style="font-size:11px">Probabilidad = producto de las piezas (partidos distintos se tratan como independientes). Stake: ⅛ de Kelly con tope de ${PARLAY_STAKE_CAP * 100}% del bankroll.</p>
+      <div class="slip-actions"><button type="button" class="btn" data-act="clear">Limpiar</button><button type="button" class="btn" data-act="best">El más probable</button></div>`;
+}
+
+function renderParlay(key) {
+  renderToken++;
+  const sel = key && GAME_DAYS.has(key) ? key : defaultDay();
+  if (parlayDay !== sel) { parlaySel.clear(); parlayDay = sel; }
+  const games = GAME_DAYS.get(sel) ?? [];
+  if (!games.length) { view.innerHTML = `<p class="status">No hay partidos en el calendario.</p>`; return; }
+  const now = new Date();
+  const isToday = sel === todayKey();
+  const week = games[0].week;
+  const dayName = longDayFmt.format(dayNoon(sel));
+  const sugg = suggestedParlays(games);
+  const pool = bestLegs(games);
+  const rec = parlayRecordHtml();
+  view.innerHTML = `
+    <section class="today-head">
+      <p class="eyebrow">Parlay · ${esc(weekLabel(week))} · ${esc(dayName)} · hora de la Ciudad de México</p>
+      <h1>${esc(isToday ? "Parlay de hoy" : `Parlay del ${dayName}`)}</h1>
+      <p class="lede">Un parlay paga más porque todas las piezas tienen que ganar, y el margen de la casa se multiplica pieza por pieza. Por eso cada partido aporta sus 2 piezas más probables, pero a los boletos sugeridos solo entran las que el modelo da en 55% o más, que el precio paga (valor esperado ≥ 0 al mejor momio) y sin contradicción alta.</p>
+      ${dayStrip(sel, "parlay")}
+    </section>
+
+    ${oddsNotice()}
+
+    <section class="stack" style="gap:10px">
+      <div class="section-head" style="margin-bottom:0">
+        <span class="eyebrow">Boletos sugeridos</span>
+        <h2>Los parlays más probables ${isToday ? "de hoy" : "del día"}</h2>
+        <p class="lede">${pool.length} ${pool.length === 1 ? "partido tiene" : "partidos tienen"} una pieza que pasa el filtro (de ${games.length}). Se toma la más probable de cada partido —nunca dos del mismo— y se juntan de la más probable a la menos.</p>
+      </div>
+      ${sugg.length ? `<div class="pl-grid">${sugg.map(parlayCard).join("")}</div>` : `<div class="top-empty">${pool.length === 1 ? "Solo una pieza pasa" : "Ninguna pieza pasa"} el filtro este día: no hay parlay sugerido. Puedes armar uno abajo, pero el modelo no ve valor.</div>`}
+    </section>
+
+    <section class="stack" style="gap:14px">
+      <div class="section-head" style="margin-bottom:0">
+        <h2>Arma tu parlay</h2>
+        <p class="lede">Las 2 piezas más probables de cada partido, por horario. Marca las que quieras: el boleto calcula probabilidad, momio, valor esperado y stake, y avisa si una pieza le resta valor o si juntas dos del mismo partido.</p>
+      </div>
+      <div class="builder">
+        <div class="pieces" id="pieces">${piecesHtml(games, now)}</div>
+        <aside class="slip" id="slip" aria-live="polite">${slipHtml(games)}</aside>
+      </div>
+    </section>
+
+    <section class="stack" style="gap:10px">
+      <div class="section-head" style="margin-bottom:0">
+        <h2>¿Funciona? Récord en vivo</h2>
+        <p class="lede">Desde el ${esc(fmtDay(LIVE_FROM))}, un boleto de cada tipo por día de partidos ya jugado, a 1 unidad y al momio de cierre. Abajo, si las piezas ganan lo que el modelo dice: las que pasan el filtro contra las "caras" o con contradicción.</p>
+      </div>
+      <div class="record">${rec.cards}</div>
+      <div class="panel">${rec.table}</div>
+    </section>
+
+    ${cloud("explain", "Cómo se eligen las piezas", `<p><b>Ancla</b>: el modelo le da 65% o más y el precio la paga. <b>Sólida</b>: 55–65% con precio justo o mejor. <b>Cara</b>: probable, pero el momio ya cobra más de lo que vale (un favorito a −1500 casi no sube el boleto y le resta valor). <b>Contradicción alta</b>: el framework ve un dato fuerte en contra. <b>Poco probable</b>: menos de 55%. La segunda pieza de cada partido es de otro mercado y nunca del rival de la primera. Probabilidad del boleto = producto de las piezas; valor esperado = probabilidad × momio decimal − 1; stake = ⅛ de Kelly con tope de ${PARLAY_STAKE_CAP * 100}% del bankroll, porque un parlay tiene mucha más varianza que un pick suelto.</p>`, "i")}`;
+  const slip = document.getElementById("slip");
+  const redrawSlip = () => { slip.innerHTML = slipHtml(games); };
+  const syncChecks = () => view.querySelectorAll("#pieces input[data-leg]").forEach((inp) => {
+    inp.checked = parlaySel.has(inp.dataset.leg);
+    inp.closest(".pc")?.classList.toggle("on", inp.checked);
+  });
+  document.getElementById("pieces").addEventListener("change", (ev) => {
+    const k = ev.target?.dataset?.leg;
+    if (!k) return;
+    if (ev.target.checked) parlaySel.add(k); else parlaySel.delete(k);
+    ev.target.closest(".pc")?.classList.toggle("on", ev.target.checked);
+    redrawSlip();
+  });
+  slip.addEventListener("click", (ev) => {
+    const act = ev.target.closest("[data-act]")?.dataset.act;
+    if (!act) return;
+    parlaySel.clear();
+    if (act === "best" && sugg[0]) sugg[0].legs.forEach((l) => parlaySel.add(l.key));
+    syncChecks();
+    redrawSlip();
+  });
+  const strip = view.querySelector(".days");
+  const active = view.querySelector(`[id="day-${sel}"]`);
+  if (strip && active) strip.scrollLeft = active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2;
+}
+
+/** Piezas de parlay dentro del análisis de cada partido. */
+function parlayPanel(a, gameId) {
+  const legs = a.bestPick?.parlay ?? [];
+  if (!legs.length) return "";
+  const g = gamesById.get(gameId);
+  const dayK = g && kickoffOf(g) ? dayKeyFmt.format(kickoffOf(g)) : null;
+  const cls = (l) => (l.usable ? "use" : l.status === "Cara" ? "cara" : l.status === "Contradicción alta" ? "contra" : "");
+  return `<section class="stack" style="gap:10px" id="piezas-parlay">
+      <div class="section-head" style="margin-bottom:0">
+        <span class="eyebrow">Parlay</span>
+        <h2>Piezas de parlay del partido</h2>
+        <p class="lede">Los 2 lados más probables de este partido para meter a un parlay. Sirven si el modelo les da 55% o más, el precio los paga (valor esperado ≥ 0) y no tienen contradicción alta.${dayK ? ` <a href="#parlay-${dayK.replace(/-/g, "")}">Armar un parlay con los partidos del día →</a>` : ""}</p>
+      </div>
+      <div class="leg-cards">${legs.map((l) => `<div class="leg-card ${cls(l)}">
+          <div class="tk-pick"><span class="rank-badge ${l.usable ? "" : "off"}">${l.rank}</span><span class="p">${esc(l.pick)}</span><span class="o">${fmtOdds(l.odds)}</span>${l.book ? `<span class="bk">en ${esc(l.book)}</span>` : ""} ${legMark(l)}</div>
+          <div class="tk-tags">${legPill(l.status)}${waitPill(l)}<span class="muted" style="font-size:12px">${esc(l.market)} · ${l.usable ? "sirve para parlay" : "no conviene en un parlay"}</span></div>
+          <div class="tk-nums">
+            <div><span>P modelo</span><b>${pct(l.pModel, 0)}</b></div>
+            <div><span>P mercado</span><b>${pct(l.pImplied, 0)}</b></div>
+            <div><span>Valor esperado</span><b class="${l.ev >= 0 ? "pos" : "negv"}">${signed(l.ev * 100, 1)}%</b></div>
+            <div><span>Multiplica</span><b>×${l.dec.toFixed(2)}</b></div>
+          </div>
+          <p class="tk-note">${esc(l.note)}</p>
+          ${l.correlated ? `<p class="tk-note"><b>Con la pieza 1:</b> ${esc(l.correlated)} Juntas en el mismo boleto son un same-game parlay: la casa lo paga distinto y la probabilidad no es el producto.</p>` : ""}
+        </div>`).join("")}</div>
+    </section>`;
+}
+/** Línea compacta de piezas de parlay en las tarjetas de "Hoy". */
+function parlayLine(g) {
+  const legs = legsOf(g);
+  if (!legs.length) return "";
+  return `<div class="tk-parlay"><span class="lbl">Parlay</span>${legs.map((l) => `<span class="pl-chip${l.usable ? " on" : ""}" title="${esc(l.note)}"><b>${esc(l.pick)}</b> <span class="num">${fmtOdds(l.odds)}</span> · ${pct(l.pModel, 0)} · ${esc(l.status)}</span>`).join("")}</div>`;
+}
+/** Acceso al parlay del día desde "Hoy". */
+function parlayLink(sel, games) {
+  const best = suggestedParlays(games)[0];
+  const m = best ? parlayMath(best.legs) : null;
+  return `<a class="today-link" href="#parlay-${sel.replace(/-/g, "")}">
+      <div><span class="eyebrow">Parlay del día</span>
+      <strong>${best ? `${esc(best.legs.map((l) => l.pick).join(" + "))} · ${m.american !== null ? fmtOdds(m.american) : ""} · ${pct(m.P, 0)} según el modelo` : "Ninguna combinación pasa el filtro: arma la tuya con las piezas de cada partido"}</strong></div>
+      <span class="go">Ver parlays →</span>
+    </a>`;
+}
+
 /* ---------- Navegación ---------- */
 let currentRoute = "";
 function route() {
@@ -3972,13 +4325,15 @@ function route() {
   const pre = /^p-(.+)$/.exec(hash);
   const pk = /^picks(?:-w(\d+))?$/.exec(hash);
   const day = /^hoy-(\d{4})(\d{2})(\d{2})$/.exec(hash);
+  const par = /^parlay(?:-(\d{4})(\d{2})(\d{2}))?$/.exec(hash);
   const isPicks = Boolean(pk) || Boolean(pre && ANALYZED_SET.has(pre[1]));
   const isLab = hash.startsWith("lab");
   const isHome = hash === "inicio" || Boolean(game);
   setCurrent("nav-lab", isLab);
   setCurrent("nav-picks", isPicks);
   setCurrent("nav-home", isHome);
-  setCurrent("nav-today", !isLab && !isPicks && !isHome);
+  setCurrent("nav-parlay", Boolean(par));
+  setCurrent("nav-today", !isLab && !isPicks && !isHome && !par);
   if (pre && ANALYZED_SET.has(pre[1])) {
     openPregame(pre[1]);
     const pg = gamesById.get(pre[1]);
@@ -3998,6 +4353,9 @@ function route() {
   } else if (game) {
     renderGame(game, match[1] === "m" ? "modelo" : "partido");
     document.title = `${game.away} @ ${game.home} · DATAGSPORTS`;
+  } else if (par) {
+    renderParlay(par[1] ? `${par[1]}-${par[2]}-${par[3]}` : null);
+    document.title = "Parlay · DATAGSPORTS 2026";
   } else if (isHome) {
     renderHome();
     document.title = "Partidos · DATAGSPORTS 2026";
