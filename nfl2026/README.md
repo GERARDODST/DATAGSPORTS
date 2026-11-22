@@ -112,6 +112,19 @@ partido) y `npm run 2026:update` (además vuelve a bajar nflverse completo).
 
 `snapshot/viewer.html` → `snapshot/dist/`:
 
+- **Hoy** (`#hoy`, portada; `#hoy-AAAAMMDD` para otro día): los picks del día en hora de la Ciudad
+  de México. Si hoy no hay partidos abre la siguiente jornada. Trae:
+  - un tablero del día: partidos, para jugar (Lean o Pick), en espera, no bet, stake total y la
+    próxima patada (o el resultado del día ya jugado);
+  - el top 3 del día, con el mismo orden que el top 3 semanal;
+  - los partidos agrupados por hora de patada, cada uno con su veredicto (Jugar / Esperar /
+    No bet), el pick #1 (semáforo, clase, confianza, modelo contra mercado, edge, stake, momio mínimo,
+    lo que tiene que pasar y el riesgo) y el #2 en una línea;
+  - filtros por veredicto y una cuenta regresiva que se recalcula en el navegador.
+
+  La hora de patada sale de `gametime` de nflverse (hora del Este, convertida con horario de verano)
+  y ESPN la corrige cuando está disponible. Si la hora ya pasó y la foto del sitio no trae el
+  marcador, el partido dice "Ya empezó" en vez de fingir que sigue por jugar.
 - **Partidos**: los picks más firmes de la semana y todos los partidos con su pick.
 - **Picks** (`#picks`): marcador de la temporada (en vivo y validación, modelo contra mercado,
   spread y over/under) y una tarjeta por partido con el pick de ganador, spread y total.

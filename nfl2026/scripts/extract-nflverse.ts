@@ -41,6 +41,21 @@ function toDate(value: string | undefined | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Fecha y hora de un huso horario (p. ej. "2026-11-22" + "13:00" en Nueva York) → instante UTC, con horario de verano. */
+export function zonedToUtc(day: string | undefined, time: string | undefined, tz = "America/New_York"): Date | null {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day ?? ""), t = /^(\d{1,2}):(\d{2})/.exec(time ?? "");
+  if (!d || !t) return null;
+  const wall = Date.UTC(+d[1], +d[2] - 1, +d[3], +t[1], +t[2]);
+  const offset = (at: number) => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      .formatToParts(new Date(at)).map((x) => [x.type, x.value]));
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - at;
+  };
+  let utc = wall - offset(wall);
+  utc = wall - offset(utc); // segunda vuelta por si el cambio de horario cae entre las dos horas
+  return new Date(utc);
+}
+
 function gameKey(season: number, week: string | number, teamA: string, teamB: string): string {
   const [a, b] = [teamA, teamB].sort();
   return `${season}|${week}|${a}-${b}`;
@@ -154,7 +169,7 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
   // casas) no se pisa con un hueco ni con una línea más vieja.
   const existing = new Map((await prisma.game.findMany({
     where: { season },
-    select: { gameId: true, homeScore: true, awayScore: true, scoreSource: true, oddsSource: true, oddsUpdatedAt: true, gameDate: true },
+    select: { gameId: true, homeScore: true, awayScore: true, scoreSource: true, oddsSource: true, oddsUpdatedAt: true, gameDate: true, kickoff: true, status: true },
   })).map((g) => [g.gameId, g]));
   const ODDS_FIELDS = ["spreadLine", "totalLine", "homeMoneyline", "awayMoneyline", "homeSpreadOdds", "awaySpreadOdds", "overOdds", "underOdds"] as const;
   for (const raw of seasonRows) {
@@ -169,6 +184,8 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
       week: toInt(row.week) ?? 0,
       gameType: row.game_type || null,
       gameDate: toDate(row.gameday),
+      // nflverse publica la hora en hora del Este (gametime "13:00").
+      kickoff: zonedToUtc(row.gameday, row.gametime),
       homeTeamAbbr: row.home_team,
       awayTeamAbbr: row.away_team,
       homeScore: toInt(row.home_score),
@@ -198,6 +215,8 @@ async function loadGames(season: number, knownTeams: Set<string>): Promise<Map<s
     const prev = existing.get(row.game_id);
     const update: Record<string, unknown> = { ...fields };
     if (prev) {
+      // La hora que ya trajo ESPN (estado por jugar / en juego) manda; nflverse llena el hueco o corrige un cambio de horario.
+      if (!fields.kickoff || (prev.kickoff && (prev.status === "pre" || prev.status === "in"))) delete update.kickoff;
       if (fields.homeScore === null && prev.homeScore !== null) { delete update.homeScore; delete update.awayScore; }
       // El marcador de nflverse es el oficial: si ya lo tiene, manda (y corrige un final de ESPN si difiere).
       else if (fields.homeScore !== null && (prev.scoreSource !== "nflverse" || prev.homeScore !== fields.homeScore || prev.awayScore !== fields.awayScore)) Object.assign(update, { status: "post", scoreSource: "nflverse", scoreUpdatedAt: new Date() });

@@ -6,6 +6,9 @@
  *
  * Cada edición se exporta por separado con su propia base de datos:
  *   npm run 2024:export   ·   npm run 2026:export   ·   npm run site:build
+ *
+ * Si una edición no está exportada en este equipo (p. ej. solo se actualizó la 2026), se arma el sitio
+ * con la otra y se avisa: al publicar se suben solo los archivos de la edición que sí está.
  */
 import { cp, mkdir, readFile, rm, stat, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -23,15 +26,19 @@ async function size(dir) {
 
 await rm(DIST, { recursive: true, force: true });
 await mkdir(DIST, { recursive: true });
+const built = [];
 for (const ed of ["2024", "2026"]) {
   const src = path.join(ROOT, `nfl${ed}`, "snapshot", "dist");
   try { await stat(path.join(src, "index.html")); } catch {
-    throw new Error(`Falta nfl${ed}/snapshot/dist/index.html: corre primero npm run ${ed}:export`);
+    console.warn(`Aviso: falta nfl${ed}/snapshot/dist/index.html (npm run ${ed}:export). El sitio se arma sin esa edición.`);
+    continue;
   }
+  built.push(ed);
   await cp(src, path.join(DIST, `nfl${ed}`), { recursive: true });
   const s = await size(path.join(DIST, `nfl${ed}`));
   console.log(`nfl${ed}/: ${s.files} archivos · ${(s.total / 1024 / 1024).toFixed(1)} MB`);
 }
+if (!built.length) throw new Error("No hay ninguna edición exportada: corre npm run 2024:export o npm run 2026:export");
 await writeFile(path.join(DIST, "index.html"), await readFile(path.join(ROOT, "site", "shell.html"), "utf8"));
 const all = await size(DIST);
 console.log(`Sitio listo en site/dist/: ${all.files} archivos · ${(all.total / 1024 / 1024).toFixed(1)} MB`);
