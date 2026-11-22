@@ -26,6 +26,7 @@ import { loadGameContext, loadModelData } from "../src/lib/models/backtest";
 import { gameModels, labSummary, readParams, runFinal } from "../src/lib/models/lab";
 import { impliedNoVig, logLoss, brier, normalCdf, outcome } from "../src/lib/models/core";
 import { inLive, inValid, VALID_CUTOFF } from "../src/lib/models/protocol";
+import { loadParlayParams } from "../src/lib/parlay-model";
 
 // Modelo de puntos esperados y cadena de Markov: se construyen con la temporada completa anterior
 // (2025), que ya existía antes del primer partido de 2026.
@@ -369,8 +370,9 @@ async function main() {
     }));
     // Piezas de parlay (las 2 más probables del partido) para la sección Parlay, "Hoy" y el constructor.
     if (pk) pk.parlay = bp.parlay.map((l) => ({
-      rank: l.rank, market: l.market, pick: l.pick, team: l.team, odds: l.odds, book: l.book, dec: l.dec, pModel: l.pModel, pImplied: l.pImplied,
-      edge: l.edge, ev: l.ev, status: l.status, usable: l.usable, wait: l.wait, note: l.note, correlated: l.correlated, won: l.won, push: l.push,
+      rank: l.rank, family: l.family, market: l.market, pick: l.pick, team: l.team, alt: l.alt, odds: l.odds, estimated: l.estimated, book: l.book, dec: l.dec,
+      p: l.p, pModel: l.pModel, pMarket: l.pMarket, pFloor: l.pFloor, beta: l.beta, ev: l.ev, minOdds: l.minOdds,
+      status: l.status, usable: l.usable, wait: l.wait, note: l.note, correlated: l.correlated, won: l.won, push: l.push,
     }));
     process.stdout.write(`\r   análisis previo ${i + 1}/${withLine.length}`);
   }
@@ -416,6 +418,9 @@ async function main() {
     if (top.length) top3ByWeek[week] = top;
   }
   (core as Record<string, unknown>).top3ByWeek = top3ByWeek;
+  // Modelo de piezas de parlay: parámetros ajustados y medición (data/parlay-params.json).
+  const parlayMeta = loadParlayParams().meta as { params: unknown; valid: unknown; live: unknown; fittedAt: string } | null;
+  (core as Record<string, unknown>).parlayModel = parlayMeta ? { params: parlayMeta.params, valid: parlayMeta.valid, live: parlayMeta.live, fittedAt: parlayMeta.fittedAt } : null;
   const top3Record = (period: "valid" | "live") => {
     const rows = Object.values(top3ByWeek).flat().filter((t) => t.period === period);
     const done = rows.filter((t) => t.won !== null);

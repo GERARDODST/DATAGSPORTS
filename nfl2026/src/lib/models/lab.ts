@@ -336,6 +336,8 @@ export function gameModels(run: FinalRun, gameId: string) {
     qbProjected: r.g.qbProjected,
     overLines: r.g.total === null ? [] : [-3, -1.5, 0, 1.5, 3].map((dl) => ({ line: (r.g.total as number) + dl, pOver: lineProb((r.g.total as number) + dl, "total") as number })),
     discrete: discreteForGame(run, r),
+    // Pesos de números clave (ω): el modelo de piezas de parlay rearma la distribución con cualquier línea.
+    keyWeights: { margin: run.kw.margin?.weights.map((v) => r4(v, 4) as number) ?? null, total: run.kw.total?.weights.map((v) => r4(v, 4) as number) ?? null },
   };
 }
 /** Regresión logística por Newton–Raphson (IRLS) con penalización ridge l2 (sin penalizar el intercepto). */

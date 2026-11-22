@@ -17,10 +17,11 @@
  * contradicción, confianza y solo después valor esperado.
  */
 
+import { buildParlayPieces, DEFAULT_PARLAY_PARAMS, pickLegs, type ParlayParams, type Piece, type PieceDist } from "./parlay-model";
+
 export type Light = "Verde" | "Amarillo" | "Rojo" | "Gris";
 export type Level = "Baja" | "Media" | "Alta";
 export type Klass = "Pick fuerte" | "Pick moderado" | "Lean" | "Esperar información" | "No bet";
-export type LegStatus = "Ancla" | "Sólida" | "Cara" | "Contradicción alta" | "Poco probable";
 export type Contradiction = { ref: string; text: string; kind: "dato" | "guion" | "info" };
 
 export type BestPickInput = {
@@ -58,12 +59,12 @@ export type BestPickInput = {
   missing: string[]; // campos obligatorios vacíos (sección 9.3)
   pending: string[]; // información que todavía no existe antes del partido (inactivos, QB confirmado…)
   result: { margin: number; total: number } | null;
+  /** Distribución del margen y del total (mezcla del torneo + números clave) para el modelo de piezas de parlay. */
+  dist?: PieceDist | null;
+  parlayParams?: ParlayParams;
 };
 
 const EDGE_MIN = 0.03;
-// Piezas de parlay: probabilidad mínima del modelo y la que la vuelve "ancla" del boleto.
-export const PARLAY_P = 0.55;
-export const PARLAY_ANCHOR = 0.65;
 const r3 = (v: number, d = 3) => Number(v.toFixed(d));
 const pct = (v: number, d = 1) => `${(v * 100).toFixed(d)}%`;
 const sgn = (v: number, d = 1) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(d)}`;
@@ -283,38 +284,22 @@ export function buildBestPick(x: BestPickInput) {
   });
 
 
-  // Piezas de parlay: los dos lados más probables del partido. En un parlay el margen de la casa se
-  // multiplica pieza por pieza, así que una pieza solo sirve si el precio paga su probabilidad (EV ≥ 0
-  // al mejor momio), si es probable (≥ 55%) y si no tiene contradicción alta. Las que no sirven se
-  // muestran igual, con el motivo, para que se vea por qué no conviene meterlas al boleto.
-  const legStatus = (c: Cand): LegStatus => c.pModel < PARLAY_P ? "Poco probable" : c.level === "Alta" ? "Contradicción alta" : c.ev < 0 ? "Cara" : c.pModel >= PARLAY_ANCHOR ? "Ancla" : "Sólida";
-  const legRank: Record<LegStatus, number> = { Ancla: 0, "Sólida": 0, Cara: 1, "Contradicción alta": 2, "Poco probable": 3 };
-  const legs = [...candidates].sort((a, b) => legRank[legStatus(a)] - legRank[legStatus(b)] || b.pModel - a.pModel);
-  const leg1 = legs[0] ?? null;
-  // La segunda pieza es de otro mercado y no puede ir con el rival del equipo de la primera.
-  const leg2 = leg1 ? legs.find((c) => c !== leg1 && c.market !== leg1.market && !(c.team && leg1.team && c.team !== leg1.team)) ?? null : null;
-  const legNote = (c: Cand, st: LegStatus) => {
-    const mult = `multiplica el momio del boleto ×${(1 + payout(c.odds)).toFixed(2)}`;
-    if (st === "Ancla") return `Muy probable (${pct(c.pModel, 0)}) y el precio la paga: ${mult}.`;
-    if (st === "Sólida") return `Probable (${pct(c.pModel, 0)}) con precio justo o mejor: ${mult}.`;
-    if (st === "Cara") return `Probable (${pct(c.pModel, 0)}), pero a ${fmtOdds(c.odds)} el precio no la paga (el mercado ya le da ${pct(c.pImplied, 0)}): ${mult} y le resta valor al boleto.`;
-    if (st === "Contradicción alta") return `Probable (${pct(c.pModel, 0)}), pero con contradicción alta: ${c.contradictions.map((k) => k.text).join(" ")}`;
-    return `Solo ${pct(c.pModel, 1)} según el modelo (se pide ${Math.round(PARLAY_P * 100)}%): demasiado incierta para un parlay.`;
+  // Piezas de parlay (src/lib/parlay-model.ts): modelo conservador con las 6 líneas con momio y las
+  // líneas alternativas compradas a favor de cada lado. La probabilidad conservadora se acerca al
+  // mercado tanto como lo pide el análisis del partido (contradicciones, avisos, QB sin confirmar y
+  // dispersión del torneo). Cada partido da 2 piezas: un lado y un total.
+  const pieces = x.dist !== undefined
+    ? buildParlayPieces({ home, away, spread: x.spread, total: x.total, margin: x.margin, totalProj: x.totalProj, qbProjected: x.qbProjected, dist: x.dist ?? null, result: x.result }, candidates, x.parlayParams ?? DEFAULT_PARLAY_PARAMS)
+    : [];
+  const legPair = pickLegs(pieces, home, away);
+  // 5.7.10: el total y el lado del favorito dependen del mismo guion de puntos.
+  const legCorr = (a: Piece, b: Piece) => {
+    const tot = a.market === "Total" ? a : b.market === "Total" ? b : null;
+    const sideP = tot === a ? b : a;
+    if (!tot || sideP.market === "Total" || !favTeam || sideP.team !== favTeam) return null;
+    return tot.family === "Over" ? "El Over y el favorito dependen del mismo guion (partido abierto con el favorito anotando)." : "El Under y el favorito se contraponen: si el favorito se despega suele subir el marcador.";
   };
-  const parlay = [leg1, leg2].filter((c): c is Cand => c !== null).map((c, i) => {
-    const status = legStatus(c);
-    // Lado que el framework manda a "Esperar información" (QB sin confirmar, edge enorme contra el
-    // cierre, titulares en duda…): sirve para el boleto solo después de confirmar ese dato.
-    const wait = c.klass === "Esperar información";
-    const waitWhy = wait ? c.contradictions.filter((k) => k.kind === "info").map((k) => k.text).join(" ") : "";
-    return {
-      rank: i + 1, market: c.market, pick: c.pick, team: c.team, side: c.side, odds: c.odds, book: c.book, dec: r3(1 + payout(c.odds), 3),
-      pModel: c.pModel, pImplied: c.pImplied, edge: c.edge, ev: c.ev, light: c.light, level: c.level,
-      status, usable: status === "Ancla" || status === "Sólida", wait, note: legNote(c, status) + (wait && (status === "Ancla" || status === "Sólida") ? ` Confirma antes de meterla: ${waitWhy}` : ""),
-      correlated: i === 1 && leg1 ? correlation(leg1, c) : null,
-      won: c.won, push: c.push,
-    };
-  });
+  const parlay = legPair.map((l, i) => ({ rank: i + 1, ...l, correlated: i === 1 ? legCorr(legPair[0], l) : null }));
 
   // Mercados alternativos (6.10 / 7.6): proyección sin cuota publicada en la fuente.
   const impliedTT = x.spread !== null && x.total !== null ? { home: x.total / 2 + x.spread / 2, away: x.total / 2 - x.spread / 2 } : null;
@@ -352,6 +337,7 @@ export function buildBestPick(x: BestPickInput) {
     best: best ? { ...best, assumption: assumption(best), correlated } : null,
     top2,
     parlay,
+    parlayPieces: pieces,
     noBetReason: best ? null : byEdge[0] && byEdge[0].edge >= EDGE_MIN
       ? `El lado con más valor (${label(byEdge[0])}, ${sgn(byEdge[0].edge * 100)} pp) tiene contradicción ${byEdge[0].level.toLowerCase()}: ${byEdge[0].contradictions.map((k) => k.text).join(" ")}`
       : `Ningún lado llega a ${EDGE_MIN * 100} pp de edge contra la línea de cierre: proteger el bankroll es más importante que forzar una apuesta.`,
@@ -362,7 +348,7 @@ export function buildBestPick(x: BestPickInput) {
       scriptMin,
       confidence: "5 + edge/3 (±2) + acuerdo de modelos (5/5 +1, 4/5 +0.5, ≤2/5 −1) + guion con holgura (+1) − 1.5 por contradicción − 1 si falta un campo obligatorio; entre 1 y 10",
       stake: "¼ Kelly en Verde, ⅛ Kelly en Amarillo (Lean); 0 en Esperar información, Rojo y Gris",
-      parlay: `Pieza de parlay: probabilidad del modelo ≥ ${Math.round(PARLAY_P * 100)}% (ancla ≥ ${Math.round(PARLAY_ANCHOR * 100)}%), EV ≥ 0 al mejor momio y sin contradicción alta`,
+      parlay: "Pieza de parlay: probabilidad conservadora ≥ 55% (Conservadora ≥ 70%), valor esperado ≥ 0 al momio real o estimado y menos de 2 contradicciones de dato o información",
     },
   };
 }

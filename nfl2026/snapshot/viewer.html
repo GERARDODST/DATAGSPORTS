@@ -4022,7 +4022,9 @@ function todayLink() {
 const PARLAY_STAKE_CAP = 0.01; // tope del stake de un parlay: 1% del bankroll
 const decOf = (am) => (am > 0 ? 1 + am / 100 : 1 + 100 / -am);
 const amOf = (d) => (d >= 2 ? Math.round((d - 1) * 100) : Math.round(-100 / (d - 1)));
-const LEG_CLS = { Ancla: "ok", "Sólida": "ok", Cara: "warn", "Contradicción alta": "no", "Poco probable": "muted" };
+const LEG_CLS = { Conservadora: "ok", Ancla: "ok", "Sólida": "ok", "Precio a revisar": "warn", Cara: "warn", "Contradicción alta": "no", "Poco probable": "muted" };
+const legP = (l) => l.p ?? l.pModel; // probabilidad conservadora del modelo de piezas
+const legOdds = (l) => `${l.estimated ? "≈" : ""}${fmtOdds(l.odds)}`;
 const legPill = (st) => `<span class="pill ${LEG_CLS[st] ?? "muted"}">${esc(st)}</span>`;
 // Pieza que pasa el filtro pero que el framework manda a esperar información.
 const waitPill = (l) => (l.wait && l.usable ? '<span class="pill next" title="El framework pide confirmar información en este lado antes de jugarlo">Confirmar info</span>' : "");
@@ -4030,7 +4032,7 @@ const legMark = (l) => (l.won === null || l.won === undefined ? "" : l.push ? '<
 const legsOf = (g) => (PICKS.get(g.id)?.parlay ?? []).map((l) => ({ ...l, id: g.id, key: `${g.id}:${l.rank}` }));
 /** Boleto: probabilidad (partidos distintos = independientes), momio, valor esperado, stake y resultado. */
 function parlayMath(legs) {
-  const P = legs.reduce((a, l) => a * l.pModel, 1);
+  const P = legs.reduce((a, l) => a * legP(l), 1);
   const D = legs.reduce((a, l) => a * (l.dec ?? decOf(l.odds)), 1);
   const ev = P * D - 1;
   const kelly = D > 1 ? ev / (D - 1) : 0;
@@ -4047,16 +4049,19 @@ function parlayMath(legs) {
 }
 /** La pieza más probable que pasa el filtro en cada partido, de la más probable a la menos. */
 function bestLegs(games) {
-  return games.map((g) => legsOf(g).find((l) => l.usable)).filter(Boolean).sort((a, b) => b.pModel - a.pModel);
+  return games.map((g) => legsOf(g).find((l) => l.usable)).filter(Boolean).sort((a, b) => legP(b) - legP(a));
 }
 const PARLAY_KINDS = [
-  { n: 2, title: "El más probable", sub: "2 piezas" },
-  { n: 3, title: "Balanceado", sub: "3 piezas" },
-  { n: 4, title: "Momio alto", sub: "4 piezas" },
+  { id: "p2", n: 2, title: "El más probable", sub: "2 piezas con valor" },
+  { id: "p3", n: 3, title: "Balanceado", sub: "3 piezas con valor" },
+  { id: "p4", n: 4, title: "Momio alto", sub: "4 piezas con valor" },
+  { id: "c3", n: 3, title: "Conservador", sub: "3 piezas · revisa precios", check: true },
 ];
 function suggestedParlays(games) {
   const pool = bestLegs(games);
-  return PARLAY_KINDS.filter((k) => pool.length >= k.n).map((k) => ({ ...k, legs: pool.slice(0, k.n) }));
+  // Conservador: la pieza más probable sin veto de cada partido, aunque su valor dependa del precio de tu casa.
+  const safe = games.map((g) => legsOf(g).find((l) => l.usable || l.status === "Precio a revisar")).filter(Boolean).sort((a, b) => legP(b) - legP(a));
+  return PARLAY_KINDS.map((k) => ({ ...k, legs: (k.check ? safe : pool).slice(0, k.n) })).filter((k) => k.legs.length >= k.n);
 }
 function parlayResult(m) {
   if (m.state === "won") return `<span class="pill ok">✓ Ganó ${signed(m.units, 2)} u</span>`;
@@ -4066,7 +4071,7 @@ function parlayResult(m) {
 }
 function legRow(l) {
   const g = gamesById.get(l.id);
-  return `<li><span class="pl-time">${g?.kickoff ? esc(hourFmt.format(new Date(g.kickoff))) : ""}</span><span class="pl-pick"><b>${esc(l.pick)}</b> ${legMark(l)}<small>${esc(g.away)} @ ${esc(g.home)} · ${esc(l.market)} · ${esc(l.status)}${l.wait ? " · confirmar info" : ""}</small></span><span class="num">${fmtOdds(l.odds)}</span><span class="num muted">${pct(l.pModel, 0)}</span></li>`;
+  return `<li><span class="pl-time">${g?.kickoff ? esc(hourFmt.format(new Date(g.kickoff))) : ""}</span><span class="pl-pick"><b>${esc(l.pick)}</b> ${legMark(l)}<small>${esc(g.away)} @ ${esc(g.home)} · ${esc(l.market)}${l.alt ? " alternativa" : ""} · ${esc(l.status)}${l.wait ? " · confirmar info" : ""}${l.estimated ? ` · mín ${fmtOdds(l.minOdds)}` : ""}</small></span><span class="num">${legOdds(l)}</span><span class="num muted">${pct(legP(l), 0)}</span></li>`;
 }
 function parlayCard(k) {
   const m = parlayMath(k.legs);
@@ -4079,18 +4084,18 @@ function parlayCard(k) {
         <div><span>Valor esperado</span><b class="${m.ev >= 0 ? "pos" : "negv"}">${signed(m.ev * 100, 1)}%</b></div>
         <div><span>Stake</span><b>${fmtStake(m.stake)}</b></div>
       </div>
-      <div class="pl-foot"><span>Momio justo según el modelo: ${m.fair !== null ? fmtOdds(m.fair) : "—"}</span>${parlayResult(m)}</div>
+      <div class="pl-foot"><span>${k.check ? `Juégalo solo si tu casa paga ${m.fair !== null ? fmtOdds(m.fair) : "—"} o mejor (o cada pieza su mínimo)` : `Momio justo según el modelo: ${m.fair !== null ? fmtOdds(m.fair) : "—"}`}</span>${parlayResult(m)}</div>
     </article>`;
 }
 /** Récord en vivo: un boleto sugerido de 2, 3 y 4 piezas por cada día de partidos ya jugado. */
 function parlayRecord() {
-  const res = Object.fromEntries(PARLAY_KINDS.map((k) => [k.n, { n: 0, w: 0, l: 0, p: 0, units: 0 }]));
+  const res = Object.fromEntries(PARLAY_KINDS.map((k) => [k.id, { n: 0, w: 0, l: 0, p: 0, units: 0 }]));
   for (const games of GAME_DAYS.values()) {
     if (!games.every((g) => PICKS.get(g.id)?.period === "live" && isPlayed(g))) continue;
     for (const k of suggestedParlays(games)) {
       const m = parlayMath(k.legs);
       if (m.state === "pending") continue;
-      const r = res[k.n];
+      const r = res[k.id];
       r.n++; r.units += m.units;
       if (m.state === "won") r.w++; else if (m.state === "lost") r.l++; else r.p++;
     }
@@ -4106,7 +4111,7 @@ function legCalibration() {
     for (const l of pk.parlay ?? []) {
       if (l.won === null || l.push) continue;
       const r = (rows[l.status] ??= { n: 0, w: 0, p: 0, u: 0 });
-      r.n++; r.w += l.won ? 1 : 0; r.p += l.pModel; r.u += l.won ? l.dec - 1 : -1;
+      r.n++; r.w += l.won ? 1 : 0; r.p += legP(l); r.u += l.won ? l.dec - 1 : -1;
     }
   }
   return rows;
@@ -4114,7 +4119,7 @@ function legCalibration() {
 function parlayRecordHtml() {
   const R = parlayRecord();
   const cards = PARLAY_KINDS.map((k) => {
-    const r = R[k.n];
+    const r = R[k.id];
     if (!r.n) return `<div class="rec-card"><span class="eyebrow">${esc(k.title)} · ${k.sub}</span><span class="big">—</span><span class="muted">Sin boletos jugados todavía.</span></div>`;
     return `<div class="rec-card">
         <span class="eyebrow">${esc(k.title)} · ${k.sub}</span>
@@ -4124,9 +4129,9 @@ function parlayRecordHtml() {
       </div>`;
   }).join("");
   const C = legCalibration();
-  const order = ["Ancla", "Sólida", "Cara", "Contradicción alta", "Poco probable"];
+  const order = ["Conservadora", "Sólida", "Precio a revisar", "Cara", "Contradicción alta", "Poco probable"];
   const table = `<div class="table-scroll"><table>
-      <thead><tr><th>Etiqueta de la pieza</th><th class="r">Piezas</th><th class="r">Ganaron</th><th class="r">P del modelo</th><th class="r">Unidades sueltas</th></tr></thead>
+      <thead><tr><th>Etiqueta de la pieza</th><th class="r">Piezas</th><th class="r">Ganaron</th><th class="r">P conservadora</th><th class="r">Unidades sueltas</th></tr></thead>
       <tbody>${order.filter((k) => C[k]).map((k) => { const r = C[k]; return `<tr><td>${legPill(k)}</td><td class="r num">${r.n}</td><td class="r num">${pct(r.w / r.n, 0)}</td><td class="r num muted">${pct(r.p / r.n, 0)}</td><td class="r num ${r.u >= 0 ? "pos" : "negv"}">${signed(r.u, 2)}</td></tr>`; }).join("")}</tbody>
     </table></div>`;
   return { cards, table };
@@ -4148,8 +4153,8 @@ function piecesHtml(games, now) {
         <div class="pc-game-head"><span>${esc(g.away)} @ ${esc(g.home)}${isPlayed(g) ? ` <span class="muted">${g.as}–${g.hs}</span>` : ""}</span><span class="muted">${esc(liveState(g, now).label)}</span></div>
         ${legs.length ? legs.map((l) => `<label class="pc${parlaySel.has(l.key) ? " on" : ""}">
             <input type="checkbox" data-leg="${esc(l.key)}"${parlaySel.has(l.key) ? " checked" : ""}>
-            <span class="pc-main"><b>${esc(l.pick)}</b><span class="num muted">${fmtOdds(l.odds)}</span>${legPill(l.status)}${waitPill(l)}${legMark(l)}</span>
-            <span class="pc-p">${pct(l.pModel, 0)}<small>×${l.dec.toFixed(2)}</small></span>
+            <span class="pc-main"><b>${esc(l.pick)}</b><span class="num muted">${legOdds(l)}</span>${legPill(l.status)}${waitPill(l)}${legMark(l)}</span>
+            <span class="pc-p">${pct(legP(l), 0)}<small>mín ${fmtOdds(l.minOdds ?? l.odds)}</small></span>
             <span class="pc-note" title="${esc(l.note)}">${esc(l.note)}${l.correlated ? ` Con la pieza 1: ${esc(l.correlated)}` : ""}</span>
           </label>`).join("") : `<p class="muted" style="font-size:12px">Sin línea del mercado todavía.</p>`}
       </div>`;
@@ -4168,6 +4173,8 @@ function slipHtml(games) {
   if (same.length) warns.push(`Dos piezas del mismo partido (${same.join(", ")}): están correlacionadas, la casa las paga como same-game parlay y la probabilidad real no es el producto.`);
   const bad = legs.filter((l) => !l.usable);
   if (bad.length) warns.push(`${bad.length === 1 ? "Una pieza no pasa" : `${bad.length} piezas no pasan`} el filtro (${[...new Set(bad.map((l) => l.status.toLowerCase()))].join(", ")}): le ${bad.length === 1 ? "resta" : "restan"} valor al boleto.`);
+  const est = legs.filter((l) => l.estimated);
+  if (est.length) warns.push(`${est.length === 1 ? "Una pieza es línea alternativa" : `${est.length} piezas son líneas alternativas`} con momio estimado: confirma en tu casa que paguen al menos el mínimo (${est.map((l) => `${l.pick} ${fmtOdds(l.minOdds)}`).join(", ")}).`);
   const wait = legs.filter((l) => l.wait && l.usable);
   if (wait.length) warns.push(`${wait.map((l) => l.pick).join(", ")}: el framework pide confirmar información (inactivos, QB o un edge demasiado grande contra el cierre) antes de jugar${wait.length === 1 ? "la" : "las"}.`);
   if (legs.length > 5) warns.push("Más de 5 piezas: la probabilidad cae muy rápido; cada pieza extra es otra moneda al aire.");
@@ -4182,12 +4189,36 @@ function slipHtml(games) {
         <div><span>Stake sugerido</span><b>${fmtStake(m.stake)}</b></div>
         <div><span>Resultado</span><b>${resTxt}</b></div>
       </div>
-      <ul class="slip-legs">${legs.map((l) => `<li><span>${esc(l.pick)} ${legMark(l)}</span><span class="num muted">${fmtOdds(l.odds)} · ${pct(l.pModel, 0)}</span></li>`).join("")}</ul>
+      <ul class="slip-legs">${legs.map((l) => `<li><span>${esc(l.pick)} ${legMark(l)}</span><span class="num muted">${legOdds(l)} · ${pct(legP(l), 0)}</span></li>`).join("")}</ul>
       ${warns.map((w) => `<p class="slip-warn">${esc(w)}</p>`).join("")}
       <p class="muted slip-help" style="font-size:11px">Probabilidad = producto de las piezas (partidos distintos se tratan como independientes). Stake: ⅛ de Kelly con tope de ${PARLAY_STAKE_CAP * 100}% del bankroll.</p>
       <div class="slip-actions"><button type="button" class="btn" data-act="clear">Limpiar</button><button type="button" class="btn" data-act="best">El más probable</button></div>`;
 }
 
+/** El modelo de piezas: parámetros ajustados con la validación y cómo le va en vivo. */
+function parlayModelPanel() {
+  const M = CORE.parlayModel;
+  if (!M?.params) return "";
+  const P = M.params;
+  const row = (label, m) => (m ? `<tr><td>${esc(label)}</td><td class="r num">${numFmt.format(m.pieces)} · ${m.games}</td><td class="r num">${m.logLoss.model.toFixed(3)}</td><td class="r num">${m.logLoss.market.toFixed(3)}</td><td class="r num"><b>${m.logLoss.conservative.toFixed(3)}</b></td></tr>` : "");
+  const cal = (M.live?.buckets ?? []).filter((b) => b.n).map((b) => `<tr><td>${esc(b.range)}</td><td class="r num">${b.n}</td><td class="r num">${pct(b.pMean, 1)}</td><td class="r num"><b>${b.hit === null ? "—" : pct(b.hit, 1)}</b></td></tr>`).join("");
+  return `<section class="stack" style="gap:10px">
+      <div class="section-head" style="margin-bottom:0">
+        <h2>El modelo de piezas</h2>
+        <p class="lede">β se eligió con la validación del protocolo (2025 semana 10+ y 2026 semanas 1–3) y en vivo solo se mide. Resultado del ajuste: se le cree al modelo <b>${Math.round(P.b0m * 100)}%</b> de lo que se separa del mercado en las líneas con momio y <b>${Math.round(P.b0 * 100)}%</b> en las alternativas, menos ${P.bd} × la dispersión de los 5 modelos del torneo. Las contradicciones del análisis no mejoraron la probabilidad${P.bc || P.bi ? "" : " (β_c = β_i = 0)"}, pero sí funcionan como veto: con 2 o más, la pieza queda fuera.</p>
+      </div>
+      <div class="two-col">
+        <div class="panel"><h3 style="margin-bottom:8px">Pérdida logarítmica (menor es mejor)</h3><div class="table-scroll"><table>
+          <thead><tr><th>Período</th><th class="r">Piezas · partidos</th><th class="r">Modelo</th><th class="r">Mercado</th><th class="r">Conservadora</th></tr></thead>
+          <tbody>${row("Validación (ajuste)", M.valid)}${row("En vivo (fuera de muestra)", M.live)}</tbody></table></div>
+          <p class="note" style="margin-top:8px">El modelo solo es demasiado optimista; la probabilidad conservadora empata o mejora al mercado y es la que decide.</p></div>
+        <div class="panel"><h3 style="margin-bottom:8px">Calibración en vivo</h3><div class="table-scroll"><table>
+          <thead><tr><th>P conservadora</th><th class="r">Piezas</th><th class="r">Prometido</th><th class="r">Ganaron</th></tr></thead>
+          <tbody>${cal}</tbody></table></div>
+          <p class="note" style="margin-top:8px">Si una pieza dice 78%, debería ganar cerca de 78 de cada 100: así se puede confiar en el producto del boleto.</p></div>
+      </div>
+    </section>`;
+}
 function renderParlay(key) {
   renderToken++;
   const sel = key && GAME_DAYS.has(key) ? key : defaultDay();
@@ -4205,7 +4236,7 @@ function renderParlay(key) {
     <section class="today-head">
       <p class="eyebrow">Parlay · ${esc(weekLabel(week))} · ${esc(dayName)} · hora de la Ciudad de México</p>
       <h1>${esc(isToday ? "Parlay de hoy" : `Parlay del ${dayName}`)}</h1>
-      <p class="lede">Un parlay paga más porque todas las piezas tienen que ganar, y el margen de la casa se multiplica pieza por pieza. Por eso cada partido aporta sus 2 piezas más probables, pero a los boletos sugeridos solo entran las que el modelo da en 55% o más, que el precio paga (valor esperado ≥ 0 al mejor momio) y sin contradicción alta.</p>
+      <p class="lede">Un parlay paga más porque todas las piezas tienen que ganar, y el margen de la casa se multiplica pieza por pieza. El modelo de piezas busca en cada partido las piezas más seguras que todavía tienen valor —incluidas líneas alternativas más conservadoras— con una probabilidad conservadora calibrada; cada partido aporta un lado y un total. A los boletos con valor solo entran piezas de 55% o más que el precio paga y sin veto del análisis.</p>
       ${dayStrip(sel, "parlay")}
     </section>
 
@@ -4240,7 +4271,9 @@ function renderParlay(key) {
       <div class="panel">${rec.table}</div>
     </section>
 
-    ${cloud("explain", "Cómo se eligen las piezas", `<p><b>Ancla</b>: el modelo le da 65% o más y el precio la paga. <b>Sólida</b>: 55–65% con precio justo o mejor. <b>Cara</b>: probable, pero el momio ya cobra más de lo que vale (un favorito a −1500 casi no sube el boleto y le resta valor). <b>Contradicción alta</b>: el framework ve un dato fuerte en contra. <b>Poco probable</b>: menos de 55%. La segunda pieza de cada partido es de otro mercado y nunca del rival de la primera. Probabilidad del boleto = producto de las piezas; valor esperado = probabilidad × momio decimal − 1; stake = ⅛ de Kelly con tope de ${PARLAY_STAKE_CAP * 100}% del bankroll, porque un parlay tiene mucha más varianza que un pick suelto.</p>`, "i")}`;
+    ${parlayModelPanel()}
+
+    ${cloud("explain", "Cómo se eligen las piezas", `<p>Cada partido se evalúa con el <b>modelo de piezas</b>: las 6 líneas con momio y líneas alternativas compradas a favor de cada lado (spread +3, +6 y +10; Over −3/−6/−10 y Under +3/+6/+10). Probabilidad conservadora = la del mercado más una parte (β) de lo que el modelo se separa de él; β baja cuando los 5 modelos del torneo no coinciden en esa pieza. <b>Conservadora</b>: 70% o más y con valor al precio. <b>Sólida</b>: 55–70% con valor. <b>Precio a revisar</b>: línea alternativa probable cuyo valor depende de lo que pague tu casa (juega solo con el momio mínimo o mejor). <b>Cara</b>: línea con momio real que no paga su probabilidad. <b>Contradicción alta</b>: dos o más datos del análisis en contra (veto). <b>Poco probable</b>: menos de 55%. Cada partido da 2 piezas: un lado y un total. Probabilidad del boleto = producto de las piezas; stake = ⅛ de Kelly con tope de ${PARLAY_STAKE_CAP * 100}% del bankroll.</p>`, "i")}`;
   const slip = document.getElementById("slip");
   const redrawSlip = () => { slip.innerHTML = slipHtml(games); };
   const syncChecks = () => view.querySelectorAll("#pieces input[data-leg]").forEach((inp) => {
@@ -4267,38 +4300,53 @@ function renderParlay(key) {
   if (strip && active) strip.scrollLeft = active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2;
 }
 
-/** Piezas de parlay dentro del análisis de cada partido. */
+/** Piezas de parlay dentro del análisis de cada partido: las 2 elegidas y todas las que evaluó el modelo. */
 function parlayPanel(a, gameId) {
   const legs = a.bestPick?.parlay ?? [];
+  const all = a.bestPick?.parlayPieces ?? [];
   if (!legs.length) return "";
   const g = gamesById.get(gameId);
   const dayK = g && kickoffOf(g) ? dayKeyFmt.format(kickoffOf(g)) : null;
-  const cls = (l) => (l.usable ? "use" : l.status === "Cara" ? "cara" : l.status === "Contradicción alta" ? "contra" : "");
+  const cls = (l) => (l.usable ? "use" : l.status === "Cara" || l.status === "Precio a revisar" ? "cara" : l.status === "Contradicción alta" ? "contra" : "");
+  const rows = all.map((l) => `<tr${l.usable ? ' class="best-row"' : ""}>
+      <td><b>${esc(l.pick)}</b>${l.alt ? ' <span class="muted">alt.</span>' : ""} ${legMark(l)}</td>
+      <td class="r num">${legOdds(l)}</td>
+      <td class="r num">${pct(l.pModel, 0)}</td><td class="r num">${pct(l.pMarket, 0)}</td><td class="r num"><b>${pct(l.p, 0)}</b></td>
+      <td class="r num muted">${l.pFloor === null ? "—" : pct(l.pFloor, 0)}</td><td class="r num muted">${l.beta.toFixed(2)}</td>
+      <td class="r num ${l.ev >= 0 ? "pos" : "negv"}">${signed(l.ev * 100, 1)}%</td><td class="r num">${fmtOdds(l.minOdds)}</td>
+      <td>${legPill(l.status)}</td></tr>`).join("");
   return `<section class="stack" style="gap:10px" id="piezas-parlay">
       <div class="section-head" style="margin-bottom:0">
-        <span class="eyebrow">Parlay</span>
+        <span class="eyebrow">Parlay · modelo de piezas</span>
         <h2>Piezas de parlay del partido</h2>
-        <p class="lede">Los 2 lados más probables de este partido para meter a un parlay. Sirven si el modelo les da 55% o más, el precio los paga (valor esperado ≥ 0) y no tienen contradicción alta.${dayK ? ` <a href="#parlay-${dayK.replace(/-/g, "")}">Armar un parlay con los partidos del día →</a>` : ""}</p>
+        <p class="lede">El modelo de piezas evalúa las 6 líneas con momio y las alternativas compradas a favor de cada lado (spread +3, +6 y +10; total ±3, ±6 y ±10) y da una probabilidad <b>conservadora</b>: la del mercado más solo una parte de lo que el modelo se separa de él, y menos cuando los 5 modelos del torneo no coinciden. Aquí van las 2 piezas elegidas (un lado y un total) y abajo todas las que evaluó.${dayK ? ` <a href="#parlay-${dayK.replace(/-/g, "")}">Armar un parlay con los partidos del día →</a>` : ""}</p>
       </div>
       <div class="leg-cards">${legs.map((l) => `<div class="leg-card ${cls(l)}">
-          <div class="tk-pick"><span class="rank-badge ${l.usable ? "" : "off"}">${l.rank}</span><span class="p">${esc(l.pick)}</span><span class="o">${fmtOdds(l.odds)}</span>${l.book ? `<span class="bk">en ${esc(l.book)}</span>` : ""} ${legMark(l)}</div>
-          <div class="tk-tags">${legPill(l.status)}${waitPill(l)}<span class="muted" style="font-size:12px">${esc(l.market)} · ${l.usable ? "sirve para parlay" : "no conviene en un parlay"}</span></div>
+          <div class="tk-pick"><span class="rank-badge ${l.usable ? "" : "off"}">${l.rank}</span><span class="p">${esc(l.pick)}</span><span class="o">${legOdds(l)}</span>${l.book ? `<span class="bk">en ${esc(l.book)}</span>` : l.estimated ? '<span class="bk">momio estimado</span>' : ""} ${legMark(l)}</div>
+          <div class="tk-tags">${legPill(l.status)}${waitPill(l)}<span class="muted" style="font-size:12px">${esc(l.market)}${l.alt ? " alternativa" : ""} · ${l.usable ? "sirve para parlay" : l.status === "Precio a revisar" ? "sirve si tu casa paga el mínimo" : "no conviene en un parlay"}</span></div>
           <div class="tk-nums">
-            <div><span>P modelo</span><b>${pct(l.pModel, 0)}</b></div>
-            <div><span>P mercado</span><b>${pct(l.pImplied, 0)}</b></div>
+            <div><span>P conservadora</span><b>${pct(l.p, 0)}</b></div>
+            <div><span>Modelo / mercado</span><b>${pct(l.pModel, 0)} / ${pct(l.pMarket, 0)}</b></div>
             <div><span>Valor esperado</span><b class="${l.ev >= 0 ? "pos" : "negv"}">${signed(l.ev * 100, 1)}%</b></div>
-            <div><span>Multiplica</span><b>×${l.dec.toFixed(2)}</b></div>
+            <div><span>Momio mínimo</span><b>${fmtOdds(l.minOdds)}</b></div>
           </div>
-          <p class="tk-note">${esc(l.note)}</p>
+          <p class="tk-note" title="${esc(l.note)}">${esc(l.note)}</p>
           ${l.correlated ? `<p class="tk-note"><b>Con la pieza 1:</b> ${esc(l.correlated)} Juntas en el mismo boleto son un same-game parlay: la casa lo paga distinto y la probabilidad no es el producto.</p>` : ""}
         </div>`).join("")}</div>
+      ${all.length ? `<details class="panel"><summary><b>Todas las piezas que evaluó el modelo (${all.length})</b> <span class="muted">· verde = tiene valor</span></summary>
+        <div class="table-scroll" style="margin-top:10px"><table>
+          <thead><tr><th>Pieza</th><th class="r">Momio</th><th class="r">Modelo</th><th class="r">Mercado</th><th class="r">Conservadora</th><th class="r">Piso torneo</th><th class="r">β</th><th class="r">Valor esp.</th><th class="r">Mínimo</th><th>Etiqueta</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+        <p class="note" style="margin-top:8px">≈ = momio estimado (línea alternativa: probabilidad del mercado + ${Math.round((CORE.parlayModel?.params?.hold ?? 0.025) * 1000) / 10} pp de margen de la casa). Piso torneo = la probabilidad según el 2.º más pesimista de los 5 modelos. β = cuánto se le cree al modelo frente al mercado en esta pieza.</p>
+      </details>` : ""}
     </section>`;
 }
 /** Línea compacta de piezas de parlay en las tarjetas de "Hoy". */
 function parlayLine(g) {
   const legs = legsOf(g);
   if (!legs.length) return "";
-  return `<div class="tk-parlay"><span class="lbl">Parlay</span>${legs.map((l) => `<span class="pl-chip${l.usable ? " on" : ""}" title="${esc(l.note)}"><b>${esc(l.pick)}</b> <span class="num">${fmtOdds(l.odds)}</span> · ${pct(l.pModel, 0)} · ${esc(l.status)}</span>`).join("")}</div>`;
+  return `<div class="tk-parlay"><span class="lbl">Parlay</span>${legs.map((l) => `<span class="pl-chip${l.usable ? " on" : ""}" title="${esc(l.note)}"><b>${esc(l.pick)}</b> <span class="num">${legOdds(l)}</span> · ${pct(legP(l), 0)} · ${esc(l.status)}</span>`).join("")}</div>`;
 }
 /** Acceso al parlay del día desde "Hoy". */
 function parlayLink(sel, games) {

@@ -9,6 +9,7 @@
  */
 import { prisma } from "./prisma";
 import { buildBestPick } from "./best-pick";
+import { loadParlayParams } from "./parlay-model";
 import type { GameModels } from "./models/lab";
 import { normalInv } from "./models/core";
 
@@ -950,6 +951,22 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
   const BASE_KEYS: [string, string][] = [["framework", "Framework"], ["elo", "Elo"], ["kalman", "Kalman"], ["ridge", "Ridge"], ["epa", "EPA"]];
   const byTeam = <T,>(f: (t: string) => T) => ({ [home]: f(home), [away]: f(away) });
   const qbProjected = Boolean((models as { qbProjected?: boolean } | null)?.qbProjected);
+  // Distribución para el modelo de piezas de parlay: mezcla de los 5 modelos (pesos de margen y total
+  // del ensamble), pesos de números clave y cada modelo del torneo por separado (piso y dispersión).
+  const kwts = (models as { keyWeights?: { margin: number[] | null; total: number[] | null } } | null)?.keyWeights ?? null;
+  const comp = (kind: "margin" | "total") => Object.entries((models?.weights?.[kind] ?? {}) as Record<string, number>).flatMap(([k, w]) => {
+    const pr = models?.preds[k];
+    const mu = kind === "margin" ? pr?.margin : pr?.total, sd = kind === "margin" ? pr?.sdMargin : pr?.sdTotal;
+    return pr && mu !== null && mu !== undefined && sd ? [{ w, mu, sd }] : [];
+  });
+  const pieceDist = models ? {
+    margin: comp("margin"), total: comp("total"),
+    omegaMargin: kwts?.margin ?? null, omegaTotal: kwts?.total ?? null,
+    base: BASE_KEYS.filter(([k]) => models.preds[k]).map(([k, label]) => {
+      const pr = models.preds[k];
+      return { key: k, label, margin: pr.margin !== null && pr.sdMargin ? { mu: pr.margin, sd: pr.sdMargin } : null, total: pr.total !== null && pr.sdTotal ? { mu: pr.total, sd: pr.sdTotal } : null };
+    }),
+  } : null;
   const bestPick = buildBestPick({
     home, away, spread, total,
     odds: { homeMl: target.homeMoneyline, awayMl: target.awayMoneyline, homeSpread: target.homeSpreadOdds, awaySpread: target.awaySpreadOdds, over: target.overOdds, under: target.underOdds },
@@ -976,6 +993,8 @@ export async function buildPregameAnalysis(gameId: string, models: GameModels | 
       ...(qbProjected ? ["QB titular confirmado"] : []),
     ],
     result: played ? { margin: finalMargin as number, total: finalTotal as number } : null,
+    dist: pieceDist,
+    parlayParams: loadParlayParams().params,
   });
   // El semáforo de cada mercado (sección 7) es el de la decisión corregida del lado con más valor.
   for (const m of markets) {

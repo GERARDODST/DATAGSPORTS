@@ -83,6 +83,61 @@ de 2026: 2–4, −2.26 unidades (muestra de 6 picks).
 El marcador de la página de Picks lleva el récord del mejor pick (1 unidad por pick y con el stake
 de Kelly). Semanas 1–3 de 2026: 7–9, −2.9 unidades, 17 partidos sin pick.
 
+## Modelo de piezas de parlay (`src/lib/parlay-model.ts`)
+
+Busca en cada partido las piezas más seguras que todavía tienen valor.
+
+**Candidatas**:
+- las 6 líneas con momio (ambos moneylines, spreads y totales);
+- spreads alternativos comprados a favor de cada lado: +3, +6 y +10 (cruzan los números clave 3 y 7);
+- totales alternativos: Over −3/−6/−10 y Under +3/+6/+10.
+
+**Probabilidades de cada pieza**:
+
+| Probabilidad | Cómo se calcula |
+|---|---|
+| Modelo (p_mod) | Distribución discreta del margen o del total del modelo final: mezcla de los 5 modelos del torneo, capas de QB, ajustes 5.3 y pesos de números clave. Condicionada a que no haya push. |
+| Mercado (p_mkt) | La misma forma centrada en la línea del mercado. En las 6 líneas con momio, la implícita sin margen. |
+| Conservadora (p_cons) | `logit p_cons = logit p_mkt + β·(logit p_mod − logit p_mkt)` |
+| Piso del torneo | La del 2.º más pesimista de los 5 modelos (informativa). |
+
+β es cuánto se le cree al modelo cuando se separa del mercado:
+`β = β₀ − β_c·contradicciones de dato − β_i·avisos de información − β_q·QB sin confirmar − β_d·dispersión de los 5 modelos`,
+acotado entre 0 y 1. Hay un β₀ para las líneas con momio y otro para las alternativas.
+
+**Ajuste**: `npm run models:parlay` escribe `data/parlay-params.json`.
+- Elige los β por cuadrícula, minimizando la log-loss de todas las piezas de la validación del
+  protocolo (2025 semana 10+ y 2026 hasta el corte).
+- En vivo solo mide.
+- Con los datos actuales salió β₀ = 0.45 en líneas con momio, 0.30 en alternativas y β_d = 1.5;
+  β_c = β_i = β_q = 0, porque las contradicciones no mejoraron la probabilidad.
+- Las contradicciones funcionan como veto: con 2 o más de dato o información, la pieza queda fuera.
+  En vivo, las vetadas ganaron bastante menos de lo prometido.
+
+**Precio**:
+- Real en las 6 líneas.
+- En las alternativas es estimado: p_mkt + 2.5 pp de margen de la casa.
+- Momio mínimo = momio justo de p_cons.
+
+**Etiquetas**:
+
+| Etiqueta | Regla |
+|---|---|
+| Conservadora | p_cons ≥ 70% y valor esperado ≥ 0 |
+| Sólida | 55–70% con valor |
+| Precio a revisar | Alternativa sin valor al precio estimado: sirve si tu casa paga el mínimo |
+| Cara | Línea con momio real que no paga su probabilidad |
+| Contradicción alta | Veto: 2 o más contradicciones de dato o información |
+| Poco probable | p_cons < 55% |
+
+**Piezas por partido**: cada partido da 2, un lado y un total.
+- Primero va la más segura que tiene valor.
+- Si ninguna tiene valor, va la que más cerca está de tenerlo.
+
+**Boletos sugeridos**:
+- 2, 3 y 4 piezas con valor, una por partido.
+- "Conservador · revisa precios": 3 piezas, la más probable sin veto de cada partido.
+
 ## Resultados en vivo y momios actuales
 
 | Fuente | Script | Qué trae | Requisito |
@@ -125,28 +180,10 @@ partido) y `npm run 2026:update` (además vuelve a bajar nflverse completo).
   La hora de patada sale de `gametime` de nflverse (hora del Este, convertida con horario de verano)
   y ESPN la corrige cuando está disponible. Si la hora ya pasó y la foto del sitio no trae el
   marcador, el partido dice "Ya empezó" en vez de fingir que sigue por jugar.
-- **Parlay** (`#parlay`, `#parlay-AAAAMMDD`): cada partido aporta sus 2 piezas más probables
-  (`buildBestPick().parlay`). La segunda es de otro mercado y nunca del rival de la primera. Cada
-  pieza lleva una etiqueta:
-
-  | Etiqueta | Regla |
-  |---|---|
-  | Ancla | Modelo ≥ 65% y EV ≥ 0 al mejor momio |
-  | Sólida | 55–65% y EV ≥ 0 |
-  | Cara | Probable, pero el precio no la paga |
-  | Contradicción alta | El framework ve un dato fuerte en contra |
-  | Poco probable | Menos de 55% |
-
-  Solo Ancla y Sólida entran a los boletos sugeridos; si el framework manda ese lado a "Esperar
-  información", la pieza se marca "Confirmar info". La sección trae:
-  - boletos sugeridos de 2, 3 y 4 piezas: la más probable que pasa el filtro de cada partido;
-  - un constructor ("Arma tu parlay") con probabilidad, momio, cobro por $100, valor esperado y
-    stake (⅛ de Kelly, tope 1%), más avisos si juntas dos piezas del mismo partido o una que resta
-    valor;
-  - el récord en vivo de los boletos y la calibración de las piezas por etiqueta.
-
-  Las piezas también aparecen en el análisis de cada partido (`#piezas-parlay`) y en las tarjetas
-  de "Hoy". La probabilidad del boleto trata como independientes a los partidos distintos.
+- **Parlay** (`#parlay`, `#parlay-AAAAMMDD`): boletos sugeridos, constructor "Arma tu parlay",
+  récord en vivo, calibración de las piezas y el panel del modelo de piezas (ver abajo). Las 2
+  piezas de cada partido también aparecen en su análisis (`#piezas-parlay`, con la tabla de todas
+  las piezas evaluadas) y en las tarjetas de "Hoy".
 - **Partidos**: los picks más firmes de la semana y todos los partidos con su pick.
 - **Picks** (`#picks`): marcador de la temporada (en vivo y validación, modelo contra mercado,
   spread y over/under) y una tarjeta por partido con el pick de ganador, spread y total.
@@ -164,4 +201,5 @@ partido) y `npm run 2026:update` (además vuelve a bajar nflverse completo).
 | `npm run data:extract-context -- --season=YYYY` | Lesiones, depth charts, presión (PFR), QBR e inactivos |
 | `npm run models:optimize` | Optimiza modelos y ensamble con el protocolo de esta edición |
 | `npm run models:report` | Tabla del torneo por periodo |
+| `npm run models:parlay` | Ajusta el modelo de piezas de parlay → `data/parlay-params.json` |
 | `npm run snapshot:export` | Genera el visor estático con los picks de toda la temporada |
